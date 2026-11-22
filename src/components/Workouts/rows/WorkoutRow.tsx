@@ -31,10 +31,10 @@ export function WorkoutRow({
                 {workout.name.length == 0 && <span>{translate("other")}</span>}
             </td>
             <td>
-                {workout.latest_session &&
-                    formatTimeDate(workout.latest_session)}
+                {workout.latest_activity &&
+                    formatTimeDate(workout.latest_activity)}
             </td>
-            <td>{formatNumber(workout.sessions, 0)}</td>
+            <td>{formatNumber(workout.activities, 0)}</td>
             <td>{workout.avg_time > 0 && formatDuration(workout.avg_time)}</td>
             <td>{workout.avg_load > 0 && workout.avg_load}</td>
             {/* Menu is portaled but React events still bubble to the row */}

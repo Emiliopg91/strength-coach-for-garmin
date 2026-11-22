@@ -1,6 +1,6 @@
+pub mod activity;
 pub mod errors;
 pub mod schedule;
-pub mod session;
 pub mod workout;
 
 use std::{io::Cursor, path::Path};

@@ -15,8 +15,8 @@ use crate::{
     dao::device::Device,
     dto::devices::DeviceListItem,
     logic::{
+        activities::helpers::{finish_activity_import, import_pending_activities},
         fit_settings, language, pool, report_error,
-        sessions::helpers::{finish_session_import, import_pending_sessions},
     },
     utils::constants,
 };
@@ -118,10 +118,10 @@ pub async fn import_from_device<R: Runtime>(
     {
         drop(mtp_client);
         let now = Local::now().timestamp() as u32;
-        res = import_pending_sessions(app, files, &mut device, lang, Some(now)).await;
+        res = import_pending_activities(app, files, &mut device, lang, Some(now)).await;
     }
 
-    finish_session_import(app, res)
+    finish_activity_import(app, res)
 }
 
 pub async fn get_registered_devices<R: Runtime>(

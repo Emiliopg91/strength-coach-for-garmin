@@ -16,7 +16,7 @@ export type ExerciseOption = {
 interface AppContexType {
     appReady: boolean;
     environment: AppEnvironment;
-    sessionsVersion: number;
+    activitiesVersion: number;
     // Empty until loaded, or if loading failed
     exercisesCatalog: ExerciseOption[];
     updateExerciseNotes: (ex_cat: number, ex_id: number, notes: string) => void;
@@ -34,7 +34,7 @@ interface AppContexType {
 const defaultValue: AppContexType = {
     appReady: false,
     environment: AppEnvironment.Release,
-    sessionsVersion: 0,
+    activitiesVersion: 0,
     exercisesCatalog: [],
     updateExerciseNotes: () => {
         /** */

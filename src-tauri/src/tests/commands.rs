@@ -9,8 +9,8 @@ use crate::{
     ConnectLock, MtpLock, SettingsLock,
     connect::ConnectClient,
     dao::{
+        activity::Activity,
         device::{Device, DeviceRepository},
-        session::Session,
         settings::settings_keys::DISTANCE_UNIT,
         settings::{DistanceUnit, WeightUnit},
         workout::Workout,
@@ -19,19 +19,19 @@ use crate::{
     },
     dto::prompts::PromptKind,
     dto::{
+        activities::{ActivityStepDto, ActivityStepsUpdate},
         app::Settings,
         body_metrics::BodyMetricListItem,
         exercises::ProgressionSuggestion,
-        sessions::{SessionStepDto, SessionStepsUpdate},
     },
     fit::parser::FitParser,
     logic::{
-        app, body_metrics, connect, devices, exercises,
+        activities, app, body_metrics, connect, devices, exercises,
         prompts::{
             self,
             helpers::{AppPrompter, Prompts},
         },
-        report, sessions, workouts,
+        report, workouts,
     },
     mtp::MtpClient,
     tests::common,
@@ -95,12 +95,12 @@ async fn workout_steps(app: &App<MockRuntime>, name: &str) -> Vec<WorkoutStep> {
         .steps
 }
 
-async fn insert_session(app: &App<MockRuntime>, date: u32, reps: u16, weight: f32) {
+async fn insert_activity(app: &App<MockRuntime>, date: u32, reps: u16, weight: f32) {
     app.state::<DatabasePool>()
         .run_in_transaction(async move |tx| {
-            let mut session = common::session(date);
-            session.steps = vec![common::set(date, 0, BENCH, reps, weight)];
-            common::insert_session(tx, session).await;
+            let mut activity = common::activity(date);
+            activity.steps = vec![common::set(date, 0, BENCH, reps, weight)];
+            common::insert_activity(tx, activity).await;
             Ok(())
         })
         .await
@@ -560,41 +560,41 @@ async fn catalog_lists_the_seeded_exercises() {
 #[tokio::test]
 async fn report_of_an_empty_range_is_empty() {
     let app = test_app().await;
-    insert_session(&app, 1_700_000_000, 10, 60.0).await;
+    insert_activity(&app, 1_700_000_000, 10, 60.0).await;
 
     let data = report::get_report_data(app.handle(), &app.state::<SettingsLock>(), 1, 2)
         .await
         .unwrap();
 
-    assert!(data.sessions.is_empty());
+    assert!(data.activities.is_empty());
     assert!(data.exercises.is_empty());
     assert!(data.body_metrics.is_empty());
 }
 
-// Sessions
+// Activities
 
 #[tokio::test]
-async fn session_changes_are_saved_and_records_recomputed() {
+async fn activity_changes_are_saved_and_records_recomputed() {
     let app = test_app().await;
     let date = 1_700_000_000;
-    insert_session(&app, date, 10, 60.0).await;
+    insert_activity(&app, date, 10, 60.0).await;
     let settings = app.state::<SettingsLock>();
 
-    let listed = sessions::get_sessions(app.handle(), &settings, None)
+    let listed = activities::get_activities(app.handle(), &settings, None)
         .await
         .unwrap();
     assert_eq!(listed.len(), 1);
 
-    let details = sessions::get_session_details(app.handle(), &settings, date)
+    let details = activities::get_activity_details(app.handle(), &settings, date)
         .await
         .unwrap();
-    let mut sets: Vec<SessionStepDto> = details.steps;
+    let mut sets: Vec<ActivityStepDto> = details.steps;
     sets[0].weight = Some(70.0);
 
-    sessions::save_session_changes(
+    activities::save_activity_changes(
         app.handle(),
         &settings,
-        SessionStepsUpdate {
+        ActivityStepsUpdate {
             timestamp: date,
             sets,
             notes: Some("Felt strong".to_string()),
@@ -603,7 +603,7 @@ async fn session_changes_are_saved_and_records_recomputed() {
     .await
     .unwrap();
 
-    let details = sessions::get_session_details(app.handle(), &settings, date)
+    let details = activities::get_activity_details(app.handle(), &settings, date)
         .await
         .unwrap();
     assert_eq!(details.steps[0].weight, Some(70.0));
@@ -617,10 +617,10 @@ async fn session_changes_are_saved_and_records_recomputed() {
 }
 
 #[tokio::test]
-async fn heatmap_is_available_without_sessions() {
+async fn heatmap_is_available_without_activities() {
     let app = test_app().await;
 
-    assert!(sessions::get_heatmap_data(app.handle()).await.is_ok());
+    assert!(activities::get_heatmap_data(app.handle()).await.is_ok());
 }
 
 // Workouts
@@ -661,16 +661,16 @@ async fn workouts_are_saved_edited_and_toggled() {
 }
 
 #[tokio::test]
-async fn stored_session_is_written_as_fit() {
+async fn stored_activity_is_written_as_fit() {
     let app = test_app().await;
     let date = 1_700_000_000;
-    insert_session(&app, date, 10, 60.0).await;
+    insert_activity(&app, date, 10, 60.0).await;
     let path = std::env::temp_dir().join(format!(
-        "gtrs-test-session-download-{}.fit",
+        "gtrs-test-activity-download-{}.fit",
         std::process::id()
     ));
 
-    sessions::helpers::write_session_fit(
+    activities::helpers::write_activity_fit(
         app.handle(),
         date,
         path.clone(),
@@ -679,7 +679,7 @@ async fn stored_session_is_written_as_fit() {
     )
     .await
     .unwrap();
-    let written = FitParser::from_file(&path).and_then(Session::try_from);
+    let written = FitParser::from_file(&path).and_then(Activity::try_from);
     let _ = std::fs::remove_file(&path);
     let written = written.unwrap();
 
@@ -692,14 +692,14 @@ async fn stored_session_is_written_as_fit() {
 }
 
 #[tokio::test]
-async fn missing_session_fails_to_write_as_fit() {
+async fn missing_activity_fails_to_write_as_fit() {
     let app = test_app().await;
     let path = std::env::temp_dir().join(format!(
-        "gtrs-test-session-download-missing-{}.fit",
+        "gtrs-test-activity-download-missing-{}.fit",
         std::process::id()
     ));
 
-    let res = sessions::helpers::write_session_fit(
+    let res = activities::helpers::write_activity_fit(
         app.handle(),
         1,
         path.clone(),
@@ -713,21 +713,21 @@ async fn missing_session_fails_to_write_as_fit() {
 }
 
 #[test]
-fn session_file_name_is_date_then_name() {
+fn activity_file_name_is_date_then_name() {
     let date = chrono::TimeZone::with_ymd_and_hms(&chrono::Local, 2026, 11, 4, 10, 37, 58)
         .unwrap()
         .timestamp() as u32;
 
     assert_eq!(
-        sessions::helpers::session_file_name(date, "Progresion 1 - Pierna"),
+        activities::helpers::activity_file_name(date, "Progresion 1 - Pierna"),
         "2026-11-04 Progresion 1 - Pierna.fit"
     );
     assert_eq!(
-        sessions::helpers::session_file_name(date, "Push/Pull"),
+        activities::helpers::activity_file_name(date, "Push/Pull"),
         "2026-11-04 Push-Pull.fit"
     );
     assert_eq!(
-        sessions::helpers::session_file_name(date, "  "),
+        activities::helpers::activity_file_name(date, "  "),
         "2026-11-04.fit"
     );
 }

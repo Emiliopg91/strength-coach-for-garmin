@@ -4,13 +4,13 @@ use std::collections::{BTreeSet, HashSet};
 
 use crate::{
     dao::{
+        activity_step::ActivityStep,
         body_metric::{BodyMetric, BodyMetricRepository},
         exercise::{self, Exercise, ExerciseRepository},
-        session_step::SessionStep,
     },
     logic::{
+        activities::helpers::{fetch_activities_details, fetch_activity_details},
         exercises::helpers::{fetch_exercise_details, fetch_exercises_details},
-        sessions::helpers::{fetch_session_details, fetch_sessions_details},
     },
     tests::common,
 };
@@ -70,7 +70,7 @@ async fn batched_muscles_match_the_relationship_fetcher() {
 }
 
 /// Details as JSON with their muscle lists sorted, as they come from a `HashSet` in any order.
-fn normalized(details: &[crate::dto::sessions::SessionDetails]) -> serde_json::Value {
+fn normalized(details: &[crate::dto::activities::ActivityDetails]) -> serde_json::Value {
     let mut value = serde_json::to_value(details).unwrap();
     for detail in value.as_array_mut().unwrap() {
         for key in ["primary_muscles", "secondary_muscles"] {
@@ -84,18 +84,18 @@ fn normalized(details: &[crate::dto::sessions::SessionDetails]) -> serde_json::V
 }
 
 #[tokio::test]
-async fn batched_session_details_match_single_ones_in_the_given_order() {
+async fn batched_activity_details_match_single_ones_in_the_given_order() {
     let db = common::test_db().await;
     db.run_in_transaction(async move |tx| {
         for (date, exercise) in [(1, BENCH), (2, CABLE_ROW)] {
-            let mut session = common::session(date);
-            session.steps = vec![
+            let mut activity = common::activity(date);
+            activity.steps = vec![
                 common::set(date, 0, exercise, 10, 50.0),
                 common::set(date, 1, exercise, 8, 55.0),
             ];
-            session.laps = vec![common::lap(date, 0, None)];
-            session.data = Some(common::additional_data(date));
-            common::insert_session(tx, session).await;
+            activity.laps = vec![common::lap(date, 0, None)];
+            activity.data = Some(common::additional_data(date));
+            common::insert_activity(tx, activity).await;
         }
         Ok(())
     })
@@ -104,10 +104,10 @@ async fn batched_session_details_match_single_ones_in_the_given_order() {
 
     let (batched, single) = db
         .run_in_connection(async move |conn| {
-            let batched = fetch_sessions_details(conn, &[2, 1], true, true).await?;
+            let batched = fetch_activities_details(conn, &[2, 1], true, true).await?;
             let single = vec![
-                fetch_session_details(conn, 2, true, true).await?,
-                fetch_session_details(conn, 1, true, true).await?,
+                fetch_activity_details(conn, 2, true, true).await?,
+                fetch_activity_details(conn, 1, true, true).await?,
             ];
             Ok((batched, single))
         })
@@ -117,17 +117,17 @@ async fn batched_session_details_match_single_ones_in_the_given_order() {
     let batched = normalized(&batched);
     assert_eq!(batched, normalized(&single));
     assert_eq!(batched[0]["timestamp"], 2);
-    // Each session only gets the muscles of its own exercises
+    // Each activity only gets the muscles of its own exercises
     assert_ne!(batched[0]["primary_muscles"], batched[1]["primary_muscles"]);
 }
 
 #[tokio::test]
-async fn no_sessions_give_no_details() {
+async fn no_activities_give_no_details() {
     let db = common::test_db().await;
 
     let details = db
         .run_in_connection(async move |conn| {
-            Ok(fetch_sessions_details(conn, &[], true, true).await?)
+            Ok(fetch_activities_details(conn, &[], true, true).await?)
         })
         .await
         .unwrap();
@@ -154,14 +154,14 @@ fn normalized_exercises(details: &[crate::dto::exercises::ExerciseDetails]) -> s
 async fn batched_exercise_details_match_single_ones() {
     let db = common::test_db().await;
     db.run_in_transaction(async move |tx| {
-        // Session 3 falls outside the range asked for
+        // Activity 3 falls outside the range asked for
         for (date, exercise) in [(10, BENCH), (20, CABLE_ROW), (30, BENCH)] {
-            let mut session = common::session(date);
-            session.steps = vec![
+            let mut activity = common::activity(date);
+            activity.steps = vec![
                 common::set(date, 0, exercise, 10, 5.0),
                 common::set(date, 1, exercise, 8, date as f32),
             ];
-            common::insert_session(tx, session).await;
+            common::insert_activity(tx, activity).await;
         }
         BodyMetricRepository::insert()
             .item(&mut BodyMetric {
@@ -173,7 +173,7 @@ async fn batched_exercise_details_match_single_ones() {
             })
             .execute_in(tx)
             .await?;
-        SessionStep::update_prs(tx, &HashSet::from([BENCH, CABLE_ROW]), &[]).await?;
+        ActivityStep::update_prs(tx, &HashSet::from([BENCH, CABLE_ROW]), &[]).await?;
         Ok(())
     })
     .await
@@ -197,7 +197,7 @@ async fn batched_exercise_details_match_single_ones() {
     let batched = normalized_exercises(&batched);
     assert_eq!(batched, normalized_exercises(&single));
     assert_eq!(batched.as_array().unwrap().len(), 3);
-    // Bench's record is in session 30, outside the range, but its session 10 is listed
+    // Bench's record is in activity 30, outside the range, but its activity 10 is listed
     assert_eq!(batched[0]["pr_date"], 30);
     assert_eq!(batched[0]["workouts"].as_array().unwrap().len(), 1);
 }

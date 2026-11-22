@@ -17,8 +17,8 @@ export default function SummarySection({ data }: Props): JSX.Element {
                 <b>{translate("body_metric_entries") + ": "}</b>
                 {data.body_metrics.length}
                 <br />
-                <b>{translate("sessions") + ": "}</b>
-                {data.sessions.length}
+                <b>{translate("activities") + ": "}</b>
+                {data.activities.length}
                 <br />
                 <b>{translate("exercises") + ": "}</b>
                 {data.exercises.length}

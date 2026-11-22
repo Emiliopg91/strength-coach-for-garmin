@@ -57,16 +57,16 @@ async fn set_increment(db: &DatabasePool, exercise: (u16, u16), increment: f32) 
     .unwrap();
 }
 
-async fn log_session(db: &DatabasePool, date: u32, sets: &[(u16, f32)]) {
+async fn log_activity(db: &DatabasePool, date: u32, sets: &[(u16, f32)]) {
     let sets = sets.to_vec();
     db.run_in_transaction(async move |tx| {
-        let mut session = common::session(date);
-        session.steps = sets
+        let mut activity = common::activity(date);
+        activity.steps = sets
             .iter()
             .enumerate()
             .map(|(idx, &(reps, weight))| common::set(date, idx as u8, BENCH, reps, weight))
             .collect();
-        common::insert_session(tx, session).await;
+        common::insert_activity(tx, activity).await;
         Ok(())
     })
     .await
@@ -160,8 +160,8 @@ async fn percent_step_resolves_against_the_best_recent_estimate() {
     let db = common::test_db().await;
     set_increment(&db, BENCH, 2.5).await;
     // Out of the window, so its higher estimate is ignored
-    log_session(&db, NOW - 9 * WEEK, &[(1, 140.0)]).await;
-    log_session(&db, NOW - WEEK, &[(1, 120.0), (5, 90.0)]).await;
+    log_activity(&db, NOW - 9 * WEEK, &[(1, 140.0)]).await;
+    log_activity(&db, NOW - WEEK, &[(1, 120.0), (5, 90.0)]).await;
     let workout = program(&db, 70, 60.0).await;
 
     assert_eq!(refresh(&db).await, vec![workout]);
@@ -175,7 +175,7 @@ async fn percent_step_resolves_against_the_best_recent_estimate() {
 async fn unchanged_percent_load_queues_nothing() {
     let db = common::test_db().await;
     set_increment(&db, BENCH, 2.5).await;
-    log_session(&db, NOW - WEEK, &[(1, 120.0)]).await;
+    log_activity(&db, NOW - WEEK, &[(1, 120.0)]).await;
     let workout = program(&db, 70, 60.0).await;
     refresh(&db).await;
     db.run_in_connection(async move |conn| {
@@ -191,7 +191,7 @@ async fn unchanged_percent_load_queues_nothing() {
 #[tokio::test]
 async fn percent_step_without_recent_sets_goes_unloaded() {
     let db = common::test_db().await;
-    log_session(&db, NOW - 9 * WEEK, &[(1, 120.0)]).await;
+    log_activity(&db, NOW - 9 * WEEK, &[(1, 120.0)]).await;
     let workout = program(&db, 70, 60.0).await;
 
     assert!(refresh(&db).await.is_empty());
@@ -202,7 +202,7 @@ async fn percent_step_without_recent_sets_goes_unloaded() {
 async fn percent_steps_stay_out_of_the_progression() {
     let db = common::test_db().await;
     set_increment(&db, BENCH, 2.5).await;
-    log_session(&db, NOW - WEEK, &[(12, 100.0), (12, 100.0)]).await;
+    log_activity(&db, NOW - WEEK, &[(12, 100.0), (12, 100.0)]).await;
     let workout = program(&db, 70, 100.0).await;
     refresh(&db).await;
     let resolved = step_weight(&db, workout, 0).await;
@@ -238,7 +238,7 @@ async fn unilateral_exercises_estimate_from_half_their_reps() {
     let db = common::test_db().await;
     set_increment(&db, BENCH, 2.5).await;
     // 10 reps: 120 kg estimated bilateral, 101 kg unilateral (5 reps a side)
-    log_session(&db, NOW - WEEK, &[(10, 90.0)]).await;
+    log_activity(&db, NOW - WEEK, &[(10, 90.0)]).await;
     let workout = program(&db, 70, 60.0).await;
     refresh(&db).await;
     assert_eq!(step_weight(&db, workout, 0).await, Some(85.0));

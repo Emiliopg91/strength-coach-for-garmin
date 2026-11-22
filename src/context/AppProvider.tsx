@@ -19,7 +19,7 @@ export function AppProvider({
     const [environment, setEnvironment] = useState(AppEnvironment.Release);
     const [cloudUploadAvailable, setCloudUploadAvailable] = useState(false);
     const [backendNotified, setBackendNotified] = useState(false);
-    const [sessionsVersion, setSessionsVersion] = useState(0);
+    const [activitiesVersion, setActivitiesVersion] = useState(0);
     const [progressionsAvailable, setProgressionsAvailableVal] =
         useState(false);
     const [rawCatalog, setRawCatalog] = useState<Record<number, number[]>>({});
@@ -96,9 +96,11 @@ export function AppProvider({
     });
 
     useEffect(() => {
-        const unregisterSessionsAdded = BackendListener.onSessionsAdded(() => {
-            setSessionsVersion((previous) => previous + 1);
-        });
+        const unregisterActivitiesAdded = BackendListener.onActivitiesAdded(
+            () => {
+                setActivitiesVersion((previous) => previous + 1);
+            },
+        );
         const unregisterProgressionAvailable =
             BackendListener.onProgressionsAvailable((val) => {
                 setProgressionsAvailableVal(val);
@@ -109,7 +111,7 @@ export function AppProvider({
         loadBackendData();
 
         return () => {
-            unregisterSessionsAdded();
+            unregisterActivitiesAdded();
             unregisterConnectLogged();
             unregisterProgressionAvailable();
         };
@@ -152,7 +154,7 @@ export function AppProvider({
     const value = {
         appReady,
         environment,
-        sessionsVersion,
+        activitiesVersion,
         exercisesCatalog,
         updateExerciseNotes,
         exerciseName,

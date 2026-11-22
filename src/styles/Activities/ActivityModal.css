@@ -1,0 +1,137 @@
+.activity-modal-name {
+  margin-left: 10px;
+}
+
+.activity-map {
+  position: relative;
+  height: 240px;
+  width: 100%;
+}
+
+.activity-map-canvas {
+  height: 100%;
+  width: 100%;
+}
+
+.activity-map-control {
+  background-color: rgba(30, 30, 30, 0.8);
+  border-radius: 4px;
+}
+
+.activity-hr-chart {
+  width: 100%;
+  height: 230px;
+  border-bottom: 1px solid white;
+}
+
+.activity-hr-legend-heading {
+  font-weight: bold;
+}
+
+.activity-hr-legend-zones {
+  display: flex;
+  justify-content: center;
+}
+
+.activity-hr-zone {
+  padding-left: 10px;
+  padding-right: 10px;
+
+  &:first-child {
+    padding-left: 0;
+  }
+
+  &:last-child {
+    padding-right: 0;
+  }
+}
+
+.activity-hr-zone-1 {
+  color: gray;
+}
+
+.activity-hr-zone-2 {
+  color: cyan;
+}
+
+.activity-hr-zone-3 {
+  color: green;
+}
+
+.activity-hr-zone-4 {
+  color: orange;
+}
+
+.activity-hr-zone-5 {
+  color: red;
+}
+
+.activity-sets-container {
+  position: relative;
+  top: -20px;
+}
+
+/* !important needed: MUI's InputBase sets width:100% at runtime,
+   injected after this file, same specificity */
+.activity-sets-reps-input {
+  width: 2em !important;
+  text-align: center;
+}
+
+.activity-sets-weight-input {
+  width: 3.5em !important;
+  text-align: center;
+}
+
+.activity-download-button {
+  /* Left of .modal-close-button, which takes 40px at right: 8px */
+  position: absolute;
+  right: 48px;
+  top: 8px;
+}
+
+.activity-sets-actions {
+  padding: 5px;
+}
+
+.group-cell-first {
+  padding-top: 5px;
+}
+
+.group-cell-last {
+  padding-bottom: 5px;
+}
+
+.activity-sets-rest-divider {
+  margin: 10px 0;
+}
+
+.activity-sets-values {
+  white-space: nowrap;
+}
+
+.activity-sets-values-cell {
+  vertical-align: top;
+}
+
+.activity-details-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.activity-muscle-model {
+  display: flex;
+  gap: 5px;
+}
+
+#activity-details-table td {
+  vertical-align: top;
+}
+
+.trophy-icon.activity-list-trophy {
+  position: relative !important;
+  top: -3px !important;
+  margin-left: 2px;
+}

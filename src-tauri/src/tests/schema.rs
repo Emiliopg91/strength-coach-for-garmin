@@ -2,9 +2,9 @@ use rusqlite_orm::{dao::Repository, database::builder::DatabaseConnectionBuilder
 
 use crate::{
     dao::{
-        body_metric::BodyMetricRepository, session::SessionRepository,
-        session_data::SessionDataRepository, session_lap::SessionLapRepository,
-        session_step::SessionStepRepository, workout::WorkoutRepository,
+        activity::ActivityRepository, activity_data::ActivityDataRepository,
+        activity_lap::ActivityLapRepository, activity_step::ActivityStepRepository,
+        body_metric::BodyMetricRepository, workout::WorkoutRepository,
         workout_device::WorkoutDeviceRepository, workout_step::StepType,
     },
     schema_ddls,
@@ -59,7 +59,7 @@ async fn migration_26_turns_rest_flag_into_kind() {
     db.create_schema(&before).await.unwrap();
 
     db.run_in_transaction(async move |tx| {
-        insert_legacy_session(tx, 1).await?;
+        insert_legacy_activity(tx, 1).await?;
         tx.execute_batch(
             "INSERT INTO SESSION_STEP (session, idx, exercise_category, exercise_id, reps, weight, pr, rest)
              VALUES (1, 0, 0, 1, 10, 50, 0, 0), (1, 1, NULL, NULL, 0, 0, 0, 1);",
@@ -70,7 +70,7 @@ async fn migration_26_turns_rest_flag_into_kind() {
 
     db.create_schema(&schema_ddls()).await.unwrap();
 
-    let mut steps = SessionStepRepository::select().fetch(&db).await.unwrap();
+    let mut steps = ActivityStepRepository::select().fetch(&db).await.unwrap();
     steps.sort_by_key(|s| s.idx);
     let kinds: Vec<_> = steps.into_iter().map(|s| s.kind).collect();
     assert_eq!(kinds, [StepType::Exercise, StepType::Rest]);
@@ -78,7 +78,7 @@ async fn migration_26_turns_rest_flag_into_kind() {
     let has_rest: bool = db
         .run_in_connection(async move |conn| {
             Ok(conn
-                .prepare("SELECT 1 FROM pragma_table_info('SESSION_STEP') WHERE name = 'rest'")?
+                .prepare("SELECT 1 FROM pragma_table_info('ACTIVITY_STEP') WHERE name = 'rest'")?
                 .exists([])?)
         })
         .await
@@ -127,18 +127,18 @@ async fn schema_creation_is_idempotent() {
 }
 
 #[tokio::test]
-async fn session_roundtrip_with_relationships() {
+async fn activity_roundtrip_with_relationships() {
     let db = common::test_db().await;
 
-    let mut session = common::session(1_700_000_000);
-    session.steps = vec![common::set(1_700_000_000, 0, (28, 0), 5, 100.0)];
-    session.laps = vec![common::lap(1_700_000_000, 0, Some((1, 2)))];
+    let mut activity = common::activity(1_700_000_000);
+    activity.steps = vec![common::set(1_700_000_000, 0, (28, 0), 5, 100.0)];
+    activity.laps = vec![common::lap(1_700_000_000, 0, Some((1, 2)))];
     let mut data = common::additional_data(1_700_000_000);
     data.notes = Some("Felt strong".to_string());
     data.distance = Some(1_000.0);
-    session.data = Some(data);
+    activity.data = Some(data);
 
-    let mut tx_session = session.clone();
+    let mut tx_activity = activity.clone();
     db.run_in_transaction(async move |tx| {
         let mut workout = crate::dao::workout::Workout {
             id: 0,
@@ -154,8 +154,8 @@ async fn session_roundtrip_with_relationships() {
             .item(&mut workout)
             .execute_in(tx)
             .await?;
-        tx_session.workout = Some(workout.id);
-        common::insert_session(tx, tx_session).await;
+        tx_activity.workout = Some(workout.id);
+        common::insert_activity(tx, tx_activity).await;
         Ok(())
     })
     .await
@@ -163,7 +163,7 @@ async fn session_roundtrip_with_relationships() {
 
     let stored = db
         .run_in_connection(async move |conn| {
-            let mut s = SessionRepository::select_by_id_in(conn, 1_700_000_000_u32)
+            let mut s = ActivityRepository::select_by_id_in(conn, 1_700_000_000_u32)
                 .await?
                 .unwrap();
             s.fetch_steps_relationship_in(conn).await?;
@@ -175,7 +175,7 @@ async fn session_roundtrip_with_relationships() {
         .await
         .unwrap();
 
-    assert_eq!(stored.name, session.name);
+    assert_eq!(stored.name, activity.name);
     assert_eq!(stored.steps.len(), 1);
     assert_eq!(stored.steps[0].weight, Some(100.0));
     assert_eq!(stored.laps.len(), 1);
@@ -189,17 +189,17 @@ async fn session_roundtrip_with_relationships() {
 }
 
 #[tokio::test]
-async fn deleting_a_session_cascades() {
+async fn deleting_an_activity_cascades() {
     let db = common::test_db().await;
 
-    let mut session = common::session(1);
-    session.steps = vec![common::set(1, 0, (28, 0), 5, 100.0)];
-    session.laps = vec![common::lap(1, 0, None)];
-    session.data = Some(common::additional_data(1));
+    let mut activity = common::activity(1);
+    activity.steps = vec![common::set(1, 0, (28, 0), 5, 100.0)];
+    activity.laps = vec![common::lap(1, 0, None)];
+    activity.data = Some(common::additional_data(1));
 
     db.run_in_transaction(async move |tx| {
-        common::insert_session(tx, session.clone()).await;
-        session.delete_by_id_in(tx).await?;
+        common::insert_activity(tx, activity.clone()).await;
+        activity.delete_by_id_in(tx).await?;
         Ok(())
     })
     .await
@@ -208,9 +208,9 @@ async fn deleting_a_session_cascades() {
     let (sets, laps, data) = db
         .run_in_connection(async move |conn| {
             Ok((
-                SessionStepRepository::select().fetch_in(conn).await?.len(),
-                SessionLapRepository::select().fetch_in(conn).await?.len(),
-                SessionDataRepository::select().fetch_in(conn).await?.len(),
+                ActivityStepRepository::select().fetch_in(conn).await?.len(),
+                ActivityLapRepository::select().fetch_in(conn).await?.len(),
+                ActivityDataRepository::select().fetch_in(conn).await?.len(),
             ))
         })
         .await
@@ -223,17 +223,17 @@ async fn deleting_a_session_cascades() {
 async fn set_requires_known_exercise() {
     let db = common::test_db().await;
 
-    let mut session = common::session(1);
-    session.steps = vec![common::set(1, 0, (9999, 9999), 5, 100.0)];
+    let mut activity = common::activity(1);
+    activity.steps = vec![common::set(1, 0, (9999, 9999), 5, 100.0)];
 
     let res = db
         .run_in_transaction(async move |tx| {
-            let mut sets = std::mem::take(&mut session.steps);
-            SessionRepository::insert()
-                .item(&mut session.clone())
+            let mut sets = std::mem::take(&mut activity.steps);
+            ActivityRepository::insert()
+                .item(&mut activity.clone())
                 .execute_in(tx)
                 .await?;
-            SessionStepRepository::insert()
+            ActivityStepRepository::insert()
                 .item(&mut sets[0])
                 .execute_in(tx)
                 .await?;
@@ -257,7 +257,7 @@ async fn migration_27_nulls_reps_and_weight_only_on_rest_steps() {
     db.create_schema(&before).await.unwrap();
 
     db.run_in_transaction(async move |tx| {
-        insert_legacy_session(tx, 1).await?;
+        insert_legacy_activity(tx, 1).await?;
         tx.execute_batch(
             "INSERT INTO SESSION_STEP (session, idx, exercise_category, exercise_id, reps, weight, pr, duration, kind)
              VALUES (1, 0, 0, 1, 10, 50, 1, 60, 'Exercise'),
@@ -270,7 +270,7 @@ async fn migration_27_nulls_reps_and_weight_only_on_rest_steps() {
 
     db.create_schema(&schema_ddls()).await.unwrap();
 
-    let mut steps = SessionStepRepository::select().fetch(&db).await.unwrap();
+    let mut steps = ActivityStepRepository::select().fetch(&db).await.unwrap();
     steps.sort_by_key(|s| s.idx);
 
     let values: Vec<_> = steps
@@ -289,7 +289,7 @@ async fn migration_27_nulls_reps_and_weight_only_on_rest_steps() {
     let indexes: i64 = db
         .run_in_connection(async move |conn| {
             Ok(conn.query_row(
-                "SELECT count(*) FROM sqlite_master WHERE type = 'index' AND tbl_name = 'SESSION_STEP' AND sql IS NOT NULL",
+                "SELECT count(*) FROM sqlite_master WHERE type = 'index' AND tbl_name = 'ACTIVITY_STEP' AND sql IS NOT NULL",
                 [],
                 |r| r.get(0),
             )?)
@@ -311,7 +311,7 @@ async fn migration_27_keeps_the_children_of_rebuilt_tables() {
     db.create_schema(&before).await.unwrap();
 
     db.run_in_transaction(async move |tx| {
-        insert_legacy_session(tx, 1).await?;
+        insert_legacy_activity(tx, 1).await?;
         tx.execute_batch(
             "INSERT INTO LAP (session, idx) VALUES (1, 0);
              INSERT INTO ADDITIONAL_DATA (session, max_hr) VALUES (1, 190);
@@ -371,9 +371,9 @@ async fn migration_27_keeps_the_children_of_rebuilt_tables() {
 async fn catalogs_in_use_cannot_be_deleted() {
     let db = common::test_db().await;
     db.run_in_transaction(async move |tx| {
-        let mut session = common::session(1);
-        session.steps = vec![common::set(1, 0, (0, 1), 10, 50.0)];
-        common::insert_session(tx, session).await;
+        let mut activity = common::activity(1);
+        activity.steps = vec![common::set(1, 0, (0, 1), 10, 50.0)];
+        common::insert_activity(tx, activity).await;
         Ok(())
     })
     .await
@@ -477,7 +477,7 @@ async fn migration_28_drops_chart_flag_and_cascades_workout_device() {
     let has_chart_flag: bool = db
         .run_in_connection(async move |conn| {
             Ok(conn.query_row(
-                "SELECT COUNT(*) > 0 FROM pragma_table_info('SESSION') WHERE name = 'show_exercises_chart'",
+                "SELECT COUNT(*) > 0 FROM pragma_table_info('ACTIVITY') WHERE name = 'show_exercises_chart'",
                 [],
                 |r| r.get(0),
             )?)
@@ -516,7 +516,7 @@ async fn migration_30_tunes_indexes() {
     assert_eq!(index_sql("WORKOUT_STEP_WORKOUT").await, None);
     assert!(index_sql("MUSCLE_EXERCISE_EXERCISE").await.is_some());
     assert!(
-        index_sql("SESSION_STEP_EXERCISE_PR")
+        index_sql("ACTIVITY_STEP_EXERCISE_PR")
             .await
             .unwrap()
             .ends_with("WHERE pr = true")
@@ -526,7 +526,7 @@ async fn migration_30_tunes_indexes() {
     let plan: Vec<String> = db
         .run_in_connection(async move |conn| {
             let mut stmt = conn.prepare(
-                "EXPLAIN QUERY PLAN SELECT session FROM SESSION_STEP
+                "EXPLAIN QUERY PLAN SELECT activity FROM ACTIVITY_STEP
                  WHERE pr=true AND exercise_category IS NOT NULL AND exercise_id IS NOT NULL",
             )?;
             let rows = stmt
@@ -537,7 +537,7 @@ async fn migration_30_tunes_indexes() {
         .await
         .unwrap();
     assert!(
-        plan.iter().any(|p| p.contains("SESSION_STEP_EXERCISE_PR")),
+        plan.iter().any(|p| p.contains("ACTIVITY_STEP_EXERCISE_PR")),
         "{plan:?}"
     );
 }
@@ -571,19 +571,19 @@ async fn migration_34_indexes_records_by_load() {
         .await
         .unwrap()
     };
-    assert!(!index_exists("SESSION_STEP_PR").await);
-    assert!(!index_exists("SESSION_STEP_EXERCISE").await);
+    assert!(!index_exists("ACTIVITY_STEP_PR").await);
+    assert!(!index_exists("ACTIVITY_STEP_EXERCISE").await);
 
     // The record of an exercise is read straight from the index, without sorting its sets
     let record = plan(
-        "SELECT * FROM SESSION_STEP WHERE exercise_category=1 AND exercise_id=2
-         ORDER BY weight DESC, reps DESC, session ASC, idx ASC LIMIT 1",
+        "SELECT * FROM ACTIVITY_STEP WHERE exercise_category=1 AND exercise_id=2
+         ORDER BY weight DESC, reps DESC, activity ASC, idx ASC LIMIT 1",
     )
     .await;
     assert!(
         record
             .iter()
-            .any(|p| p.contains("SESSION_STEP_EXERCISE_RECORD")),
+            .any(|p| p.contains("ACTIVITY_STEP_EXERCISE_RECORD")),
         "{record:?}"
     );
     assert!(
@@ -591,39 +591,39 @@ async fn migration_34_indexes_records_by_load() {
         "{record:?}"
     );
 
-    // Every record, as `SessionStep::get_personal_records` asks for them, scans the partial index
+    // Every record, as `ActivityStep::get_personal_records` asks for them, scans the partial index
     let records = plan(
-        "SELECT * FROM SESSION_STEP
+        "SELECT * FROM ACTIVITY_STEP
          WHERE pr=true AND exercise_category IS NOT NULL AND exercise_id IS NOT NULL",
     )
     .await;
     assert!(
         records
             .iter()
-            .any(|p| p.contains("SESSION_STEP_EXERCISE_PR")),
+            .any(|p| p.contains("ACTIVITY_STEP_EXERCISE_PR")),
         "{records:?}"
     );
 }
 
-/// Inserts a session with raw SQL, using only the columns that exist before migration 28:
-/// the `Session` entity tracks the latest schema, so its inserts fail on older ones.
-async fn insert_legacy_session(
+/// Inserts an activity with raw SQL, using only the columns that exist before migration 28:
+/// the `Activity` entity tracks the latest schema, so its inserts fail on older ones.
+pub(crate) async fn insert_legacy_activity(
     tx: &rusqlite_orm::rusqlite::Transaction<'_>,
     date: u32,
 ) -> rusqlite_orm::rusqlite::Result<()> {
-    let session = common::session(date);
+    let activity = common::activity(date);
     tx.execute(
         "INSERT INTO SESSION (date, name, total_elapsed_time, active_time, active_calories, training_load, sport, sub_sport)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
         rusqlite_orm::rusqlite::params![
-            session.date,
-            session.name,
-            session.total_elapsed_time,
-            session.active_time,
-            session.active_calories,
-            session.training_load,
-            session.sport,
-            session.sub_sport,
+            activity.date,
+            activity.name,
+            activity.total_elapsed_time,
+            activity.active_time,
+            activity.active_calories,
+            activity.training_load,
+            activity.sport,
+            activity.sub_sport,
         ],
     )?;
     Ok(())

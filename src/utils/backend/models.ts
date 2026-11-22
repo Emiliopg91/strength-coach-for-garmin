@@ -1,5 +1,77 @@
 //Auto generated file, do not edit manually
 
+// From src-tauri/src/dto/activities.rs:104
+export interface ActivityDetails {
+  active_calories: number;
+  active_time: number;
+  connect_id: string | null;
+  coordinates: ([number, number] | null)[];
+  device: string | null;
+  distance: number | null;
+  heart_rates: (number | null)[];
+  laps: ActivityLapDto[];
+  max_hr: number;
+  name: string;
+  notes: string;
+  primary_muscles: string[];
+  secondary_muscles: string[];
+  speeds: (number | null)[];
+  sport: number;
+  steps: ActivityStepDto[];
+  sub_sport: number;
+  timestamp: number;
+  total_elapsed_time: number;
+  training_load: number;
+}
+
+// From src-tauri/src/dto/activities.rs:87
+export interface ActivityLapDto {
+  idx: number;
+  start_latitude: number | null;
+  start_longitude: number | null;
+}
+
+// From src-tauri/src/dto/activities.rs:14
+export interface ActivityListItem {
+  active_calories: number;
+  has_record: boolean;
+  has_sets: boolean;
+  name: string;
+  sport: number;
+  sub_sport: number;
+  timestamp: number;
+  total_elapsed_time: number;
+  training_load: number;
+}
+
+// From src-tauri/src/dto/activities.rs:198
+export interface ActivityLocation {
+  activity: number;
+  location: string;
+}
+
+// From src-tauri/src/dto/activities.rs:54
+export interface ActivityStepDto {
+  duration: number | null;
+  duration_ref: number | null;
+  ex_cat: number | null;
+  ex_id: number | null;
+  idx: number;
+  kind: StepType;
+  pr: boolean;
+  reps: number | null;
+  reps_ref: number | null;
+  weight: number | null;
+  weight_ref: number | null;
+}
+
+// From src-tauri/src/dto/activities.rs:191
+export interface ActivityStepsUpdate {
+  notes: string | null;
+  sets: ActivityStepDto[];
+  timestamp: number;
+}
+
 // From src-tauri/src/dto/app.rs:5
 export enum AppEnvironment {
 	Debug = "Debug",
@@ -48,6 +120,12 @@ export interface Exercise {
   weight: number;
 }
 
+// From src-tauri/src/dto/exercises.rs:38
+export interface ExerciseActivity {
+  series: ActivityStepDto[];
+  weight: number | null;
+}
+
 // From src-tauri/src/dao/exercise_category.rs:9
 export interface ExerciseCategory {
   id: number;
@@ -56,6 +134,7 @@ export interface ExerciseCategory {
 
 // From src-tauri/src/dto/exercises.rs:44
 export interface ExerciseDetails {
+  activities: Record<string, ExerciseActivity>;
   category: number;
   id: number;
   notes: string | null;
@@ -66,7 +145,6 @@ export interface ExerciseDetails {
   reps: number;
   reps_range: string;
   secondary_muscles: string[];
-  sessions: Record<string, ExerciseSession>;
   unilateral: boolean;
   weight: number;
   workouts: string[];
@@ -83,12 +161,6 @@ export interface ExerciseListItem {
   unilateral: boolean;
   used: boolean;
   weight: number;
-}
-
-// From src-tauri/src/dto/exercises.rs:38
-export interface ExerciseSession {
-  series: SessionStepDto[];
-  weight: number | null;
 }
 
 // From src-tauri/src/utils/translations.rs:10
@@ -111,7 +183,7 @@ export interface MuscleExercise {
   muscle_obj: Muscle | null;
 }
 
-// From src-tauri/src/dto/workouts.rs:53
+// From src-tauri/src/dto/workouts.rs:55
 export interface PercentLoadBase {
   ex_cat: number;
   ex_id: number;
@@ -142,81 +214,9 @@ export interface PromptRequest {
 
 // From src-tauri/src/dto/report.rs:8
 export interface ReportData {
+  activities: ActivityDetails[];
   body_metrics: BodyMetricListItem[];
   exercises: ExerciseDetails[];
-  sessions: SessionDetails[];
-}
-
-// From src-tauri/src/dto/sessions.rs:104
-export interface SessionDetails {
-  active_calories: number;
-  active_time: number;
-  connect_id: string | null;
-  coordinates: ([number, number] | null)[];
-  device: string | null;
-  distance: number | null;
-  heart_rates: (number | null)[];
-  laps: SessionLapDto[];
-  max_hr: number;
-  name: string;
-  notes: string;
-  primary_muscles: string[];
-  secondary_muscles: string[];
-  speeds: (number | null)[];
-  sport: number;
-  steps: SessionStepDto[];
-  sub_sport: number;
-  timestamp: number;
-  total_elapsed_time: number;
-  training_load: number;
-}
-
-// From src-tauri/src/dto/sessions.rs:87
-export interface SessionLapDto {
-  idx: number;
-  start_latitude: number | null;
-  start_longitude: number | null;
-}
-
-// From src-tauri/src/dto/sessions.rs:14
-export interface SessionListItem {
-  active_calories: number;
-  has_record: boolean;
-  has_sets: boolean;
-  name: string;
-  sport: number;
-  sub_sport: number;
-  timestamp: number;
-  total_elapsed_time: number;
-  training_load: number;
-}
-
-// From src-tauri/src/dto/sessions.rs:193
-export interface SessionLocation {
-  location: string;
-  session: number;
-}
-
-// From src-tauri/src/dto/sessions.rs:54
-export interface SessionStepDto {
-  duration: number | null;
-  duration_ref: number | null;
-  ex_cat: number | null;
-  ex_id: number | null;
-  idx: number;
-  kind: StepType;
-  pr: boolean;
-  reps: number | null;
-  reps_ref: number | null;
-  weight: number | null;
-  weight_ref: number | null;
-}
-
-// From src-tauri/src/dto/sessions.rs:186
-export interface SessionStepsUpdate {
-  notes: string | null;
-  sets: SessionStepDto[];
-  timestamp: number;
 }
 
 // From src-tauri/src/dto/app.rs:16
@@ -257,47 +257,47 @@ export interface Workout {
   steps: WorkoutStep[];
 }
 
-// From src-tauri/src/dto/workouts.rs:35
+// From src-tauri/src/dto/workouts.rs:20
+export interface WorkoutActivity {
+  date: number;
+  time: number;
+  volume: number;
+}
+
+// From src-tauri/src/dto/workouts.rs:37
 export interface WorkoutDetails {
+  activities: WorkoutActivity[];
+  activity_count: number;
   avg_time: number;
   avg_volume: number;
   enabled: boolean;
   id: number;
-  latest_session: number | null;
+  latest_activity: number | null;
   name: string;
   notes: string | null;
   primary_muscles: string[];
   progression: boolean;
   secondary_muscles: string[];
-  session_count: number;
-  sessions: WorkoutSession[];
   steps: WorkoutStep[];
 }
 
-// From src-tauri/src/dto/workouts.rs:6
+// From src-tauri/src/dto/workouts.rs:8
 export interface WorkoutListItem {
+  activities: number;
   avg_load: number;
   avg_time: number;
   enabled: boolean;
   has_steps: boolean;
   id: number;
-  latest_session: number | null;
+  latest_activity: number | null;
   name: string;
-  sessions: number;
 }
 
-// From src-tauri/src/dto/workouts.rs:63
+// From src-tauri/src/dto/workouts.rs:65
 export interface WorkoutPlanListItem {
+  activity: number | null;
   date: number;
-  session: number | null;
   workout: number;
-}
-
-// From src-tauri/src/dto/workouts.rs:18
-export interface WorkoutSession {
-  date: number;
-  time: number;
-  volume: number;
 }
 
 // From src-tauri/src/dao/workout_step.rs:33

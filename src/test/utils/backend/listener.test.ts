@@ -62,9 +62,9 @@ describe("BackendListener", () => {
 
     it("invokes payload-less callbacks", () => {
         const callback = vi.fn();
-        BackendListener.onSessionsAdded(callback);
+        BackendListener.onActivitiesAdded(callback);
 
-        emit("sessions_added", undefined);
+        emit("activities_added", undefined);
         expect(callback).toHaveBeenCalledTimes(1);
     });
 

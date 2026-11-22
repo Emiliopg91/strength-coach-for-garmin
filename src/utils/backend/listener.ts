@@ -2,9 +2,17 @@
 
 import { listen } from "@tauri-apps/api/event";
 
-import { DeviceListItem, PromptRequest, SessionLocation } from "./models";
+import { ActivityLocation, DeviceListItem, PromptRequest } from "./models";
 
 export class BackendListener {
+	public static onActivitiesAdded(callback: () => void): () => void {
+	  return BackendListener.inner_listen<undefined>("activities_added", callback);
+	}
+
+	public static onActivityLocationUpdate(callback: (payload: ActivityLocation) => void): () => void {
+	  return BackendListener.inner_listen<ActivityLocation>("activity_location_update", callback);
+	}
+
 	public static onAddedWorkoutSteps(callback: (payload: number[]) => void): () => void {
 	  return BackendListener.inner_listen<number[]>("added_workout_steps", callback);
 	}
@@ -35,14 +43,6 @@ export class BackendListener {
 
 	public static onPromptRequested(callback: (payload: PromptRequest) => void): () => void {
 	  return BackendListener.inner_listen<PromptRequest>("prompt_requested", callback);
-	}
-
-	public static onSessionLocationUpdate(callback: (payload: SessionLocation) => void): () => void {
-	  return BackendListener.inner_listen<SessionLocation>("session_location_update", callback);
-	}
-
-	public static onSessionsAdded(callback: () => void): () => void {
-	  return BackendListener.inner_listen<undefined>("sessions_added", callback);
 	}
 
 	public static onStartLoading(callback: () => void): () => void {

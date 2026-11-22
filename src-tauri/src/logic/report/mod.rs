@@ -49,8 +49,8 @@ pub async fn get_report_data<R: Runtime>(
 
     res.inspect(|data| {
         info!(
-            "Retrieved report data: {} sessions, {} exercises, {} body metrics",
-            data.sessions.len(),
+            "Retrieved report data: {} activities, {} exercises, {} body metrics",
+            data.activities.len(),
             data.exercises.len(),
             data.body_metrics.len()
         )

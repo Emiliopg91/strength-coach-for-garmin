@@ -1,6 +1,6 @@
 import { AppContext } from "@/context/AppContext";
 import { I18nSettingsContext } from "@/context/I18nSettingsContext";
-import { SessionUtils } from "@/utils/SessionUtils";
+import { ActivityUtils } from "@/utils/ActivityUtils";
 import { useContext } from "react";
 import PriorityHighIcon from "@mui/icons-material/PriorityHigh";
 import { Tooltip } from "@mui/material";
@@ -16,7 +16,7 @@ export function ExerciseRow({ exercise, onSelect }: Props) {
         useContext(I18nSettingsContext);
     const { exerciseName } = useContext(AppContext);
 
-    const e1rm = SessionUtils.estimate1rm(
+    const e1rm = ActivityUtils.estimate1rm(
         exercise.weight,
         exercise.reps,
         exercise.unilateral,

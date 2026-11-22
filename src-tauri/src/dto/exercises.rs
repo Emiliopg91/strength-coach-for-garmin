@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{dao::exercise::Exercise, dto::sessions::SessionStepDto};
+use crate::{dao::exercise::Exercise, dto::activities::ActivityStepDto};
 
 #[derive(Serialize)]
 pub struct ExerciseListItem {
@@ -35,9 +35,9 @@ impl From<&Exercise> for ExerciseListItem {
 }
 
 #[derive(Serialize, Default)]
-pub struct ExerciseSession {
+pub struct ExerciseActivity {
     pub weight: Option<f32>,
-    pub series: Vec<SessionStepDto>,
+    pub series: Vec<ActivityStepDto>,
 }
 
 #[derive(Serialize)]
@@ -48,7 +48,7 @@ pub struct ExerciseDetails {
     pub weight: f32,
     pub unilateral: bool,
     pub workouts: Vec<String>,
-    pub sessions: HashMap<String, ExerciseSession>,
+    pub activities: HashMap<String, ExerciseActivity>,
     pub pr_date: u32,
     pub progression: bool,
     pub reps_range: String,
@@ -66,7 +66,7 @@ impl From<&Exercise> for ExerciseDetails {
             reps: 0,
             weight: 0_f32,
             workouts: Vec::new(),
-            sessions: HashMap::new(),
+            activities: HashMap::new(),
             pr_date: 0,
             unilateral: value.unilateral,
             progression: value.progression,

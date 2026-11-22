@@ -16,8 +16,8 @@ use crate::{
     dao::{exercise::Exercise, workout::Workout, workout_step::WorkoutStep},
     dto::exercises::{ExerciseDetails, ExerciseListItem, ProgressionSuggestion},
     logic::{
-        connect::helpers::sync_workouts_connect, devices::helpers::push_pending_to_usb, pool,
-        report_error, sessions::helpers::spawn_percent_load_sync,
+        activities::helpers::spawn_percent_load_sync, connect::helpers::sync_workouts_connect,
+        devices::helpers::push_pending_to_usb, pool, report_error,
     },
     utils::time::now,
 };
@@ -43,7 +43,7 @@ pub async fn get_exercises<R: Runtime>(
         })
 }
 
-/// Returns the personal record and full per-session set history for one exercise.
+/// Returns the personal record and full per-activity set history for one exercise.
 pub async fn get_exercise_details<R: Runtime>(
     app: &AppHandle<R>,
     settings: &SettingsLock,

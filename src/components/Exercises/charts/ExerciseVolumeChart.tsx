@@ -1,6 +1,6 @@
 import { I18nSettingsContext } from "@/context/I18nSettingsContext";
-import { ExerciseDetails, ExerciseSession } from "@/utils/backend/models";
-import { ExerciseChartPoint, SessionUtils } from "@/utils/SessionUtils";
+import { ExerciseDetails, ExerciseActivity } from "@/utils/backend/models";
+import { ExerciseChartPoint, ActivityUtils } from "@/utils/ActivityUtils";
 import { useContext, useState } from "react";
 import {
     CartesianGrid,
@@ -16,7 +16,7 @@ import {
 
 type Props = {
     exercise: ExerciseDetails;
-    series: Record<string, ExerciseSession>;
+    series: Record<string, ExerciseActivity>;
 };
 
 type LineKey = "weight" | "reps" | "e1rm" | "relativeWeight";
@@ -63,7 +63,7 @@ export function ExerciseVolumeChart({ series, exercise }: Props) {
     const { translate } = useContext(I18nSettingsContext);
     const [hidden, setHidden] = useState<Set<LineKey>>(new Set());
 
-    const chartData = SessionUtils.exerciseChartData(
+    const chartData = ActivityUtils.exerciseChartData(
         series,
         exercise.unilateral,
     );

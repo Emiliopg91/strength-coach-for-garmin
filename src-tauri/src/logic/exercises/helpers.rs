@@ -4,20 +4,20 @@ use rusqlite_orm::rusqlite::Connection;
 
 use crate::{
     dao::{
+        activity::Activity,
+        activity_step::ActivityStep,
         body_metric::BodyMetric,
         exercise::{Exercise, GENERIC_EXERCISE_ID},
         exercise_category::ExerciseCategory,
-        session::Session,
-        session_step::SessionStep,
         workout_step::WorkoutStep,
     },
     dto::{
+        activities::ActivityStepDto,
         exercises::{ExerciseDetails, ExerciseListItem, ProgressionSuggestion},
-        sessions::SessionStepDto,
     },
 };
 
-/// Loads the personal record and full per-session set history for one exercise.
+/// Loads the personal record and full per-activity set history for one exercise.
 pub(crate) async fn fetch_exercise_details(
     conn: &Connection,
     category: u16,
@@ -25,7 +25,7 @@ pub(crate) async fn fetch_exercise_details(
     from_to: Option<(u32, u32)>,
 ) -> rusqlite_orm::errors::Result<ExerciseDetails> {
     let exercise = Exercise::get_with_muscles(conn, category, id).await?;
-    let series = SessionStep::get_by_exercise(conn, category, id).await?;
+    let series = ActivityStep::get_by_exercise(conn, category, id).await?;
     if !series.iter().any(|s| s.pr) {
         return Ok(build_exercise_details(
             &exercise,
@@ -35,9 +35,9 @@ pub(crate) async fn fetch_exercise_details(
         ));
     }
 
-    // The sessions with this exercise are exactly those of its sets
-    let session_dates: HashSet<u32> = series.iter().map(|s| s.session).collect();
-    let workouts = Session::get_names_by_dates(conn, &session_dates, from_to).await?;
+    // The activities with this exercise are exactly those of its sets
+    let activity_dates: HashSet<u32> = series.iter().map(|s| s.activity).collect();
+    let workouts = Activity::get_names_by_dates(conn, &activity_dates, from_to).await?;
     let body_metrics = BodyMetric::get_by_range(conn, None).await?;
     Ok(build_exercise_details(
         &exercise,
@@ -61,20 +61,20 @@ pub(crate) async fn fetch_exercises_details(
         .map(|e| ((e.category, e.id), e))
         .collect();
 
-    let mut series = SessionStep::get_by_exercises(conn, keys).await?;
+    let mut series = ActivityStep::get_by_exercises(conn, keys).await?;
 
-    // Only exercises with a record list their sessions
-    let session_dates: HashSet<u32> = series
+    // Only exercises with a record list their activities
+    let activity_dates: HashSet<u32> = series
         .values()
         .filter(|sets| sets.iter().any(|s| s.pr))
         .flatten()
-        .map(|s| s.session)
+        .map(|s| s.activity)
         .collect();
-    let (workouts, body_metrics) = if session_dates.is_empty() {
+    let (workouts, body_metrics) = if activity_dates.is_empty() {
         (HashMap::new(), Vec::new())
     } else {
         (
-            Session::get_names_by_dates(conn, &session_dates, from_to).await?,
+            Activity::get_names_by_dates(conn, &activity_dates, from_to).await?,
             BodyMetric::get_by_range(conn, None).await?,
         )
     };
@@ -94,12 +94,12 @@ pub(crate) async fn fetch_exercises_details(
         .collect())
 }
 
-/// Details of `exercise` from its `series` (newest session first), naming each session after
-/// `workouts` (sessions not in it are skipped) and pairing it with the body weight of
+/// Details of `exercise` from its `series` (newest activity first), naming each activity after
+/// `workouts` (activities not in it are skipped) and pairing it with the body weight of
 /// `body_metrics` (newest first) measured before it. Without a record, only the exercise.
 fn build_exercise_details(
     exercise: &Exercise,
-    series: Vec<SessionStep>,
+    series: Vec<ActivityStep>,
     workouts: &HashMap<u32, String>,
     body_metrics: &[BodyMetric],
 ) -> ExerciseDetails {
@@ -109,26 +109,26 @@ fn build_exercise_details(
     };
     res.reps = pr.reps.unwrap_or_default();
     res.weight = pr.weight.unwrap_or_default();
-    res.pr_date = pr.session;
+    res.pr_date = pr.activity;
 
-    let mut last_session = None;
+    let mut last_activity = None;
     let mut ex_str = String::new();
     for serie in series {
-        // Sessions outside the range aren't in `workouts`: their sets are skipped
-        let Some(workout) = workouts.get(&serie.session) else {
+        // Activities outside the range aren't in `workouts`: their sets are skipped
+        let Some(workout) = workouts.get(&serie.activity) else {
             continue;
         };
-        if last_session != Some(serie.session) {
-            ex_str = format!("{}\n{}", workout, serie.session);
+        if last_activity != Some(serie.activity) {
+            ex_str = format!("{}\n{}", workout, serie.activity);
             res.workouts.push(ex_str.clone());
-            last_session = Some(serie.session);
+            last_activity = Some(serie.activity);
         }
 
-        let entry = res.sessions.entry(ex_str.clone()).or_default();
+        let entry = res.activities.entry(ex_str.clone()).or_default();
         entry.weight = body_metrics
             .iter()
-            .find_map(|b| (b.date < serie.session).then_some(b.weight));
-        entry.series.push(SessionStepDto::from(&serie));
+            .find_map(|b| (b.date < serie.activity).then_some(b.weight));
+        entry.series.push(ActivityStepDto::from(&serie));
     }
     res
 }
@@ -170,8 +170,8 @@ pub(crate) async fn exercises_catalog(
 pub(crate) async fn update_all_prs(
     tx: &rusqlite_orm::rusqlite::Transaction<'_>,
 ) -> rusqlite_orm::errors::Result<()> {
-    let exercises = SessionStep::get_performed_exercises(tx).await?;
-    SessionStep::update_prs(tx, &exercises, &[])
+    let exercises = ActivityStep::get_performed_exercises(tx).await?;
+    ActivityStep::update_prs(tx, &exercises, &[])
         .await
         .map(|_| ())
 }
@@ -242,10 +242,10 @@ async fn progression_suggestions_for<'a>(
         return Ok(HashMap::new());
     }
 
-    // Sets of the latest session of each exercise
+    // Sets of the latest activity of each exercise
     let keys: HashSet<(u16, u16)> = exercises.keys().copied().collect();
     let mut latest: HashMap<(u16, u16), Vec<Set>> = HashMap::new();
-    for (key, _, weight, reps) in SessionStep::get_latest_exercise_sets(conn, &keys).await? {
+    for (key, _, weight, reps) in ActivityStep::get_latest_exercise_sets(conn, &keys).await? {
         latest.entry(key).or_default().push((weight, reps));
     }
 
@@ -276,7 +276,7 @@ async fn progression_suggestions_for<'a>(
         .collect())
 }
 
-/// Load to suggest for `exercise` given the `sets` of its latest session, `None` if they don't
+/// Load to suggest for `exercise` given the `sets` of its latest activity, `None` if they don't
 /// share a weight or don't all reach its rep range.
 fn suggestion_from_sets(exercise: &Exercise, sets: &[Set]) -> Option<ProgressionSuggestion> {
     let &(weight, _) = sets.first()?;
@@ -320,7 +320,7 @@ pub(super) async fn exercise_list(
     conn: &Connection,
 ) -> rusqlite_orm::errors::Result<Vec<ExerciseListItem>> {
     // Only exercise sets can hold a record; the filter just keeps the unwraps below safe
-    let prs: Vec<_> = SessionStep::get_personal_records(conn)
+    let prs: Vec<_> = ActivityStep::get_personal_records(conn)
         .await?
         .into_iter()
         .filter(|s| s.ex_cat.is_some() && s.ex_id.is_some())
@@ -363,7 +363,7 @@ pub(super) async fn exercise_list(
                 id: key.1,
                 reps: pr.reps.unwrap_or_default(),
                 weight: pr.weight.unwrap_or_default(),
-                date: pr.session,
+                date: pr.activity,
                 unilateral: exercise.is_some_and(|e| e.unilateral),
                 progression: suggested_progressions.contains_key(&key),
                 notes: exercise.and_then(|e| e.notes.clone()),

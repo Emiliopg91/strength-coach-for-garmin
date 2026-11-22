@@ -12,7 +12,7 @@ use rusqlite_orm::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{connect::client::DeviceSummary, dao::session::Session, utils::constants};
+use crate::{connect::client::DeviceSummary, dao::activity::Activity, utils::constants};
 
 #[derive(Clone, Entity, Serialize, Deserialize)]
 #[primary_key(serial)]
@@ -110,7 +110,7 @@ impl Device {
         Ok(discovered)
     }
 
-    /// The Connect pseudo-device and the dates of every stored session, to import only new activities.
+    /// The Connect pseudo-device and the dates of every stored activity, to import only new activities.
     pub async fn get_connect_import_state(
         conn: &Connection,
     ) -> rusqlite_orm::errors::Result<(Device, BTreeSet<u32>)> {
@@ -123,7 +123,7 @@ impl Device {
             .await?
             .unwrap();
 
-        let existing: BTreeSet<u32> = Session::get_dates(conn).await?;
+        let existing: BTreeSet<u32> = Activity::get_dates(conn).await?;
 
         Ok((device, existing))
     }

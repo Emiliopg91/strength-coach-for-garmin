@@ -45,7 +45,7 @@ impl TryFrom<FitParser> for Workout {
 }
 
 /// Accumulates the `workout` and `workout_step` FIT messages as they stream in, so both the
-/// workout and the session parsers can build a [`Workout`] from them.
+/// workout and the activity parsers can build a [`Workout`] from them.
 #[derive(Default)]
 pub(super) struct WorkoutAccumulator {
     name: String,

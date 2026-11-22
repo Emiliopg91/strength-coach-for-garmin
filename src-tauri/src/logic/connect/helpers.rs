@@ -7,13 +7,13 @@ use crate::{
     ConnectLock, SettingsLock,
     connect::ConnectClient,
     dao::{
-        device::Device, exercise::Exercise, session::Session, workout::Workout,
+        activity::Activity, device::Device, exercise::Exercise, workout::Workout,
         workout_device::WorkoutDevice, workout_planning::WorkoutPlanning,
     },
     dto::{
+        activities::ActivityStepDto,
         connect::{ConnectUpdateSets, ConnectWorkout},
         devices::DeviceListItem,
-        sessions::SessionStepDto,
     },
     logic::{pool, report_error},
     utils::constants,
@@ -324,16 +324,16 @@ pub(crate) async fn queue_workout_on_connect<R: Runtime>(
         .map_err(|e| e.to_string())
 }
 
-/// Mirrors the user edits of a session's sets on its Connect activity, if the session is linked to
+/// Mirrors the user edits of an activity's sets on its Connect activity, if the activity is linked to
 /// one and a user is logged in. Runs after the local save, so failures are only logged.
-pub(crate) async fn sync_session_sets_connect<R: Runtime>(
+pub(crate) async fn sync_activity_sets_connect<R: Runtime>(
     app: &AppHandle<R>,
     timestamp: u32,
-    sets: Vec<SessionStepDto>,
+    sets: Vec<ActivityStepDto>,
 ) {
     let res = pool(app)
         .run_in_connection(async move |conn| {
-            let Some(connect_id) = Session::get_connect_id(conn, timestamp).await? else {
+            let Some(connect_id) = Activity::get_connect_id(conn, timestamp).await? else {
                 return Ok(None);
             };
 
@@ -371,7 +371,7 @@ pub(crate) async fn sync_session_sets_connect<R: Runtime>(
         Ok(_) => return,
         Err(e) => {
             error!(
-                "Error loading sets of session {} for Connect: {}",
+                "Error loading sets of activity {} for Connect: {}",
                 timestamp, e
             );
             return;
@@ -387,17 +387,17 @@ pub(crate) async fn sync_session_sets_connect<R: Runtime>(
     if connect.logged_user().is_none() {
         return;
     }
-    update_session_sets(&mut connect, id, updates).await;
+    update_activity_sets(&mut connect, id, updates).await;
 }
 
 /// Applies `sets` over the current sets of the Connect activity `id` and sends them back.
 /// Sets are matched by their FIT message index, which is the local set index.
-pub(super) async fn update_session_sets(
+pub(super) async fn update_activity_sets(
     connect: &mut ConnectClient,
     id: u64,
     sets: Vec<ConnectUpdateSets>,
 ) {
-    let Ok(mut original_sets) = connect.get_session_sets(id).await else {
+    let Ok(mut original_sets) = connect.get_activity_sets(id).await else {
         return;
     };
 
@@ -421,7 +421,7 @@ pub(super) async fn update_session_sets(
         }];
     }
 
-    let _ = connect.update_session_sets(&original_sets).await;
+    let _ = connect.update_activity_sets(&original_sets).await;
 }
 
 pub async fn push_plan_to_connect<R: Runtime>(app: &AppHandle<R>, date: u32, workout: u16) {

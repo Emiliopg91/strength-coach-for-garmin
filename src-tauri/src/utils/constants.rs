@@ -90,8 +90,8 @@ pub static RCLONE_CONFIG_FILE: LazyLock<PathBuf> =
 // Pending files block: the downloaded files whose parse or import failed, in one subfolder per
 // source (named after its serial). Uploads are encoded and sent from memory
 pub static PENDING_FOLDER: LazyLock<PathBuf> = LazyLock::new(|| DATA_LOCAL_DIR.join("pending"));
-pub static PENDING_DOWNLOAD_SESSIONS_FOLDER: LazyLock<PathBuf> =
-    LazyLock::new(|| PENDING_FOLDER.join("download").join("sessions"));
+pub static PENDING_DOWNLOAD_ACTIVITIES_FOLDER: LazyLock<PathBuf> =
+    LazyLock::new(|| PENDING_FOLDER.join("download").join("activities"));
 pub static PENDING_DOWNLOAD_WORKOUTS_FOLDER: LazyLock<PathBuf> =
     LazyLock::new(|| PENDING_FOLDER.join("download").join("workouts"));
 

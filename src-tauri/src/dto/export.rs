@@ -5,17 +5,17 @@ use serde::Serialize;
 
 use crate::{
     dao::{
+        activity::{Activity, ActivityRepository},
+        activity_data::{ActivityData, ActivityDataRepository},
+        activity_lap::{ActivityLap, ActivityLapRepository},
+        activity_step::{ActivityStep, ActivityStepRepository},
         body_metric::{BodyMetric, BodyMetricRepository},
         device::{Device, DeviceRepository},
-        session::{Session, SessionRepository},
-        session_data::{SessionData, SessionDataRepository},
-        session_lap::{SessionLap, SessionLapRepository},
-        session_step::{SessionStep, SessionStepRepository},
         settings::{Settings, SettingsRepository},
         workout::{Workout, WorkoutRepository},
         workout_step::{WorkoutStep, WorkoutStepRepository},
     },
-    dto::sessions::SessionStepDto,
+    dto::activities::ActivityStepDto,
     utils::translations::{Languages, translate},
 };
 
@@ -25,7 +25,7 @@ pub struct Export {
     exercises: Vec<ExerciseExport>,
     devices: Vec<Device>,
     workouts: Vec<Workout>,
-    sessions: Vec<SessionExport>,
+    activities: Vec<ActivityExport>,
     settings: Vec<Settings>,
     laps: Vec<LapExport>,
 }
@@ -48,43 +48,43 @@ impl Export {
             }
             let devices = DeviceRepository::select().fetch_in(conn).await?;
             let settings = SettingsRepository::select().fetch_in(conn).await?;
-            let sessions = SessionRepository::select().fetch_in(conn).await?;
-            let laps = SessionLapRepository::select()
+            let activities = ActivityRepository::select().fetch_in(conn).await?;
+            let laps = ActivityLapRepository::select()
                 .fetch_in(conn)
                 .await?
                 .into_iter()
                 .map(LapExport::from)
                 .collect();
 
-            let mut additional_datas: HashMap<u32, SessionData> = HashMap::new();
-            SessionDataRepository::select()
+            let mut additional_datas: HashMap<u32, ActivityData> = HashMap::new();
+            ActivityDataRepository::select()
                 .fetch_in(conn)
                 .await?
                 .into_iter()
                 .for_each(|ad| {
-                    additional_datas.insert(ad.session, ad);
+                    additional_datas.insert(ad.activity, ad);
                 });
 
             let mut used_exercises = HashSet::new();
 
-            let mut series: HashMap<u32, Vec<SessionStep>> = HashMap::new();
-            SessionStepRepository::select()
+            let mut series: HashMap<u32, Vec<ActivityStep>> = HashMap::new();
+            ActivityStepRepository::select()
                 .fetch_in(conn)
                 .await?
                 .into_iter()
                 .for_each(|s| {
                     used_exercises.insert((s.ex_cat, s.ex_id));
-                    let entry = series.entry(s.session).or_default();
+                    let entry = series.entry(s.activity).or_default();
                     entry.push(s);
                 });
 
-            let sessions = sessions
+            let activities = activities
                 .into_iter()
-                .map(|session| {
-                    let serie = series.get(&session.date).map(Vec::as_slice);
-                    let add_data = additional_datas.get(&session.date);
+                .map(|activity| {
+                    let serie = series.get(&activity.date).map(Vec::as_slice);
+                    let add_data = additional_datas.get(&activity.date);
 
-                    SessionExport::from((&session, add_data, serie))
+                    ActivityExport::from((&activity, add_data, serie))
                 })
                 .collect();
 
@@ -102,7 +102,7 @@ impl Export {
                 body_metrics,
                 devices,
                 workouts,
-                sessions,
+                activities,
                 exercises,
                 settings,
                 laps,
@@ -118,7 +118,7 @@ impl Export {
 }
 
 #[derive(Serialize)]
-pub struct SessionExport {
+pub struct ActivityExport {
     pub date: u32,
     pub workout: String,
     pub total_elapsed_time: u32,
@@ -134,28 +134,28 @@ pub struct SessionExport {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub heart_rates: Option<Vec<Option<u8>>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub sets: Option<Vec<SessionStepDto>>,
+    pub sets: Option<Vec<ActivityStepDto>>,
 }
 
-impl From<(&Session, Option<&SessionData>, Option<&[SessionStep]>)> for SessionExport {
+impl From<(&Activity, Option<&ActivityData>, Option<&[ActivityStep]>)> for ActivityExport {
     fn from(
-        (session, data, steps): (&Session, Option<&SessionData>, Option<&[SessionStep]>),
+        (activity, data, steps): (&Activity, Option<&ActivityData>, Option<&[ActivityStep]>),
     ) -> Self {
         Self {
-            date: session.date,
-            workout: session.name.clone(),
-            total_elapsed_time: session.total_elapsed_time,
-            active_time: session.active_time,
-            active_calories: session.active_calories,
-            training_load: session.training_load,
-            sport: session.sport,
-            sub_sport: session.sub_sport,
-            device: session.device.clone(),
+            date: activity.date,
+            workout: activity.name.clone(),
+            total_elapsed_time: activity.total_elapsed_time,
+            active_time: activity.active_time,
+            active_calories: activity.active_calories,
+            training_load: activity.training_load,
+            sport: activity.sport,
+            sub_sport: activity.sub_sport,
+            device: activity.device.clone(),
             sets: steps
                 .filter(|s| !s.is_empty())
-                .map(|s| s.iter().map(SessionStepDto::from).collect()),
-            heart_rates: data.and_then(SessionData::get_heart_rates),
-            coordinates: data.and_then(SessionData::get_coordinates_degrees),
+                .map(|s| s.iter().map(ActivityStepDto::from).collect()),
+            heart_rates: data.and_then(ActivityData::get_heart_rates),
+            coordinates: data.and_then(ActivityData::get_coordinates_degrees),
         }
     }
 }
@@ -169,23 +169,23 @@ pub struct ExerciseExport {
 
 #[derive(Serialize)]
 pub struct LapExport {
-    pub session: u32,
+    pub activity: u32,
     pub idx: u16,
     pub start_latitude: Option<f64>,
     pub start_longitude: Option<f64>,
 }
 
-impl From<SessionLap> for LapExport {
-    fn from(value: SessionLap) -> Self {
+impl From<ActivityLap> for LapExport {
+    fn from(value: ActivityLap) -> Self {
         Self {
-            session: value.session,
+            activity: value.activity,
             idx: value.idx,
             start_latitude: value
                 .start_latitude
-                .map(|s| s as f64 * SessionData::SEMICIRCLE_TO_DEGREES),
+                .map(|s| s as f64 * ActivityData::SEMICIRCLE_TO_DEGREES),
             start_longitude: value
                 .start_longitude
-                .map(|s| s as f64 * SessionData::SEMICIRCLE_TO_DEGREES),
+                .map(|s| s as f64 * ActivityData::SEMICIRCLE_TO_DEGREES),
         }
     }
 }

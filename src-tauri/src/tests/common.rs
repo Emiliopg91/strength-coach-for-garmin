@@ -6,10 +6,10 @@ use rusqlite_orm::{
 
 use crate::{
     dao::{
-        session::{Session, SessionRepository},
-        session_data::{SessionData, SessionDataRepository},
-        session_lap::{SessionLap, SessionLapRepository},
-        session_step::{SessionStep, SessionStepRepository},
+        activity::{Activity, ActivityRepository},
+        activity_data::{ActivityData, ActivityDataRepository},
+        activity_lap::{ActivityLap, ActivityLapRepository},
+        activity_step::{ActivityStep, ActivityStepRepository},
         workout_step::StepType,
     },
     schema_ddls,
@@ -34,10 +34,10 @@ pub async fn test_db() -> DatabasePool {
     database
 }
 
-pub fn session(date: u32) -> Session {
-    Session {
+pub fn activity(date: u32) -> Activity {
+    Activity {
         date,
-        name: format!("Session {date}"),
+        name: format!("Activity {date}"),
         total_elapsed_time: 3600,
         active_time: 3000,
         active_calories: 100,
@@ -56,9 +56,9 @@ pub fn session(date: u32) -> Session {
     }
 }
 
-pub fn set(session: u32, idx: u8, exercise: (u16, u16), reps: u16, weight: f32) -> SessionStep {
-    SessionStep {
-        session,
+pub fn set(activity: u32, idx: u8, exercise: (u16, u16), reps: u16, weight: f32) -> ActivityStep {
+    ActivityStep {
+        activity,
         idx,
         ex_cat: Some(exercise.0),
         ex_id: Some(exercise.1),
@@ -74,9 +74,9 @@ pub fn set(session: u32, idx: u8, exercise: (u16, u16), reps: u16, weight: f32) 
     }
 }
 
-pub fn additional_data(session: u32) -> SessionData {
-    SessionData {
-        session,
+pub fn additional_data(activity: u32) -> ActivityData {
+    ActivityData {
+        activity,
         heart_rates: None,
         coordinates: None,
         speeds: None,
@@ -86,19 +86,19 @@ pub fn additional_data(session: u32) -> SessionData {
     }
 }
 
-pub async fn insert_session(tx: &Transaction<'_>, mut session: Session) {
-    let mut sets = std::mem::take(&mut session.steps);
-    let mut laps = std::mem::take(&mut session.laps);
-    let additional_data = session.data.take();
+pub async fn insert_activity(tx: &Transaction<'_>, mut activity: Activity) {
+    let mut sets = std::mem::take(&mut activity.steps);
+    let mut laps = std::mem::take(&mut activity.laps);
+    let additional_data = activity.data.take();
 
-    SessionRepository::insert()
-        .item(&mut session)
+    ActivityRepository::insert()
+        .item(&mut activity)
         .execute_in(tx)
         .await
-        .expect("session insert");
+        .expect("activity insert");
 
     if !sets.is_empty() {
-        let mut insert = SessionStepRepository::insert();
+        let mut insert = ActivityStepRepository::insert();
         for set in &mut sets {
             insert = insert.item(set);
         }
@@ -106,7 +106,7 @@ pub async fn insert_session(tx: &Transaction<'_>, mut session: Session) {
     }
 
     if !laps.is_empty() {
-        let mut insert = SessionLapRepository::insert();
+        let mut insert = ActivityLapRepository::insert();
         for lap in &mut laps {
             insert = insert.item(lap);
         }
@@ -114,7 +114,7 @@ pub async fn insert_session(tx: &Transaction<'_>, mut session: Session) {
     }
 
     if let Some(mut additional_data) = additional_data {
-        SessionDataRepository::insert()
+        ActivityDataRepository::insert()
             .item(&mut additional_data)
             .execute_in(tx)
             .await
@@ -122,9 +122,9 @@ pub async fn insert_session(tx: &Transaction<'_>, mut session: Session) {
     }
 }
 
-pub fn lap(session: u32, idx: u16, position: Option<(i32, i32)>) -> SessionLap {
-    SessionLap {
-        session,
+pub fn lap(activity: u32, idx: u16, position: Option<(i32, i32)>) -> ActivityLap {
+    ActivityLap {
+        activity,
         idx,
         start_latitude: position.map(|p| p.0),
         start_longitude: position.map(|p| p.1),

@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use rusqlite_orm::{database::DatabasePool, types::order_by::OrderBy};
 
 use crate::{
-    dao::session_step::{self, SessionStep, SessionStepRepository},
+    dao::activity_step::{self, ActivityStep, ActivityStepRepository},
     tests::common,
 };
 
@@ -12,32 +12,32 @@ const BENCH: (u16, u16) = (0, 0);
 
 async fn pr_sets(db: &DatabasePool) -> Vec<(u32, u8, u16, u16)> {
     db.run_in_connection(async move |conn| {
-        Ok(SessionStepRepository::select_by_personal_records_in(
+        Ok(ActivityStepRepository::select_by_personal_records_in(
             conn,
             true,
-            Some(&[OrderBy::Asc(session_step::entity::columns::EX_CAT)]),
+            Some(&[OrderBy::Asc(activity_step::entity::columns::EX_CAT)]),
         )
         .await?
         .into_iter()
-        .map(|s| (s.session, s.idx, s.ex_cat.unwrap(), s.ex_id.unwrap()))
+        .map(|s| (s.activity, s.idx, s.ex_cat.unwrap(), s.ex_id.unwrap()))
         .collect())
     })
     .await
     .unwrap()
 }
 
-async fn insert_and_update(db: &DatabasePool, sessions: Vec<(u32, Vec<SessionStep>)>) {
+async fn insert_and_update(db: &DatabasePool, activities: Vec<(u32, Vec<ActivityStep>)>) {
     db.run_in_transaction(async move |tx| {
         let mut exercises = HashSet::new();
-        for (date, sets) in &sessions {
-            let mut session = common::session(*date);
+        for (date, sets) in &activities {
+            let mut activity = common::activity(*date);
             for s in sets {
                 exercises.insert((s.ex_cat.unwrap(), s.ex_id.unwrap()));
             }
-            session.steps = sets.clone();
-            common::insert_session(tx, session).await;
+            activity.steps = sets.clone();
+            common::insert_activity(tx, activity).await;
         }
-        SessionStep::update_prs(tx, &exercises, &[]).await?;
+        ActivityStep::update_prs(tx, &exercises, &[]).await?;
         Ok(())
     })
     .await

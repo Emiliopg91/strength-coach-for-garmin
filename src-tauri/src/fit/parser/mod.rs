@@ -1,4 +1,4 @@
-pub mod session;
+pub mod activity;
 
 use std::io::Cursor;
 #[cfg(any(test, debug_assertions))]

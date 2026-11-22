@@ -19,8 +19,8 @@ const WHEEL_MONTH_THROTTLE_MS = 250;
 // changes with the mouse wheel
 const NoCalendarHeader = () => null;
 
-// A plan is done once a session of its workout was imported on its day
-const isDone = (plan: WorkoutPlanListItem) => plan.session != null;
+// A plan is done once an activity of its workout was imported on its day
+const isDone = (plan: WorkoutPlanListItem) => plan.activity != null;
 
 type Props = {
     plans: WorkoutPlanListItem[];

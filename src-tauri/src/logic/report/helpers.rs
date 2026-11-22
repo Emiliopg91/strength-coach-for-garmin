@@ -1,10 +1,10 @@
 use std::collections::BTreeSet;
 
 use crate::{
-    dao::{body_metric::BodyMetric, session::Session},
+    dao::{activity::Activity, body_metric::BodyMetric},
     dto::{body_metrics::BodyMetricListItem, report::ReportData},
     logic::{
-        exercises::helpers::fetch_exercises_details, sessions::helpers::fetch_sessions_details,
+        activities::helpers::fetch_activities_details, exercises::helpers::fetch_exercises_details,
     },
 };
 
@@ -12,7 +12,7 @@ const STRENGTH_SPORT: u8 = 10;
 
 const STRENGTH_SUB_SPORT: u8 = 20;
 
-/// Strength sessions between `from` and `to`, with the history of every exercise trained in them
+/// Strength activities between `from` and `to`, with the history of every exercise trained in them
 /// and the body measurements of the period.
 pub(super) async fn report_data(
     conn: &rusqlite_orm::rusqlite::Connection,
@@ -20,7 +20,7 @@ pub(super) async fn report_data(
     to: u32,
 ) -> rusqlite_orm::errors::Result<ReportData> {
     // Oldest first
-    let timestamps: Vec<u32> = Session::get_sessions(
+    let timestamps: Vec<u32> = Activity::get_activities(
         conn,
         Some(from.into()),
         Some(to.into()),
@@ -32,10 +32,10 @@ pub(super) async fn report_data(
     .rev()
     .map(|s| s.date)
     .collect();
-    let session_details = fetch_sessions_details(conn, &timestamps, false, false).await?;
+    let activity_details = fetch_activities_details(conn, &timestamps, false, false).await?;
 
     // Sorted and deduplicated; sets without exercise are skipped
-    let trained: BTreeSet<(u16, u16)> = session_details
+    let trained: BTreeSet<(u16, u16)> = activity_details
         .iter()
         .flat_map(|d| &d.steps)
         .filter_map(|set| Some((set.ex_cat?, set.ex_id?)))
@@ -54,7 +54,7 @@ pub(super) async fn report_data(
     body_metrics.reverse();
 
     Ok(ReportData {
-        sessions: session_details,
+        activities: activity_details,
         exercises,
         body_metrics,
     })

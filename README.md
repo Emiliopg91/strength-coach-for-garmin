@@ -7,15 +7,15 @@
 
 **Everything Garmin Connect doesn't do for your strength training — on Linux, offline, with your data in a local file.**
 
-Your Garmin watch records every set you lift, but Garmin Connect does little with it: exercises get misdetected, sets are tedious to fix, and nothing tells you when it's time to add weight. Strength Coach for Garmin is a Linux desktop app that takes over from there. Plug in your watch, and your sessions are imported, analyzed and turned into your next workout — which goes straight back to the watch.
+Your Garmin watch records every set you lift, but Garmin Connect does little with it: exercises get misdetected, sets are tedious to fix, and nothing tells you when it's time to add weight. Strength Coach for Garmin is a Linux desktop app that takes over from there. Plug in your watch, and your activities are imported, analyzed and turned into your next workout — which goes straight back to the watch.
 
 No account required, no cloud, no Garmin Express (which doesn't exist on Linux anyway). Just a USB cable and a SQLite database you own — with optional Garmin Connect sync for when the cable isn't at hand.
 
 ## Screenshots
 
-| ![Home: training status, last session and next planned workout](resources/screenshots/screenshot1.png) | ![Sessions list](resources/screenshots/screenshot2.png) |
+| ![Home: training status, last activity and next planned workout](resources/screenshots/screenshot1.png) | ![Activities list](resources/screenshots/screenshot2.png) |
 | :----------------------------------------------------: | :----------------------------------------------------: |
-| ![Strength session: worked muscles, heart rate and sets](resources/screenshots/screenshot3.png) | ![Running session with map and heart rate zones](resources/screenshots/screenshot4.png) |
+| ![Strength activity: worked muscles, heart rate and sets](resources/screenshots/screenshot3.png) | ![Running activity with map and heart rate zones](resources/screenshots/screenshot4.png) |
 | ![Workouts and planning calendar](resources/screenshots/screenshot5.png) | ![Exercises with personal records and 1RM](resources/screenshots/screenshot6.png) |
 | ![Exercise detail with progression suggestion](resources/screenshots/screenshot7.png) | ![Body metrics](resources/screenshots/screenshot8.png) |
 
@@ -24,7 +24,7 @@ No account required, no cloud, no Garmin Express (which doesn't exist on Linux a
 1. **Plan** — Build strength workouts in the app and send them to your watch, by cable or wirelessly through Garmin Connect.
 2. **Train** — Follow the workout on the watch as usual.
 3. **Sync** — Plug the watch in. The app can launch itself on connect and imports new activities automatically.
-4. **Progress** — Strength Coach for Garmin checks each exercise against its rep range and suggests your next target. Apply the suggestion and the affected workouts are updated, queued for your watch and, if you're signed in, synced to Garmin Connect, ready for the next session.
+4. **Progress** — Strength Coach for Garmin checks each exercise against its rep range and suggests your next target. Apply the suggestion and the affected workouts are updated, queued for your watch and, if you're signed in, synced to Garmin Connect, ready for the next activity.
 
 ## Progression, done for you
 
@@ -36,14 +36,14 @@ No account required, no cloud, no Garmin Express (which doesn't exist on Linux a
 
 ## Strength analysis
 
-- **Session review and editing** — Fix exercises, sets, reps and weights, add notes, and hide the exercises chart on sessions where it adds nothing.
-- **Muscles worked** — Every catalog exercise lists its primary and secondary muscles, and exercises, sessions and workouts show them on a front and back body map.
+- **Activity review and editing** — Fix exercises, sets, reps and weights, add notes, and hide the exercises chart on activities where it adds nothing.
+- **Muscles worked** — Every catalog exercise lists its primary and secondary muscles, and exercises, activities and workouts show them on a front and back body map.
 - **Personal records** — 1RM estimation per exercise, with a desktop notification when you set a new PR.
-- **Exercise history** — Full per-session set history and a chart of weight, reps and estimated 1RM (absolute and relative to bodyweight) for every exercise.
+- **Exercise history** — Full per-activity set history and a chart of weight, reps and estimated 1RM (absolute and relative to bodyweight) for every exercise.
 - **Exercise notes** — Keep cues and setup notes per exercise; workout steps without their own notes inherit them, both on the watch and in printed workouts.
-- **Session comparison** — Compare sessions and their exercises side by side.
+- **Activity comparison** — Compare activities and their exercises side by side.
 - **Training load** — Daily load heatmap and workload chart on the home page.
-- **Progression report** — Printable report for any date range, covering sessions, exercises, body composition and notes.
+- **Progression report** — Printable report for any date range, covering activities, exercises, body composition and notes.
 
 ## Beyond the gym
 

@@ -79,8 +79,8 @@ pub fn calendar_page_items(
         .collect()
 }
 
-/// Id of the activity of `items` that started at `timestamp`, as sessions are keyed by their start.
-pub fn session_activity_id(items: &[CalendarItem], timestamp: u32) -> Option<u64> {
+/// Id of the activity of `items` that started at `timestamp`, as activities are keyed by their start.
+pub fn connect_activity_id(items: &[CalendarItem], timestamp: u32) -> Option<u64> {
     items
         .iter()
         .find(|item| {
@@ -358,17 +358,20 @@ impl ConnectClient {
         Ok(items)
     }
 
-    /// Id of the Connect activity of the session that started at `timestamp`, or `None` when
+    /// Id of the Connect activity that started at `timestamp`, or `None` when
     /// Connect does not have it (yet, if the device has not synced it).
-    pub async fn find_session_activity(&mut self, timestamp: u32) -> Result<Option<u64>> {
-        info!("Looking for the activity of session {}...", timestamp);
+    pub async fn find_connect_activity(&mut self, timestamp: u32) -> Result<Option<u64>> {
+        info!(
+            "Looking for the Connect activity started at {}...",
+            timestamp
+        );
 
         let date = Local
             .timestamp_opt(i64::from(timestamp), 0)
             .single()
             .ok_or_else(|| {
                 log_error(
-                    "Error parsing session timestamp",
+                    "Error parsing activity timestamp",
                     ConnectError::InvalidTimestamp(timestamp),
                 )
             })?
@@ -380,13 +383,13 @@ impl ConnectClient {
             .await
             .map_err(|e| log_error("Error fetching calendar", ConnectError::FetchCalendar(e)))?;
 
-        let id = session_activity_id(
+        let id = connect_activity_id(
             &calendar_page_items(page, year, month, date, date),
             timestamp,
         );
         match id {
-            Some(id) => info!("Session {} is activity {}.", timestamp, id),
-            None => info!("Session {} not found in Connect.", timestamp),
+            Some(id) => info!("Activity {} is Connect activity {}.", timestamp, id),
+            None => info!("Activity {} not found in Connect.", timestamp),
         }
 
         Ok(id)
@@ -413,7 +416,7 @@ impl ConnectClient {
         Ok(activity.description.filter(|notes| !notes.is_empty()))
     }
 
-    /// Place names Connect gives the activities started at any of `timestamps`, as sessions are
+    /// Place names Connect gives the activities started at any of `timestamps`, as activities are
     /// keyed by their start. The activities of the days they span are listed newest first, a page
     /// at a time, until every one is found or the oldest is passed, so it usually takes a single
     /// request. Those Connect does not have, or has no place for, are left out.
@@ -484,7 +487,7 @@ impl ConnectClient {
     }
 
     /// Sets of the strength activity `id`.
-    pub async fn get_session_sets(&mut self, id: u64) -> Result<ExerciseSets> {
+    pub async fn get_activity_sets(&mut self, id: u64) -> Result<ExerciseSets> {
         info!("Fetching exercise sets of activity {}...", id);
 
         let client = self.api_client().await?;
@@ -507,7 +510,7 @@ impl ConnectClient {
 
     /// Replaces every set of the strength activity `sets.activity_id` with `sets`, which should
     /// come from `get_exercise_sets` so the fields not modelled are kept.
-    pub async fn update_session_sets(&mut self, sets: &ExerciseSets) -> Result<()> {
+    pub async fn update_activity_sets(&mut self, sets: &ExerciseSets) -> Result<()> {
         let id = sets.activity_id;
         info!("Updating exercise sets of activity {}...", id);
 

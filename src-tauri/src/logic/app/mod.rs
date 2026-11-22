@@ -18,12 +18,11 @@ use crate::{
         notifications::{NotificationDefinition, NotificationKind},
     },
     logic::{
+        activities::helpers::spawn_geolocation_update,
         connect::helpers::{get_devices_from_connect, up_to_date_connect},
         devices::helpers::start_device_watcher,
         notifications::show_notification,
-        pool, report_error,
-        sessions::helpers::spawn_geolocation_update,
-        settings_language,
+        pool, report_error, settings_language,
     },
     utils::translations::{Languages, TRANSLATIONS, translate},
 };

@@ -11,7 +11,7 @@ use crate::connect::{
         api::{calendar_month_path, workout_schedule_path},
         models::ActivityDescriptionUpdate,
     },
-    next_schedule_window, session_activity_id, take_activity_locations,
+    connect_activity_id, next_schedule_window, take_activity_locations,
 };
 use serde_json::{Value, json};
 
@@ -699,7 +699,7 @@ fn activity_description_update_body() {
 }
 
 #[test]
-fn session_activity_is_the_activity_started_with_the_session() {
+fn connect_activity_is_the_one_started_with_the_activity() {
     let item = |id, item_type, start_timestamp_local| CalendarItem {
         id,
         item_type,
@@ -712,8 +712,8 @@ fn session_activity_is_the_activity_started_with_the_session() {
         item(Some(3), CalendarItemType::Activity, Some(1000)),
     ];
 
-    assert_eq!(session_activity_id(&items, 1000), Some(3));
-    assert_eq!(session_activity_id(&items, 1100), None);
+    assert_eq!(connect_activity_id(&items, 1000), Some(3));
+    assert_eq!(connect_activity_id(&items, 1100), None);
 }
 
 #[test]

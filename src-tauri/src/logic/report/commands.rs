@@ -20,7 +20,7 @@ pub async fn report_ready(window: WebviewWindow) -> Result<(), String> {
     super::report_ready(window).await
 }
 
-/// Strength sessions in `from`..`to` (Unix seconds), the history in that range of every exercise
+/// Strength activities in `from`..`to` (Unix seconds), the history in that range of every exercise
 /// trained in them (sorted by translated name) and the body measurements of the period. On failure,
 /// shows a persistent error notification and rejects with the message.
 #[traced_command(log_payload = false)]

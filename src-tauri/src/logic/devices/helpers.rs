@@ -212,8 +212,8 @@ pub(super) async fn on_device_connected<R: Runtime>(
     .await;
 }
 
-/// Runs a sync between `start_loading` and `finish_loading`, then emits `sessions_added` if it
-/// imported any session. Each event is emitted only here, as the TS listener is generated per call.
+/// Runs a sync between `start_loading` and `finish_loading`, then emits `activities_added` if it
+/// imported any activity. Each event is emitted only here, as the TS listener is generated per call.
 pub(super) async fn with_loading<R: Runtime>(
     app: &AppHandle<R>,
     sync: impl Future<Output = usize>,
@@ -222,7 +222,7 @@ pub(super) async fn with_loading<R: Runtime>(
     let imported = sync.await;
     let _ = app.emit("finish_loading", ());
     if imported > 0 {
-        let _ = app.emit("sessions_added", ());
+        let _ = app.emit("activities_added", ());
     }
 }
 
@@ -483,7 +483,7 @@ pub(super) async fn store_pending_workouts<R: Runtime>(
     }
 }
 
-/// Downloads from `device` the step definitions of workouts that have sessions recorded on it but no steps stored yet.
+/// Downloads from `device` the step definitions of workouts that have activities recorded on it but no steps stored yet.
 pub(super) async fn download_pending_workouts<R: Runtime>(app: &AppHandle<R>, serial: &str) {
     let serial_q = serial.to_string();
     let pending_workouts = match pool(app)

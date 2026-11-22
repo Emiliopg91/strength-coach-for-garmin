@@ -2,9 +2,9 @@ use rusqlite_orm::{dao::Repository, database::builder::DatabaseConnectionBuilder
 
 use crate::{
     dao::{
+        activity_step::ActivityStepRepository,
         exercise::{ExerciseRepository, GENERIC_EXERCISE_ID},
         exercise_category::ExerciseCategoryRepository,
-        session_step::SessionStepRepository,
         workout_step::WorkoutStepRepository,
     },
     logic::exercises::helpers::exercises_catalog,
@@ -25,14 +25,12 @@ async fn migration_29_moves_hyperextensions_to_the_generic() {
     db.create_schema(&before).await.unwrap();
 
     db.run_in_transaction(async move |tx| {
-        let mut session = common::session(1);
-        session.steps = vec![
-            common::set(1, 0, (13, 1), 15, 10.0),
-            common::set(1, 1, (13, 0), 12, 0.0),
-        ];
-        common::insert_session(tx, session).await;
+        // Raw SQL: the entities follow the current schema, not the one before migration 29
+        super::schema::insert_legacy_activity(tx, 1).await?;
         tx.execute_batch(
-            "UPDATE EXERCISE SET notes = 'Slow', reps = '12-15' WHERE category = 13 AND id = 1;
+            "INSERT INTO SESSION_STEP (session, idx, kind, exercise_category, exercise_id, reps, weight, pr)
+             VALUES (1, 0, 'Exercise', 13, 1, 15, 10, 0), (1, 1, 'Exercise', 13, 0, 12, 0, 0);
+             UPDATE EXERCISE SET notes = 'Slow', reps = '12-15' WHERE category = 13 AND id = 1;
              INSERT INTO WORKOUT (name, enabled) VALUES ('Back', 1), ('Chest', 1);
              INSERT INTO WORKOUT_STEP (workout, idx, kind, exercise_category, exercise_id)
              VALUES ('Back', 0, 'Exercise', 13, 1), ('Chest', 0, 'Exercise', 0, 1);
@@ -46,7 +44,7 @@ async fn migration_29_moves_hyperextensions_to_the_generic() {
 
     db.create_schema(&schema_ddls()).await.unwrap();
 
-    let mut sets = SessionStepRepository::select().fetch(&db).await.unwrap();
+    let mut sets = ActivityStepRepository::select().fetch(&db).await.unwrap();
     sets.sort_by_key(|s| s.idx);
     let sets: Vec<_> = sets.iter().map(|s| (s.ex_cat, s.ex_id)).collect();
     assert_eq!(

@@ -1,5 +1,5 @@
 import { I18nSettingsContext } from "@/context/I18nSettingsContext";
-import { WorkoutSession } from "@/utils/backend/models";
+import { WorkoutActivity } from "@/utils/backend/models";
 import { useContext } from "react";
 import {
     CartesianGrid,
@@ -15,7 +15,7 @@ import {
 } from "recharts";
 
 type Props = {
-    sessions: WorkoutSession[];
+    activities: WorkoutActivity[];
 };
 
 function WorkoutVolumeTooltip({ active, payload, label }: TooltipContentProps) {
@@ -38,9 +38,9 @@ function WorkoutVolumeTooltip({ active, payload, label }: TooltipContentProps) {
     );
 }
 
-export function WorkoutVolumeChart({ sessions }: Props) {
+export function WorkoutVolumeChart({ activities }: Props) {
     const { translate } = useContext(I18nSettingsContext);
-    const chartData = sessions.toReversed().map((ws) => {
+    const chartData = activities.toReversed().map((ws) => {
         const day = new Date(ws.date * 1000);
         const date = new Date(day.getFullYear(), day.getMonth(), day.getDate());
         return {

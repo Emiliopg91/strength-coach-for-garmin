@@ -7,7 +7,7 @@ use crate::{
     dto::workouts::{PercentLoadBase, WorkoutDetails, WorkoutListItem, WorkoutPlanListItem},
 };
 
-/// Every workout with its session stats (count, average time and load, latest date), by name. On
+/// Every workout with its activity stats (count, average time and load, latest date), by name. On
 /// failure, shows a persistent error notification and rejects with the message.
 #[traced_command]
 #[tauri::command]
@@ -18,7 +18,7 @@ pub async fn get_workout_list(
     super::get_workout_list(&app, &settings).await
 }
 
-/// The workout `id` with its steps, worked muscles and every session with its volume. On failure,
+/// The workout `id` with its steps, worked muscles and every activity with its volume. On failure,
 /// shows a persistent error notification and rejects with the message.
 #[traced_command]
 #[tauri::command]

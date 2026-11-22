@@ -22,15 +22,15 @@ export default function ContentTable({ data }: Props): JSX.Element {
                 {data.body_metrics.length > 0 && (
                     <li>{translate("body_composition")}</li>
                 )}
-                {data.sessions.length > 0 && (
+                {data.activities.length > 0 && (
                     <li>
-                        {translate("sessions")}
+                        {translate("activities")}
                         <ul>
-                            {data.sessions.map((session) => (
-                                <li key={session.timestamp}>
-                                    {session.name +
+                            {data.activities.map((activity) => (
+                                <li key={activity.timestamp}>
+                                    {activity.name +
                                         " @ " +
-                                        formatTimeDate(session.timestamp)}
+                                        formatTimeDate(activity.timestamp)}
                                 </li>
                             ))}
                         </ul>

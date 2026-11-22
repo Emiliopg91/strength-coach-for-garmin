@@ -1,7 +1,7 @@
 use rusqlite_orm::database::DatabasePool;
 
 use crate::{
-    dao::session_data::{SessionData, SessionDataRepository},
+    dao::activity_data::{ActivityData, ActivityDataRepository},
     tests::common,
 };
 
@@ -9,18 +9,18 @@ const WITH_DATA: u32 = 1;
 const WITHOUT_DATA: u32 = 2;
 const OTHER: u32 = 3;
 
-/// Inserts a session with an additional data row (`WITH_DATA`, `OTHER`) and one without it (`WITHOUT_DATA`).
+/// Inserts an activity with an additional data row (`WITH_DATA`, `OTHER`) and one without it (`WITHOUT_DATA`).
 async fn setup() -> DatabasePool {
     let db = common::test_db().await;
     db.run_in_transaction(async move |tx| {
         for date in [WITH_DATA, OTHER] {
-            let mut session = common::session(date);
+            let mut activity = common::activity(date);
             let mut add_data = common::additional_data(date);
             add_data.notes = Some(format!("Notes {date}"));
-            session.data = Some(add_data);
-            common::insert_session(tx, session).await;
+            activity.data = Some(add_data);
+            common::insert_activity(tx, activity).await;
         }
-        common::insert_session(tx, common::session(WITHOUT_DATA)).await;
+        common::insert_activity(tx, common::activity(WITHOUT_DATA)).await;
         Ok(())
     })
     .await
@@ -28,27 +28,27 @@ async fn setup() -> DatabasePool {
     db
 }
 
-async fn save_notes(db: &DatabasePool, session: u32, notes: Option<&str>) {
+async fn save_notes(db: &DatabasePool, activity: u32, notes: Option<&str>) {
     let notes = notes.map(str::to_string);
     db.run_in_transaction(async move |tx| {
-        Ok(SessionData::update_notes(tx, session, notes.as_deref()).await?)
+        Ok(ActivityData::update_notes(tx, activity, notes.as_deref()).await?)
     })
     .await
     .unwrap();
 }
 
-async fn additional_data(db: &DatabasePool, session: u32) -> Option<SessionData> {
-    SessionDataRepository::select_by_id(db, session)
+async fn additional_data(db: &DatabasePool, activity: u32) -> Option<ActivityData> {
+    ActivityDataRepository::select_by_id(db, activity)
         .await
         .unwrap()
 }
 
-async fn notes(db: &DatabasePool, session: u32) -> Option<String> {
-    additional_data(db, session).await.and_then(|a| a.notes)
+async fn notes(db: &DatabasePool, activity: u32) -> Option<String> {
+    additional_data(db, activity).await.and_then(|a| a.notes)
 }
 
 #[tokio::test]
-async fn updating_notes_does_not_touch_other_sessions() {
+async fn updating_notes_does_not_touch_other_activities() {
     let db = setup().await;
 
     save_notes(&db, WITH_DATA, Some("Updated")).await;
@@ -58,7 +58,7 @@ async fn updating_notes_does_not_touch_other_sessions() {
 }
 
 #[tokio::test]
-async fn clearing_notes_does_not_touch_other_sessions() {
+async fn clearing_notes_does_not_touch_other_activities() {
     let db = setup().await;
 
     save_notes(&db, WITH_DATA, None).await;
@@ -68,7 +68,7 @@ async fn clearing_notes_does_not_touch_other_sessions() {
 }
 
 #[tokio::test]
-async fn notes_on_session_without_additional_data_are_stored() {
+async fn notes_on_activity_without_additional_data_are_stored() {
     let db = setup().await;
 
     save_notes(&db, WITHOUT_DATA, Some("New notes")).await;
@@ -89,7 +89,7 @@ async fn blank_notes_are_stored_as_null() {
 }
 
 #[tokio::test]
-async fn blank_notes_on_session_without_additional_data_create_no_row() {
+async fn blank_notes_on_activity_without_additional_data_create_no_row() {
     let db = setup().await;
 
     save_notes(&db, WITHOUT_DATA, Some("  ")).await;

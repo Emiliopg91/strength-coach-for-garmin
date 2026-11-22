@@ -1,3 +1,4 @@
+mod activity_names;
 mod additional_data;
 mod batch_queries;
 mod commands;
@@ -19,7 +20,6 @@ mod progressions;
 mod prs;
 mod schedule;
 mod schema;
-mod session_names;
 mod settings;
 mod translations;
 mod workout_push;

@@ -1,13 +1,13 @@
+pub mod activity;
+pub mod activity_data;
+pub mod activity_lap;
+pub mod activity_step;
 pub mod body_metric;
 pub mod device;
 pub mod exercise;
 pub mod exercise_category;
 pub mod muscle;
 pub mod muscle_exercise;
-pub mod session;
-pub mod session_data;
-pub mod session_lap;
-pub mod session_step;
 pub mod settings;
 pub mod sport;
 pub mod sub_sport;

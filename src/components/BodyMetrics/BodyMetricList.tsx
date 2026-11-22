@@ -25,16 +25,16 @@ export function BodyMetricList() {
     >(undefined);
 
     const [toCompare, setToCompare] = useState<number[]>([]);
-    const [comparingSessions, setComparingSessions] = useState<
+    const [comparingActivities, setComparingActivities] = useState<
         BodyMetricListItem[]
     >([]);
 
     const goToCompare = () => {
         const sorted = toCompare.toSorted((a, b) => a - b);
-        const sessions = sorted.map((date) =>
+        const activities = sorted.map((date) =>
             bodyMetrics.find((entry) => entry.date == date)!,
         );
-        setComparingSessions(sessions);
+        setComparingActivities(activities);
     };
 
     const toggleSelect = (metric: BodyMetricListItem) => {
@@ -119,10 +119,10 @@ export function BodyMetricList() {
                         }
                     />
                 )}
-                {comparingSessions.length >= 2 && (
+                {comparingActivities.length >= 2 && (
                     <BodyMetricsCompareModal
-                        measures={comparingSessions}
-                        onClose={() => setComparingSessions([])}
+                        measures={comparingActivities}
+                        onClose={() => setComparingActivities([])}
                     />
                 )}
             </div>

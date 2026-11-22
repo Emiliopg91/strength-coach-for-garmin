@@ -21,7 +21,7 @@ import { useCurrentDay } from "@/hooks/useCurrentDay";
 import { isSameDay, startOfDay } from "date-fns";
 
 export function WorkoutsList() {
-    const { sessionsVersion } = useContext(AppContext);
+    const { activitiesVersion } = useContext(AppContext);
     const { translate, toKg, formatTimeDate } = useContext(I18nSettingsContext);
     const withLoading = useLoadingTask();
 
@@ -49,7 +49,7 @@ export function WorkoutsList() {
                 BackendClient.getWorkoutList().then((data) =>
                     sortWorkouts(data),
                 ),
-            [sessionsVersion],
+            [activitiesVersion],
         );
     const [workoutDetails, setWorkoutDetails] = useState<
         WorkoutDetails | undefined
@@ -66,7 +66,7 @@ export function WorkoutsList() {
     const currentDay = useCurrentDay();
     const [plans, , refreshPlans] = useBackendList(
         BackendClient.getPlannedWorkouts,
-        [sessionsVersion],
+        [activitiesVersion],
     );
 
     const isPastDay = selectedDay < startOfDay(new Date(currentDay));
@@ -112,9 +112,9 @@ export function WorkoutsList() {
                     avg_volume: 0,
                     enabled: true,
                     progression: true,
-                    latest_session: 0,
-                    session_count: 0,
-                    sessions: [],
+                    latest_activity: 0,
+                    activity_count: 0,
+                    activities: [],
                     notes: null,
                     steps: WorkoutUtils.toWorkoutSteps(
                         [structuredClone(WorkoutUtils.DEFAULT_GROUP)],
@@ -175,8 +175,8 @@ export function WorkoutsList() {
     };
 
     const [filter, filteredWorkouts] = useFilterList(workouts, (workout) => {
-        if (workout.latest_session !== null) {
-            return [workout.name, formatTimeDate(workout.latest_session)];
+        if (workout.latest_activity !== null) {
+            return [workout.name, formatTimeDate(workout.latest_activity)];
         } else {
             return [workout.name];
         }
@@ -206,10 +206,10 @@ export function WorkoutsList() {
                                 {translate("workout")}
                             </th>
                             <th className="text-center">
-                                {translate("latest_session")}
+                                {translate("latest_activity")}
                             </th>
                             <th className="text-center">
-                                {translate("session_count")}
+                                {translate("activity_count")}
                             </th>
                             <th className="text-center">
                                 {translate("average_duration")}

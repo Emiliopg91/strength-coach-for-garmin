@@ -2,12 +2,12 @@ use rusqlite_orm::{dao::Repository, database::DatabasePool};
 
 use crate::{
     dao::{
+        activity::{Activity, ActivityRepository},
         device::{Device, DeviceRepository},
-        session::{Session, SessionRepository},
         workout::{Workout, WorkoutRepository},
     },
     fit::{FitFile, parser::FitParser},
-    logic::sessions::helpers::{ParsedFiles, import_file_list, parse_files},
+    logic::activities::helpers::{ParsedFiles, import_file_list, parse_files},
     tests::common,
 };
 
@@ -21,9 +21,9 @@ fn fixture_path(name: &str) -> String {
     )
 }
 
-fn parse_fixture(name: &str) -> Session {
+fn parse_fixture(name: &str) -> Activity {
     FitParser::from_file(fixture_path(name))
-        .and_then(Session::try_from)
+        .and_then(Activity::try_from)
         .unwrap_or_else(|e| panic!("{name}: {e:?}"))
 }
 
@@ -48,16 +48,16 @@ async fn register_device(db: &DatabasePool, serial: &str) {
     .unwrap();
 }
 
-/// Imports the fixture and returns the device stored in its session.
+/// Imports the fixture and returns the device stored in its activity.
 async fn import(db: &DatabasePool, fixture: &str) -> Option<String> {
     let files = [FitFile::read(fixture_path(fixture)).unwrap()];
     let imported = db
         .run_in_transaction(async move |tx| Ok(import_file_list(tx, parse_files(&files)).await?))
         .await
         .unwrap();
-    assert_eq!(imported.sessions.len(), 1);
+    assert_eq!(imported.activities.len(), 1);
 
-    SessionRepository::select_by_id(db, imported.sessions[0])
+    ActivityRepository::select_by_id(db, imported.activities[0])
         .await
         .unwrap()
         .unwrap()
@@ -95,16 +95,16 @@ async fn unknown_device_is_cleared() {
     assert_eq!(import(&db, "strength_1").await, None);
 }
 
-/// Imports the given files and returns the Connect id stored in the single session created.
+/// Imports the given files and returns the Connect id stored in the single activity created.
 async fn import_connect_id(db: &DatabasePool, file: FitFile) -> Option<String> {
     let files = [file];
     let imported = db
         .run_in_transaction(async move |tx| Ok(import_file_list(tx, parse_files(&files)).await?))
         .await
         .unwrap();
-    assert_eq!(imported.sessions.len(), 1);
+    assert_eq!(imported.activities.len(), 1);
 
-    SessionRepository::select_by_id(db, imported.sessions[0])
+    ActivityRepository::select_by_id(db, imported.activities[0])
         .await
         .unwrap()
         .unwrap()
@@ -132,9 +132,9 @@ async fn local_file_has_no_connect_id() {
     assert_eq!(import_connect_id(&db, file).await, None);
 }
 
-fn session_of_workout(date: u32, notes: &str) -> Session {
-    let mut session = common::session(date);
-    session.workout_obj = Some(Workout {
+fn activity_of_workout(date: u32, notes: &str) -> Activity {
+    let mut activity = common::activity(date);
+    activity.workout_obj = Some(Workout {
         id: 0,
         name: "Legs".to_string(),
         enabled: true,
@@ -144,18 +144,18 @@ fn session_of_workout(date: u32, notes: &str) -> Session {
         connect_created_time: None,
         progression: true,
     });
-    session
+    activity
 }
 
 #[tokio::test]
-async fn workout_keeps_the_notes_of_its_latest_session() {
+async fn workout_keeps_the_notes_of_its_latest_activity() {
     let db = common::test_db().await;
     // Oldest first, as `parse_files` hands them
     let parsed = ParsedFiles {
-        sessions: vec![
-            session_of_workout(1, "Oldest"),
-            session_of_workout(2, "Middle"),
-            session_of_workout(3, "Latest"),
+        activities: vec![
+            activity_of_workout(1, "Oldest"),
+            activity_of_workout(2, "Middle"),
+            activity_of_workout(3, "Latest"),
         ],
         failed: Vec::new(),
     };
@@ -165,15 +165,15 @@ async fn workout_keeps_the_notes_of_its_latest_session() {
         .await
         .unwrap();
 
-    assert_eq!(imported.sessions, [1, 2, 3]);
+    assert_eq!(imported.activities, [1, 2, 3]);
     let workout = WorkoutRepository::select_by_name(&db, "Legs")
         .await
         .unwrap()
         .unwrap();
     assert_eq!(workout.notes.as_deref(), Some("Latest"));
 
-    // Every session links to the single workout stored
-    let sessions = SessionRepository::select().fetch(&db).await.unwrap();
-    assert_eq!(sessions.len(), 3);
-    assert!(sessions.iter().all(|s| s.workout == Some(workout.id)));
+    // Every activity links to the single workout stored
+    let activities = ActivityRepository::select().fetch(&db).await.unwrap();
+    assert_eq!(activities.len(), 3);
+    assert!(activities.iter().all(|s| s.workout == Some(workout.id)));
 }

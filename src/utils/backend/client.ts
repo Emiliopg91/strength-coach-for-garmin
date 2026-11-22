@@ -2,7 +2,7 @@
 
 import { invoke, InvokeArgs } from "@tauri-apps/api/core";
 
-import { AppEnvironment, BodyMetricListItem, CloudProvider, DeviceListItem, ExerciseDetails, ExerciseListItem, PercentLoadBase, ProgressionSuggestion, ReportData, SessionDetails, SessionListItem, SessionStepsUpdate, Settings, Workout, WorkoutDetails, WorkoutListItem, WorkoutPlanListItem } from "./models";
+import { ActivityDetails, ActivityListItem, ActivityStepsUpdate, AppEnvironment, BodyMetricListItem, CloudProvider, DeviceListItem, ExerciseDetails, ExerciseListItem, PercentLoadBase, ProgressionSuggestion, ReportData, Settings, Workout, WorkoutDetails, WorkoutListItem, WorkoutPlanListItem } from "./models";
 
 export class BackendClient {
 
@@ -68,15 +68,27 @@ export class BackendClient {
 	}
 	
 
-	// From src-tauri/src/logic/sessions/commands.rs:42
-	public static downloadSession(timestamp: number): Promise<void> {
-	  return BackendClient.inner_invoke("download_session", { timestamp }); 
+	// From src-tauri/src/logic/activities/commands.rs:42
+	public static downloadActivity(timestamp: number): Promise<void> {
+	  return BackendClient.inner_invoke("download_activity", { timestamp }); 
 	}
 	
 
 	// From src-tauri/src/logic/export/commands.rs:30
 	public static exportDatabase(): Promise<void> {
 	  return BackendClient.inner_invoke("export_database"); 
+	}
+	
+
+	// From src-tauri/src/logic/activities/commands.rs:15
+	public static getActivities(limit: number | null): Promise<ActivityListItem[]> {
+	  return BackendClient.inner_invoke("get_activities", { limit }); 
+	}
+	
+
+	// From src-tauri/src/logic/activities/commands.rs:28
+	public static getActivityDetails(timestamp: number): Promise<ActivityDetails> {
+	  return BackendClient.inner_invoke("get_activity_details", { timestamp }); 
 	}
 	
 
@@ -110,7 +122,7 @@ export class BackendClient {
 	}
 	
 
-	// From src-tauri/src/logic/sessions/commands.rs:82
+	// From src-tauri/src/logic/activities/commands.rs:82
 	public static getHeatmapData(): Promise<[number, number][][]> {
 	  return BackendClient.inner_invoke("get_heatmap_data"); 
 	}
@@ -158,18 +170,6 @@ export class BackendClient {
 	}
 	
 
-	// From src-tauri/src/logic/sessions/commands.rs:28
-	public static getSessionDetails(timestamp: number): Promise<SessionDetails> {
-	  return BackendClient.inner_invoke("get_session_details", { timestamp }); 
-	}
-	
-
-	// From src-tauri/src/logic/sessions/commands.rs:15
-	public static getSessions(limit: number | null): Promise<SessionListItem[]> {
-	  return BackendClient.inner_invoke("get_sessions", { limit }); 
-	}
-	
-
 	// From src-tauri/src/logic/app/commands.rs:14
 	public static getSettings(): Promise<Settings> {
 	  return BackendClient.inner_invoke("get_settings"); 
@@ -206,7 +206,7 @@ export class BackendClient {
 	}
 	
 
-	// From src-tauri/src/logic/sessions/commands.rs:71
+	// From src-tauri/src/logic/activities/commands.rs:71
 	public static importFromFiles(): Promise<number> {
 	  return BackendClient.inner_invoke("import_from_files"); 
 	}
@@ -248,15 +248,15 @@ export class BackendClient {
 	}
 	
 
-	// From src-tauri/src/logic/exercises/commands.rs:140
-	public static saveExerciseNotes(category: number, id: number, notes: string): Promise<void> {
-	  return BackendClient.inner_invoke("save_exercise_notes", { category, id, notes }); 
+	// From src-tauri/src/logic/activities/commands.rs:56
+	public static saveActivityChanges(details: ActivityStepsUpdate): Promise<void> {
+	  return BackendClient.inner_invoke("save_activity_changes", { details }); 
 	}
 	
 
-	// From src-tauri/src/logic/sessions/commands.rs:56
-	public static saveSessionChanges(details: SessionStepsUpdate): Promise<void> {
-	  return BackendClient.inner_invoke("save_session_changes", { details }); 
+	// From src-tauri/src/logic/exercises/commands.rs:140
+	public static saveExerciseNotes(category: number, id: number, notes: string): Promise<void> {
+	  return BackendClient.inner_invoke("save_exercise_notes", { category, id, notes }); 
 	}
 	
 

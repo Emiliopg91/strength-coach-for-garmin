@@ -12,7 +12,7 @@ import {
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { ExerciseVolumeChart } from "../charts/ExerciseVolumeChart";
-import { SessionUtils } from "@/utils/SessionUtils";
+import { ActivityUtils } from "@/utils/ActivityUtils";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import { useLoadingTask } from "@/hooks/useLoadingTask";
 import { BackendClient } from "@/utils/backend/client";
@@ -242,14 +242,15 @@ export function ExerciseModal({
                                     <td>{translate("category")}:</td>
                                     <td>{categoryName(exercise.category)}</td>
                                 </tr>
-                                {Object.keys(exercise.sessions).length > 0 && (
+                                {Object.keys(exercise.activities).length >
+                                    0 && (
                                     <>
                                         <tr>
                                             <td>{translate("rm")}:</td>
                                             <td>
                                                 {formatNumber(
                                                     fromKg(
-                                                        SessionUtils.estimate1rm(
+                                                        ActivityUtils.estimate1rm(
                                                             exercise.weight,
                                                             exercise.reps,
                                                             unilateral,
@@ -354,7 +355,7 @@ export function ExerciseModal({
                     <div>
                         {(exercise.primary_muscles.length > 0 ||
                             exercise.secondary_muscles.length > 0) && (
-                            <div className="session-muscle-model">
+                            <div className="activity-muscle-model">
                                 <MuscleModel
                                     primary={exercise.primary_muscles}
                                     secondary={exercise.secondary_muscles}
@@ -363,7 +364,7 @@ export function ExerciseModal({
                         )}
                     </div>
                 </div>
-                {Object.keys(exercise.sessions).length > 0 && (
+                {Object.keys(exercise.activities).length > 0 && (
                     <table id="workout-details-table">
                         <colgroup>
                             <col className="col-180" />
@@ -479,11 +480,11 @@ export function ExerciseModal({
                         </table>
                     </>
                 )}
-                {Object.keys(exercise.sessions).length > 0 && (
+                {Object.keys(exercise.activities).length > 0 && (
                     <>
                         <hr />
                         <ExerciseVolumeChart
-                            series={exercise.sessions}
+                            series={exercise.activities}
                             exercise={exercise}
                         />
                         <table className="full-width">
@@ -501,15 +502,15 @@ export function ExerciseModal({
                             </thead>
                             <tbody>
                                 {exercise.workouts.map((workout) => {
-                                    return exercise.sessions[
+                                    return exercise.activities[
                                         workout
-                                    ].series.map((session, idx) => (
+                                    ].series.map((activity, idx) => (
                                         <tr key={`${workout}-${idx}`}>
                                             {idx === 0 && (
                                                 <td
                                                     className="divider-bottom"
                                                     rowSpan={
-                                                        exercise.sessions[
+                                                        exercise.activities[
                                                             workout
                                                         ].series.length
                                                     }
@@ -528,7 +529,7 @@ export function ExerciseModal({
                                             <td
                                                 className={
                                                     idx ===
-                                                    exercise.sessions[workout]
+                                                    exercise.activities[workout]
                                                         .series.length -
                                                         1
                                                         ? "divider-bottom"
@@ -538,7 +539,7 @@ export function ExerciseModal({
                                                     textAlign: "right",
                                                 }}
                                             >
-                                                {session.pr && (
+                                                {activity.pr && (
                                                     <EmojiEventsIcon
                                                         fontSize="small"
                                                         className="trophy-icon"
@@ -548,16 +549,18 @@ export function ExerciseModal({
                                             <td
                                                 className={`text-center${
                                                     idx ===
-                                                    exercise.sessions[workout]
+                                                    exercise.activities[workout]
                                                         .series.length -
                                                         1
                                                         ? " divider-bottom"
                                                         : ""
                                                 }`}
                                             >
-                                                {session.reps}x
+                                                {activity.reps}x
                                                 {formatNumber(
-                                                    fromKg(session.weight ?? 0),
+                                                    fromKg(
+                                                        activity.weight ?? 0,
+                                                    ),
                                                     1,
                                                 ) +
                                                     " " +

@@ -9,12 +9,12 @@ use rusqlite_orm::{
 use serde::{Deserialize, Serialize};
 
 use crate::dao::{
+    activity_step::{
+        ActivityStepRepository, entity::columns as activity_step_cols, exercise_key_values,
+    },
     exercise_category::{self, ExerciseCategory},
     muscle_exercise::{
         self, MuscleExercise, MuscleExerciseRepository, entity::columns as muscle_exercise_cols,
-    },
-    session_step::{
-        SessionStepRepository, entity::columns as session_step_cols, exercise_key_values,
     },
     workout::{WorkoutRepository, entity::columns as workout_cols},
     workout_device::{WorkoutDeviceRepository, entity::columns as workout_device_cols},
@@ -186,10 +186,10 @@ impl Exercise {
     pub async fn get_progression_candidates(
         conn: &Connection,
     ) -> rusqlite_orm::errors::Result<Vec<Exercise>> {
-        let performed = SessionStepRepository::select()
-            .distinct(&[session_step_cols::EX_CAT, session_step_cols::EX_ID])
+        let performed = ActivityStepRepository::select()
+            .distinct(&[activity_step_cols::EX_CAT, activity_step_cols::EX_ID])
             .where_(Where::Eq(
-                session_step_cols::KIND,
+                activity_step_cols::KIND,
                 StepType::Exercise.into(),
             ))
             .to_subquery();

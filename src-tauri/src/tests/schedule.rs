@@ -53,7 +53,7 @@ async fn setup(plans: &[(u32, &'static str)]) -> DatabasePool {
                 .item(&mut WorkoutPlanning {
                     date,
                     workout: id(workout),
-                    session: None,
+                    activity: None,
                     connect_id: None,
                     workout_obj: None,
                 })

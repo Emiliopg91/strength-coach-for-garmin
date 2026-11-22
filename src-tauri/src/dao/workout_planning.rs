@@ -13,12 +13,12 @@ use crate::dao::workout::{self, Workout, WorkoutRepository};
 #[entity("workout_planning")]
 #[primary_key(date, workout)]
 #[index("date", (date))]
-#[index("session", (session))]
+#[index("activity", (activity))]
 pub struct WorkoutPlanning {
     pub date: u32,
     pub workout: u16,
-    /// Session that fulfilled this plan; set to NULL by the DB if that session is deleted
-    pub session: Option<u32>,
+    /// Activity that fulfilled this plan; set to NULL by the DB if that activity is deleted
+    pub activity: Option<u32>,
     pub connect_id: Option<String>,
 
     #[allow(dead_code)]
@@ -101,7 +101,7 @@ impl WorkoutPlanning {
         WorkoutPlanningRepository::select()
             .where_(Where::And(vec![
                 Where::Gte(entity::columns::DATE, from.into()),
-                Where::Null(entity::columns::SESSION),
+                Where::Null(entity::columns::ACTIVITY),
             ]))
             .order_by(OrderBy::Asc(entity::columns::DATE))
             .fetch_one_in(conn)
@@ -118,7 +118,7 @@ impl WorkoutPlanning {
             date,
             workout,
             workout_obj: None,
-            session: None,
+            activity: None,
             connect_id: None,
         };
 

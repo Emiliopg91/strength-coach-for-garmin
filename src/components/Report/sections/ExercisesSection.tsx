@@ -59,7 +59,7 @@ export default function ExercisesSection({ exercises }: Props): JSX.Element {
                                             <tbody>
                                                 {exercise.workouts.map(
                                                     (workout) => {
-                                                        return exercise.sessions[
+                                                        return exercise.activities[
                                                             workout
                                                         ].series.map(
                                                             (serie, idx) => (
@@ -71,7 +71,7 @@ export default function ExercisesSection({ exercises }: Props): JSX.Element {
                                                                         <td
                                                                             rowSpan={
                                                                                 exercise
-                                                                                    .sessions[
+                                                                                    .activities[
                                                                                     workout
                                                                                 ]
                                                                                     .series

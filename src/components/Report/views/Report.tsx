@@ -6,7 +6,7 @@ import { AppContext } from "@/context/AppContext";
 import { BackendClient } from "@/utils/backend/client";
 import { ReportData } from "@/utils/backend/models";
 import ContentTable from "../sections/ContentTable";
-import SessionsSection from "../sections/SessionsSection";
+import ActivitiesSection from "../sections/ActivitiesSection";
 import NotesSection from "../sections/NotesSection";
 
 type Props = {
@@ -46,8 +46,8 @@ export default function Report({ beginDate, endDate }: Props): JSX.Element {
             <ContentTable data={data} />
             <NotesSection />
             <BodySection bodyMetrics={data.body_metrics} />
-            <SessionsSection
-                sessions={data.sessions}
+            <ActivitiesSection
+                activities={data.activities}
                 exercises={data.exercises}
             />
             <ExercisesSection exercises={data.exercises} />

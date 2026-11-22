@@ -35,7 +35,7 @@ use crate::{
     },
 };
 
-/// Returns sessions grouped/aggregated by workout name (count, average time, latest date), sorted by name.
+/// Returns activities grouped/aggregated by workout name (count, average time, latest date), sorted by name.
 pub async fn get_workout_list<R: Runtime>(
     app: &AppHandle<R>,
     settings: &SettingsLock,
@@ -55,7 +55,7 @@ pub async fn get_workout_list<R: Runtime>(
         })
 }
 
-/// Returns the workout `id` with every session following it and its per-session volume.
+/// Returns the workout `id` with every activity following it and its per-activity volume.
 pub async fn get_workout_details<R: Runtime>(
     app: &AppHandle<R>,
     settings: &SettingsLock,
@@ -272,7 +272,7 @@ pub async fn remove_planned_workout<R: Runtime>(
         .run_in_connection(async move |conn| {
             let entry = WorkoutPlanning::get(conn, date, workout).await?.unwrap();
             // Kept as the record of what was planned: the UI offers no delete for these either
-            if entry.session.is_some()
+            if entry.activity.is_some()
                 || today_local_midnight().is_some_and(|today| entry.date < today)
             {
                 return Err("Past or done planned workouts can't be deleted".into());

@@ -19,14 +19,14 @@ import PriorityHighIcon from "@mui/icons-material/PriorityHigh";
 import { PromptDialog } from "../Prompt/PromptDialog";
 
 // Only Home is bundled eagerly; the rest is fetched in background once Home is shown
-const loadSessionsList = () => import("../Sessions/SessionList");
+const loadActivitiesList = () => import("../Activities/ActivityList");
 const loadExercisesList = () => import("../Exercises/ExercisesList");
 const loadBodyMetricList = () => import("../BodyMetrics/BodyMetricList");
 const loadWorkoutsList = () => import("../Workouts/WorkoutList");
 const loadSettings = () => import("../Settings/Settings");
 
-const SessionsList = lazy(() =>
-    loadSessionsList().then((m) => ({ default: m.SessionsList })),
+const ActivitiesList = lazy(() =>
+    loadActivitiesList().then((m) => ({ default: m.ActivitiesList })),
 );
 const ExercisesList = lazy(() =>
     loadExercisesList().then((m) => ({ default: m.ExercisesList })),
@@ -50,7 +50,7 @@ export function App(): JSX.Element {
 
     useEffect(() => {
         if (!appReady) return;
-        void loadSessionsList();
+        void loadActivitiesList();
         void loadExercisesList();
         void loadBodyMetricList();
         void loadWorkoutsList();
@@ -80,11 +80,11 @@ export function App(): JSX.Element {
             selected: tab == Tabs.HOME,
         },
         {
-            label: <span>{translate("sessions")}</span>,
+            label: <span>{translate("activities")}</span>,
             onSelected: () => {
-                setTab(Tabs.SESSIONS);
+                setTab(Tabs.ACTIVITIES);
             },
-            selected: tab == Tabs.SESSIONS,
+            selected: tab == Tabs.ACTIVITIES,
         },
         {
             label: <span>{translate("workouts")}</span>,
@@ -146,7 +146,7 @@ export function App(): JSX.Element {
                         <div className="list-layer">
                             <Suspense fallback={null}>
                                 {tab == Tabs.HOME && <Home />}
-                                {tab == Tabs.SESSIONS && <SessionsList />}
+                                {tab == Tabs.ACTIVITIES && <ActivitiesList />}
                                 {tab == Tabs.EXERCISES && <ExercisesList />}
                                 {tab == Tabs.WORKOUTS && <WorkoutsList />}
                                 {tab == Tabs.BODY_METRICS && <BodyMetricList />}

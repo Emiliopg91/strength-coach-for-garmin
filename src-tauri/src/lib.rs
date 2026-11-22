@@ -33,6 +33,13 @@ use crate::{
     dao::body_metric::migration_21,
     dto::app::Settings,
     logic::{
+        activities::{
+            commands::{
+                download_activity, get_activities, get_activity_details, get_heatmap_data,
+                import_from_files, save_activity_changes,
+            },
+            helpers::import_file_paths,
+        },
         app::commands::{
             get_environment, get_settings, get_translations, notify_frontend_ready,
             update_settings_value,
@@ -55,13 +62,6 @@ use crate::{
             helpers::{AppPrompter, Prompts},
         },
         report::commands::{get_report_data, load_report, report_ready},
-        sessions::{
-            commands::{
-                download_session, get_heatmap_data, get_session_details, get_sessions,
-                import_from_files, save_session_changes,
-            },
-            helpers::import_file_paths,
-        },
         workouts::commands::{
             add_planned_workout, delete_planned_workout, get_next_planned_workout,
             get_percent_load_bases, get_planned_workouts, get_workout_details, get_workout_list,
@@ -146,7 +146,7 @@ fn initialize(app: &AppHandle) -> (DatabasePool, Settings, ConnectClient, MtpCli
                     warn!("Could not refresh percentage loads: {}", e);
                 }
 
-                //crate::logic::sessions::helpers::merge_sessions(&database, _, _);
+                //crate::logic::activities::helpers::merge_activities(&database, _, _);
 
                 #[cfg(debug_assertions)]
                 let _ = database
@@ -318,11 +318,11 @@ pub fn run(log_level: LevelFilter) {
         .invoke_handler(tauri::generate_handler![
             //Prompts
             answer_prompt,
-            //Sessions
-            get_sessions,
-            get_session_details,
-            download_session,
-            save_session_changes,
+            //Activities
+            get_activities,
+            get_activity_details,
+            download_activity,
+            save_activity_changes,
             import_from_files,
             get_heatmap_data,
             //Exercises

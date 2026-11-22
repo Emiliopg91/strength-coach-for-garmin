@@ -41,8 +41,8 @@ fn every_key_has_every_language() {
 #[test]
 fn replace_single_placeholder() {
     assert_eq!(
-        translate_and_replace("imported {} sessions", &["3"], Languages::English),
-        "imported 3 sessions"
+        translate_and_replace("imported {} activities", &["3"], Languages::English),
+        "imported 3 activities"
     );
 }
 

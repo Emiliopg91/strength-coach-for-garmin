@@ -19,8 +19,8 @@ pub async fn send_to_device(
 }
 
 /// Downloads over USB the activities recorded by the device `serial` since its last sync and
-/// imports them, moving the sync mark. Files that fail to parse are kept as pending; new sessions
-/// are geocoded in the background. Resolves to the number of sessions imported. On failure, shows a
+/// imports them, moving the sync mark. Files that fail to parse are kept as pending; new activities
+/// are geocoded in the background. Resolves to the number of activities imported. On failure, shows a
 /// persistent error notification and rejects with the message.
 #[traced_command]
 #[tauri::command]

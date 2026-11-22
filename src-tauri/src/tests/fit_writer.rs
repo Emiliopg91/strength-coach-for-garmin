@@ -5,8 +5,8 @@ use rustyfit::profile::{
 
 use crate::{
     dao::{
+        activity::Activity,
         exercise::GENERIC_EXERCISE_ID,
-        session::Session,
         settings::WeightUnit,
         workout::Workout,
         workout_planning::WorkoutPlanning,
@@ -104,25 +104,25 @@ fn step_without_exercise_writes_no_exercise_category() {
     );
 }
 
-fn parse_file(path: &std::path::Path) -> Session {
+fn parse_file(path: &std::path::Path) -> Activity {
     FitParser::from_file(path)
-        .and_then(Session::try_from)
+        .and_then(Activity::try_from)
         .unwrap_or_else(|e| panic!("{}: {e:?}", path.display()))
 }
 
-fn parse_fixture(name: &str) -> Session {
+fn parse_fixture(name: &str) -> Activity {
     parse_file(std::path::Path::new(&format!(
         "{}/src/tests/fixtures/{name}.fit",
         env!("CARGO_MANIFEST_DIR")
     )))
 }
 
-fn round_trip(session: &Session, name: &str) -> Session {
+fn round_trip(activity: &Activity, name: &str) -> Activity {
     let path = std::env::temp_dir().join(format!(
-        "gtrs-test-session-writer-{name}-{}.fit",
+        "gtrs-test-activity-writer-{name}-{}.fit",
         std::process::id()
     ));
-    FitWriter::from(session)
+    FitWriter::from(activity)
         .write(&path, Languages::English, WeightUnit::Kilograms)
         .unwrap();
     let written = parse_file(&path);
@@ -130,8 +130,8 @@ fn round_trip(session: &Session, name: &str) -> Session {
     written
 }
 
-fn step_summary(session: &Session) -> Vec<StepSummary> {
-    session
+fn step_summary(activity: &Activity) -> Vec<StepSummary> {
+    activity
         .steps
         .iter()
         .map(|s| {
@@ -165,7 +165,7 @@ type StepSummary = (
 );
 
 #[test]
-fn session_survives_a_fit_round_trip() {
+fn activity_survives_a_fit_round_trip() {
     for name in [
         "strength_1",
         "strength_2",
@@ -178,32 +178,32 @@ fn session_survives_a_fit_round_trip() {
         "walk_oslo",
         "indoor_biking",
     ] {
-        let session = parse_fixture(name);
-        let written = round_trip(&session, name);
+        let activity = parse_fixture(name);
+        let written = round_trip(&activity, name);
 
-        assert_eq!(written.date, session.date, "{name}");
-        assert_eq!(written.name, session.name, "{name}");
-        assert_eq!(written.device, session.device, "{name}");
-        assert_eq!(written.sport, session.sport, "{name}");
-        assert_eq!(written.sub_sport, session.sub_sport, "{name}");
+        assert_eq!(written.date, activity.date, "{name}");
+        assert_eq!(written.name, activity.name, "{name}");
+        assert_eq!(written.device, activity.device, "{name}");
+        assert_eq!(written.sport, activity.sport, "{name}");
+        assert_eq!(written.sub_sport, activity.sub_sport, "{name}");
         assert_eq!(
-            written.total_elapsed_time, session.total_elapsed_time,
+            written.total_elapsed_time, activity.total_elapsed_time,
             "{name}"
         );
-        assert_eq!(written.active_time, session.active_time, "{name}");
-        assert_eq!(written.active_calories, session.active_calories, "{name}");
-        assert_eq!(written.training_load, session.training_load, "{name}");
-        assert_eq!(step_summary(&written), step_summary(&session), "{name}");
+        assert_eq!(written.active_time, activity.active_time, "{name}");
+        assert_eq!(written.active_calories, activity.active_calories, "{name}");
+        assert_eq!(written.training_load, activity.training_load, "{name}");
+        assert_eq!(step_summary(&written), step_summary(&activity), "{name}");
 
-        let laps = |s: &Session| -> Vec<_> {
+        let laps = |s: &Activity| -> Vec<_> {
             s.laps
                 .iter()
                 .map(|l| (l.idx, l.start_latitude, l.start_longitude))
                 .collect()
         };
-        assert_eq!(laps(&written), laps(&session), "{name}");
+        assert_eq!(laps(&written), laps(&activity), "{name}");
 
-        let data = session.data.as_ref().unwrap();
+        let data = activity.data.as_ref().unwrap();
         let written_data = written.data.as_ref().unwrap();
         assert_eq!(written_data.heart_rates, data.heart_rates, "{name}");
         assert_eq!(written_data.coordinates, data.coordinates, "{name}");
@@ -214,45 +214,45 @@ fn session_survives_a_fit_round_trip() {
 }
 
 #[test]
-fn session_sets_do_not_depend_on_its_current_workout() {
-    let mut session = parse_fixture("strength_1");
-    let expected = step_summary(&session);
-    session.workout_obj = None;
+fn activity_sets_do_not_depend_on_its_current_workout() {
+    let mut activity = parse_fixture("strength_1");
+    let expected = step_summary(&activity);
+    activity.workout_obj = None;
 
-    assert_eq!(step_summary(&round_trip(&session, "no_workout")), expected);
+    assert_eq!(step_summary(&round_trip(&activity, "no_workout")), expected);
 }
 
 #[test]
-fn session_without_device_uses_its_date_as_file_key() {
-    let mut session = parse_fixture("strength_1");
-    session.device = None;
-    session.device_obj = None;
+fn activity_without_device_uses_its_date_as_file_key() {
+    let mut activity = parse_fixture("strength_1");
+    activity.device = None;
+    activity.device_obj = None;
 
-    assert_eq!(session.file_key(), session.date);
-    assert!(round_trip(&session, "no_device").device.is_none());
+    assert_eq!(activity.file_key(), activity.date);
+    assert!(round_trip(&activity, "no_device").device.is_none());
 }
 
 #[test]
-fn session_set_with_both_targets_keeps_the_reps_one() {
-    let mut session = parse_fixture("strength_1");
-    let idx = session
+fn activity_set_with_both_targets_keeps_the_reps_one() {
+    let mut activity = parse_fixture("strength_1");
+    let idx = activity
         .steps
         .iter()
         .position(|s| s.kind == StepType::Exercise)
         .unwrap();
-    session.steps[idx].reps_ref = Some(12);
-    session.steps[idx].duration_ref = Some(80);
+    activity.steps[idx].reps_ref = Some(12);
+    activity.steps[idx].duration_ref = Some(80);
 
-    let written = round_trip(&session, "both_targets");
+    let written = round_trip(&activity, "both_targets");
 
     assert_eq!(written.steps[idx].reps_ref, Some(12));
     assert_eq!(written.steps[idx].duration_ref, None);
 }
 
 #[test]
-fn session_references_its_workout_like_a_device_recording() {
-    let session = parse_fixture("strength_1");
-    let messages = session
+fn activity_references_its_workout_like_a_device_recording() {
+    let activity = parse_fixture("strength_1");
+    let messages = activity
         .to_fit_messages(Languages::English, WeightUnit::Kilograms)
         .unwrap();
     let position = |num| messages.iter().position(|msg| msg.num == num).unwrap();
@@ -266,11 +266,11 @@ fn session_references_its_workout_like_a_device_recording() {
 }
 
 #[test]
-fn session_set_without_duration_keeps_it_empty() {
-    let mut session = parse_fixture("strength_1");
-    session.steps[0].duration = None;
+fn activity_set_without_duration_keeps_it_empty() {
+    let mut activity = parse_fixture("strength_1");
+    activity.steps[0].duration = None;
 
-    let written = round_trip(&session, "no_duration");
+    let written = round_trip(&activity, "no_duration");
 
     assert_eq!(written.steps[0].duration, None);
     assert!(written.steps[1].duration.is_some());
@@ -300,25 +300,25 @@ fn step_time_is_in_milliseconds_only_inside_the_fit_file() {
 }
 
 #[test]
-fn session_duration_target_stays_in_seconds_after_a_round_trip() {
-    let mut session = parse_fixture("strength_1");
-    let idx = session
+fn activity_duration_target_stays_in_seconds_after_a_round_trip() {
+    let mut activity = parse_fixture("strength_1");
+    let idx = activity
         .steps
         .iter()
         .position(|s| s.kind == StepType::Rest)
         .unwrap();
-    session.steps[idx].duration_ref = Some(90);
+    activity.steps[idx].duration_ref = Some(90);
 
     assert_eq!(
-        round_trip(&session, "duration_ref").steps[idx].duration_ref,
+        round_trip(&activity, "duration_ref").steps[idx].duration_ref,
         Some(90)
     );
 }
 
 #[test]
 fn generic_exercise_survives_a_fit_round_trip() {
-    let mut session = parse_fixture("strength_1");
-    let step = session
+    let mut activity = parse_fixture("strength_1");
+    let step = activity
         .steps
         .iter_mut()
         .find(|s| s.ex_cat.is_some())
@@ -327,7 +327,7 @@ fn generic_exercise_survives_a_fit_round_trip() {
     step.ex_id = Some(GENERIC_EXERCISE_ID);
     let idx = step.idx;
 
-    let written = round_trip(&session, "generic");
+    let written = round_trip(&activity, "generic");
     let step = written.steps.iter().find(|s| s.idx == idx).unwrap();
 
     assert_eq!(
@@ -386,12 +386,12 @@ fn plan(
     date: u32,
     connect_id: Option<&str>,
     created: Option<u32>,
-    session: Option<u32>,
+    activity: Option<u32>,
 ) -> WorkoutPlanning {
     WorkoutPlanning {
         date,
         workout: 1,
-        session,
+        activity,
         connect_id: None,
         workout_obj: Some(Workout {
             id: 1,
@@ -472,11 +472,11 @@ fn schedule_file_key_follows_its_content() {
     assert_ne!(Vec::<WorkoutPlanning>::new().file_key(), 0);
 }
 
-fn written_training_file(connect_created_time: Option<u32>) -> (Session, mesgdef::TrainingFile) {
-    let mut session = parse_fixture("strength_1");
-    session.workout_obj = Some(Workout {
+fn written_training_file(connect_created_time: Option<u32>) -> (Activity, mesgdef::TrainingFile) {
+    let mut activity = parse_fixture("strength_1");
+    activity.workout_obj = Some(Workout {
         id: 0,
-        name: session.name.clone(),
+        name: activity.name.clone(),
         enabled: true,
         notes: None,
         connect_id: Some("1746212841".to_string()),
@@ -484,7 +484,7 @@ fn written_training_file(connect_created_time: Option<u32>) -> (Session, mesgdef
         steps: vec![],
         progression: true,
     });
-    let messages = session
+    let messages = activity
         .to_fit_messages(Languages::English, WeightUnit::Kilograms)
         .unwrap();
     let msg = messages
@@ -492,11 +492,11 @@ fn written_training_file(connect_created_time: Option<u32>) -> (Session, mesgdef
         .find(|msg| msg.num == MesgNum::TRAINING_FILE)
         .unwrap();
     let training_file = mesgdef::TrainingFile::from(msg);
-    (session, training_file)
+    (activity, training_file)
 }
 
 #[test]
-fn session_points_to_the_workout_file_by_its_keys() {
+fn activity_points_to_the_workout_file_by_its_keys() {
     let (_, training_file) = written_training_file(Some(1793401668));
 
     assert_eq!(training_file.r#type, typedef::File::WORKOUT);
@@ -507,8 +507,8 @@ fn session_points_to_the_workout_file_by_its_keys() {
 }
 
 #[test]
-fn session_without_connect_creation_time_points_to_its_date() {
-    let (session, training_file) = written_training_file(None);
+fn activity_without_connect_creation_time_points_to_its_date() {
+    let (activity, training_file) = written_training_file(None);
 
-    assert_eq!(training_file.time_created.0, session.date - 631_065_600);
+    assert_eq!(training_file.time_created.0, activity.date - 631_065_600);
 }

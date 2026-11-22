@@ -5,7 +5,7 @@ const MAX_ESTIMATION_REPS: u16 = 20;
 const DEFAULT_INCREMENT: f32 = 0.5;
 
 /// Estimated 1RM of a set, truncated to whole kg: Brzycki up to 10 reps, a linear fit beyond.
-/// Unilateral sets count both sides, so half their reps. Mirrors `SessionUtils.estimate1rm`.
+/// Unilateral sets count both sides, so half their reps. Mirrors `ActivityUtils.estimate1rm`.
 pub fn estimate_1rm(weight: f32, reps: u16, unilateral: bool) -> f32 {
     let reps = if unilateral { reps / 2 } else { reps };
     if reps <= 1 {

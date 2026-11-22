@@ -1,5 +1,5 @@
 import { I18nSettingsContext } from "@/context/I18nSettingsContext";
-import { LoadZone, SessionUtils, WorkoutLoad } from "@/utils/SessionUtils";
+import { LoadZone, ActivityUtils, WorkoutLoad } from "@/utils/ActivityUtils";
 import { useContext } from "react";
 import {
     Area,
@@ -33,7 +33,7 @@ function ZoneLine({ workload }: { workload: WorkoutLoad[] }) {
 
     return (
         <g>
-            {SessionUtils.loadSegments(workload).map((s, i) => (
+            {ActivityUtils.loadSegments(workload).map((s, i) => (
                 <line
                     key={i}
                     x1={xScale(s.x0)}
@@ -53,7 +53,7 @@ function ZoneLine({ workload }: { workload: WorkoutLoad[] }) {
                     r={3}
                     fill={
                         ZONE_COLORS[
-                            SessionUtils.loadZone(
+                            ActivityUtils.loadZone(
                                 p.current,
                                 p.lower,
                                 p.lower + p.upper,
@@ -113,7 +113,7 @@ export function WorkloadChart({ workload, minDate }: Props) {
 
     // Status of today's load
     const today = workload[workload.length - 1];
-    const zone = SessionUtils.loadZone(
+    const zone = ActivityUtils.loadZone(
         today.current,
         today.lower,
         today.lower + today.upper,

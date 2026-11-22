@@ -14,8 +14,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     dao::{
+        activity_step::{ActivityStep, exercise_key_values},
         exercise::{self, Exercise},
-        session_step::{SessionStep, exercise_key_values},
         workout::{WorkoutRepository, entity::columns as workout_cols},
         workout_device::{WorkoutDeviceRepository, entity::columns as workout_device_cols},
     },
@@ -394,7 +394,7 @@ pub async fn current_one_rms(
 ) -> rusqlite_orm::errors::Result<HashMap<(u16, u16), f32>> {
     let since = now.saturating_sub(ONE_RM_WINDOW_WEEKS * 7 * 24 * 3600);
     let mut one_rms: HashMap<(u16, u16), f32> = HashMap::new();
-    for (key, weight, reps) in SessionStep::get_sets_since(conn, keys, since).await? {
+    for (key, weight, reps) in ActivityStep::get_sets_since(conn, keys, since).await? {
         let unilateral = exercises.get(&key).is_some_and(|e| e.unilateral);
         let estimate = estimate_1rm(weight, reps, unilateral);
         if estimate > 0.0 {

@@ -1,13 +1,15 @@
 use serde::Serialize;
 
-use crate::dao::{session::Session, workout_planning::WorkoutPlanning, workout_step::WorkoutStep};
+use crate::dao::{
+    activity::Activity, workout_planning::WorkoutPlanning, workout_step::WorkoutStep,
+};
 
 #[derive(Serialize)]
 pub struct WorkoutListItem {
     pub id: u16,
     pub name: String,
-    pub latest_session: Option<u32>,
-    pub sessions: u32,
+    pub latest_activity: Option<u32>,
+    pub activities: u32,
     pub avg_time: u32,
     pub avg_load: u16,
     pub enabled: bool,
@@ -15,15 +17,15 @@ pub struct WorkoutListItem {
 }
 
 #[derive(Serialize)]
-pub struct WorkoutSession {
+pub struct WorkoutActivity {
     pub date: u32,
     pub volume: f32,
     pub time: u32,
 }
 
-impl From<&Session> for WorkoutSession {
-    fn from(value: &Session) -> Self {
-        WorkoutSession {
+impl From<&Activity> for WorkoutActivity {
+    fn from(value: &Activity) -> Self {
+        WorkoutActivity {
             date: value.date,
             volume: 0_f32,
             time: value.total_elapsed_time,
@@ -35,11 +37,11 @@ impl From<&Session> for WorkoutSession {
 pub struct WorkoutDetails {
     pub id: u16,
     pub name: String,
-    pub latest_session: Option<u32>,
-    pub session_count: u32,
+    pub latest_activity: Option<u32>,
+    pub activity_count: u32,
     pub avg_time: u32,
     pub avg_volume: f32,
-    pub sessions: Vec<WorkoutSession>,
+    pub activities: Vec<WorkoutActivity>,
     pub enabled: bool,
     pub progression: bool,
     pub notes: Option<String>,
@@ -63,7 +65,7 @@ pub struct PercentLoadBase {
 pub struct WorkoutPlanListItem {
     pub date: u32,
     pub workout: u16,
-    pub session: Option<u32>,
+    pub activity: Option<u32>,
 }
 
 impl From<&WorkoutPlanning> for WorkoutPlanListItem {
@@ -71,7 +73,7 @@ impl From<&WorkoutPlanning> for WorkoutPlanListItem {
         Self {
             date: value.date,
             workout: value.workout,
-            session: value.session,
+            activity: value.activity,
         }
     }
 }

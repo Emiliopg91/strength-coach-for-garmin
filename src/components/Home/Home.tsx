@@ -5,21 +5,21 @@ import { useCurrentDay } from "@/hooks/useCurrentDay";
 import { useLoadingTask } from "@/hooks/useLoadingTask";
 import { BackendClient } from "@/utils/backend/client";
 import {
-    SessionFrontDetails,
-    SessionUtils,
+    ActivityFrontDetails,
+    ActivityUtils,
     WorkoutLoad,
-} from "@/utils/SessionUtils";
+} from "@/utils/ActivityUtils";
 import { usePickerAdapter } from "@mui/x-date-pickers/hooks";
 import { useContext, useEffect, useEffectEvent, useState } from "react";
 import "@/styles/Home/Home.css";
-import "@/styles/Sessions/SessionModal.css";
+import "@/styles/Activities/ActivityModal.css";
 import {
-    SessionListItem,
+    ActivityListItem,
     WorkoutDetails,
     WorkoutListItem,
 } from "@/utils/backend/models";
 import { BackendListener } from "@/utils/backend/listener";
-import { SessionModal } from "../Sessions/modals/SessionModal";
+import { ActivityModal } from "../Activities/modals/ActivityModal";
 import { WorkoutModal } from "../Workouts/modals/WorkoutModal";
 import { Heatmap } from "./charts/Heatmap";
 import { WorkloadChart } from "./charts/WorkloadChart";
@@ -27,11 +27,11 @@ import { WorkoutStepsModal } from "../Workouts/modals/WorkoutStepsModal";
 import { WorkoutActionsMenu } from "../Workouts/menus/WorkoutActionsMenu";
 import { Button } from "@mui/material";
 import { ReportModal } from "../Report/modals/ReportModal";
-import { ImportSessionsMenu } from "../Sessions/menus/ImportSessionsMenu";
+import { ImportActivitiesMenu } from "../Activities/menus/ImportActivitiesMenu";
 import { differenceInCalendarDays } from "date-fns";
 
 interface PeriodStats {
-    sessions: number;
+    activities: number;
     time: number;
     kcal: number;
     load: number;
@@ -48,7 +48,7 @@ type Period = (typeof PERIODS)[number];
 type HomeStats = Record<Period, PeriodStats>;
 
 const emptyPeriod = (): PeriodStats => ({
-    sessions: 0,
+    activities: 0,
     time: 0,
     kcal: 0,
     load: 0,
@@ -61,16 +61,16 @@ const emptyStats = (): HomeStats => ({
     month: emptyPeriod(),
 });
 
-const addSession = (stats: PeriodStats, session: SessionListItem) => {
-    stats.sessions += 1;
-    stats.time += session.total_elapsed_time;
-    stats.kcal += session.active_calories;
-    stats.load += session.training_load;
+const addActivity = (stats: PeriodStats, activity: ActivityListItem) => {
+    stats.activities += 1;
+    stats.time += activity.total_elapsed_time;
+    stats.kcal += activity.active_calories;
+    stats.load += activity.training_load;
 };
 
-// Sessions must be sorted by timestamp, most recent first
+// Activities must be sorted by timestamp, most recent first
 const calculateStats = (
-    sessions: SessionListItem[],
+    activities: ActivityListItem[],
     today: number,
     adapter: ReturnType<typeof usePickerAdapter>,
 ): HomeStats => {
@@ -81,18 +81,18 @@ const calculateStats = (
     const prevWeekLimit = adapter.addWeeks(startOfWeek, -1).getTime() / 1000;
     const monthLimit = today - 29 * 24 * 60 * 60;
 
-    for (const session of sessions) {
-        if (session.timestamp < monthLimit) {
+    for (const activity of activities) {
+        if (activity.timestamp < monthLimit) {
             break;
         }
-        addSession(stats.month, session);
-        if (session.timestamp >= thisWeekLimit) {
-            addSession(stats.thisWeek, session);
-            if (session.timestamp >= today) {
-                addSession(stats.today, session);
+        addActivity(stats.month, activity);
+        if (activity.timestamp >= thisWeekLimit) {
+            addActivity(stats.thisWeek, activity);
+            if (activity.timestamp >= today) {
+                addActivity(stats.today, activity);
             }
-        } else if (session.timestamp >= prevWeekLimit) {
-            addSession(stats.previousWeek, session);
+        } else if (activity.timestamp >= prevWeekLimit) {
+            addActivity(stats.previousWeek, activity);
         }
     }
 
@@ -100,7 +100,7 @@ const calculateStats = (
 };
 
 export function Home() {
-    const { sessionsVersion } = useContext(AppContext);
+    const { activitiesVersion } = useContext(AppContext);
     const withLoading = useLoadingTask();
     const {
         translate,
@@ -125,11 +125,11 @@ export function Home() {
     const [workoutDetails, setWorkoutDetails] = useState<
         WorkoutDetails | undefined
     >(undefined);
-    const [session, setLastSession] = useState<SessionListItem | undefined>(
+    const [activity, setLastActivity] = useState<ActivityListItem | undefined>(
         undefined,
     );
-    const [sessionDetails, setSessionDetails] = useState<
-        SessionFrontDetails | undefined
+    const [activityDetails, setActivityDetails] = useState<
+        ActivityFrontDetails | undefined
     >(undefined);
     const [workoutEdit, setWorkoutEdit] = useState<WorkoutDetails | undefined>(
         undefined,
@@ -140,17 +140,17 @@ export function Home() {
         const today =
             new Date(new Date().setHours(0, 0, 0, 0)).getTime() / 1000;
         withLoading(
-            BackendClient.getSessions(
-                today - SessionUtils.CHRONIC_DAYS * 2 * 24 * 60 * 60,
+            BackendClient.getActivities(
+                today - ActivityUtils.CHRONIC_DAYS * 2 * 24 * 60 * 60,
             ),
-        ).then((sessions) => {
-            setAvailableData(sessions.length > 0);
+        ).then((activities) => {
+            setAvailableData(activities.length > 0);
 
-            if (sessions.length > 0) {
+            if (activities.length > 0) {
                 const workout_data =
-                    SessionUtils.calculateWorkoutLoad(sessions);
-                const overreaching = SessionUtils.isOverreaching(workout_data);
-                const newStats = calculateStats(sessions, today, adapter);
+                    ActivityUtils.calculateWorkoutLoad(activities);
+                const overreaching = ActivityUtils.isOverreaching(workout_data);
+                const newStats = calculateStats(activities, today, adapter);
 
                 withLoading(BackendClient.getHeatmapData()).then(
                     setHeatMapData,
@@ -178,13 +178,13 @@ export function Home() {
                     if (!overreaching && filtered.length > 0) {
                         // Never-done workouts take priority, otherwise the least recent one
                         let oldest = filtered.find(
-                            (w) => w.latest_session == null,
+                            (w) => w.latest_activity == null,
                         );
                         if (oldest === undefined) {
                             oldest = filtered[0];
                             for (const w of filtered) {
                                 if (
-                                    oldest.latest_session! > w.latest_session!
+                                    oldest.latest_activity! > w.latest_activity!
                                 ) {
                                     oldest = w;
                                 }
@@ -200,7 +200,7 @@ export function Home() {
 
                 setWorkload(workout_data);
 
-                setLastSession(sessions[0]);
+                setLastActivity(activities[0]);
             }
         });
     };
@@ -215,11 +215,11 @@ export function Home() {
         return translate("in_n_days", [String(diff)]);
     };
 
-    const getSessionDetails = (timestamp: number) => {
-        withLoading(BackendClient.getSessionDetails(timestamp)).then(
+    const getActivityDetails = (timestamp: number) => {
+        withLoading(BackendClient.getActivityDetails(timestamp)).then(
             (details) => {
-                setSessionDetails(
-                    SessionUtils.detailsFromBackend(details, fromKg),
+                setActivityDetails(
+                    ActivityUtils.detailsFromBackend(details, fromKg),
                 );
             },
         );
@@ -231,9 +231,9 @@ export function Home() {
         );
     };
 
-    useBackendEvent(BackendListener.onSessionLocationUpdate, (data) => {
-        setLastSession((prev) =>
-            prev && prev.timestamp == data.session
+    useBackendEvent(BackendListener.onActivityLocationUpdate, (data) => {
+        setLastActivity((prev) =>
+            prev && prev.timestamp == data.activity
                 ? { ...prev, name: data.location }
                 : prev,
         );
@@ -251,7 +251,7 @@ export function Home() {
 
     useEffect(() => {
         onRefreshTrigger();
-    }, [sessionsVersion, adapter, day]);
+    }, [activitiesVersion, adapter, day]);
 
     const openEdit = (workout: number) => {
         withLoading(BackendClient.getWorkoutDetails(workout)).then(
@@ -269,8 +269,8 @@ export function Home() {
                     <h1 id="no-available-data">
                         {translate("no_available_data")}
                     </h1>
-                    <h3 id="import-sessions">
-                        {translate("import_session_to_begin")}
+                    <h3 id="import-activities">
+                        {translate("import_activity_to_begin")}
                     </h3>
                 </>
             )}
@@ -306,11 +306,11 @@ export function Home() {
                                 </thead>
                                 <tbody>
                                     <tr>
-                                        <td>{translate("sessions")}</td>
+                                        <td>{translate("activities")}</td>
                                         {PERIODS.map((p) => (
                                             <td key={p}>
                                                 {formatNumber(
-                                                    stats[p].sessions,
+                                                    stats[p].activities,
                                                     0,
                                                 )}
                                             </td>
@@ -323,9 +323,10 @@ export function Home() {
                                         {PERIODS.map((p) => (
                                             <td key={p}>
                                                 {formatNumber(
-                                                    stats[p].sessions > 0
+                                                    stats[p].activities > 0
                                                         ? stats[p].load /
-                                                              stats[p].sessions
+                                                              stats[p]
+                                                                  .activities
                                                         : 0,
                                                     0,
                                                 ) +
@@ -364,7 +365,7 @@ export function Home() {
                     </div>
                     <div className="dashboard-box">
                         <fieldset>
-                            <legend>{translate("last_session")}</legend>
+                            <legend>{translate("last_activity")}</legend>
                             <div className="list-layer">
                                 <table>
                                     <thead>
@@ -391,38 +392,38 @@ export function Home() {
                                         <tr
                                             className="clickable-row"
                                             onClick={() =>
-                                                getSessionDetails(
-                                                    session!.timestamp,
+                                                getActivityDetails(
+                                                    activity!.timestamp,
                                                 )
                                             }
                                         >
                                             <td>
                                                 {formatTimeDate(
-                                                    session!.timestamp,
+                                                    activity!.timestamp,
                                                 )}
                                             </td>
                                             <td>
                                                 {translate(
-                                                    "sport_" + session!.sport,
+                                                    "sport_" + activity!.sport,
                                                 ) +
                                                     " - " +
                                                     translate(
                                                         "subsport_" +
-                                                            session!.sport +
+                                                            activity!.sport +
                                                             "_" +
-                                                            session!.sub_sport,
+                                                            activity!.sub_sport,
                                                     )}
                                             </td>
-                                            <td>{session!.name}</td>
+                                            <td>{activity!.name}</td>
                                             <td>
                                                 {formatNumber(
-                                                    session!.active_calories,
+                                                    activity!.active_calories,
                                                     0,
                                                 )}
                                             </td>
                                             <td>
                                                 {formatNumber(
-                                                    session!.training_load,
+                                                    activity!.training_load,
                                                     0,
                                                 )}
                                             </td>
@@ -461,7 +462,7 @@ export function Home() {
                                                 </th>
                                                 <th className="text-center">
                                                     {translate(
-                                                        "latest_session",
+                                                        "latest_activity",
                                                     )}
                                                 </th>
                                                 <th className="text-center">
@@ -510,10 +511,10 @@ export function Home() {
                                                 </td>
                                                 <td>
                                                     {workout.details
-                                                        .latest_session &&
+                                                        .latest_activity &&
                                                         formatTimeDate(
                                                             workout.details
-                                                                .latest_session,
+                                                                .latest_activity,
                                                         )}
                                                 </td>
                                                 <td>
@@ -560,10 +561,10 @@ export function Home() {
             )}
 
             <div>
-                {sessionDetails && (
-                    <SessionModal
-                        session={sessionDetails}
-                        onClose={() => setSessionDetails(undefined)}
+                {activityDetails && (
+                    <ActivityModal
+                        activity={activityDetails}
+                        onClose={() => setActivityDetails(undefined)}
                         onUpdate={() => {
                             refresh();
                         }}
@@ -608,7 +609,7 @@ export function Home() {
                 style={{ display: "flex", gap: 5 }}
                 className="list-action-bar equal-width-children"
             >
-                <ImportSessionsMenu onImported={refresh} />
+                <ImportActivitiesMenu onImported={refresh} />
                 <Button
                     variant="contained"
                     onClick={() => {

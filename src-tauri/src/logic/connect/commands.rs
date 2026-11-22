@@ -4,8 +4,8 @@ use tauri::{AppHandle, State};
 use crate::{ConnectLock, SettingsLock};
 
 /// Downloads and imports the Connect activities of the last 15 days not stored yet. Files that fail
-/// to parse are kept as pending; new sessions are geocoded in the background. Resolves to the
-/// number of sessions imported. On failure, shows a persistent error notification and rejects with
+/// to parse are kept as pending; new activities are geocoded in the background. Resolves to the
+/// number of activities imported. On failure, shows a persistent error notification and rejects with
 /// the message.
 #[traced_command]
 #[tauri::command]

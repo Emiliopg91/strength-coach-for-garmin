@@ -15,7 +15,7 @@ import { useBatchedRows } from "@/hooks/useBatchedRows";
 import { useLoadingTask } from "@/hooks/useLoadingTask";
 import "@/styles/Exercises/ExercisesList.css";
 import { Button } from "@mui/material";
-import { SessionUtils } from "@/utils/SessionUtils";
+import { ActivityUtils } from "@/utils/ActivityUtils";
 
 /// `relevant`: it has a record or is planned in some workout; the rest of the catalog is dimmed.
 /// `bodyweight`: kg at the record's date, null when unknown or without record.
@@ -27,7 +27,7 @@ export type ExerciseListEntry = ExerciseListItem & {
 export function ExercisesList() {
     const loadingTask = useLoadingTask();
     const {
-        sessionsVersion,
+        activitiesVersion,
         exercisesCatalog,
         exerciseName,
         categoryName,
@@ -72,7 +72,10 @@ export function ExercisesList() {
                             ...e,
                             relevant: true,
                             bodyweight: e.used
-                                ? SessionUtils.bodyweightAt(bodyMetrics, e.date)
+                                ? ActivityUtils.bodyweightAt(
+                                      bodyMetrics,
+                                      e.date,
+                                  )
                                 : null,
                         }))
                         .toSorted(byName),
@@ -80,7 +83,7 @@ export function ExercisesList() {
                 ];
             }),
         // The catalog loads in the background; refetch once it arrives to list the rest
-        [sessionsVersion, exercisesCatalog.length],
+        [activitiesVersion, exercisesCatalog.length],
     );
     const [exerciseDetails, setExerciseDetails] = useState<
         ExerciseDetails | undefined

@@ -53,7 +53,7 @@ fn schedule_message(plan: &WorkoutPlanning) -> Option<Message> {
     schedule.product = file_id.product;
     schedule.serial_number = file_id.serial_number;
     schedule.time_created = file_id.time_created;
-    schedule.completed = if plan.session.is_some() {
+    schedule.completed = if plan.activity.is_some() {
         Bool::TRUE
     } else {
         Bool::FALSE

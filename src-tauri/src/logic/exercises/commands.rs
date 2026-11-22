@@ -20,7 +20,7 @@ pub async fn get_exercises(
     super::get_exercises(&app, &settings).await
 }
 
-/// Personal record and full per-session set history of the exercise `category`/`id`. On failure,
+/// Personal record and full per-activity set history of the exercise `category`/`id`. On failure,
 /// shows a persistent error notification and rejects with the message.
 #[traced_command]
 #[tauri::command]

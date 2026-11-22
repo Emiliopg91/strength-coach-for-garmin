@@ -1,7 +1,7 @@
 use std::fs;
 
 use crate::{
-    dao::{session::Session, session_data::SessionData, workout_step::StepType},
+    dao::{activity::Activity, activity_data::ActivityData, workout_step::StepType},
     fit::parser::{FitParser, errors::ParseFitFileError},
     tests::common::{STRENGTH_SPORT, STRENGTH_SUB_SPORT},
 };
@@ -21,7 +21,7 @@ fn garbage_file_fails_to_parse() {
     )
     .unwrap();
 
-    let res = FitParser::from_file(&path).and_then(Session::try_from);
+    let res = FitParser::from_file(&path).and_then(Activity::try_from);
     let _ = fs::remove_file(&path);
 
     assert!(matches!(res, Err(ParseFitFileError::FileReading(..))));
@@ -39,13 +39,13 @@ const WALKING_SUB_SPORT: u8 = 0;
 const CYCLING_SPORT: u8 = 2;
 const INDOOR_CYCLING_SUB_SPORT: u8 = 6;
 
-fn parse_fixture(name: &str) -> Session {
+fn parse_fixture(name: &str) -> Activity {
     let path = format!(
         "{}/src/tests/fixtures/{name}.fit",
         env!("CARGO_MANIFEST_DIR")
     );
     FitParser::from_file(&path)
-        .and_then(Session::try_from)
+        .and_then(Activity::try_from)
         .unwrap_or_else(|e| panic!("{name}: {e:?}"))
 }
 
@@ -181,22 +181,22 @@ const WALKS: [(Expected, (f64, f64), f64, usize); 3] = [
     ),
 ];
 
-fn assert_session(session: &Session, expected: &Expected, sport: (u8, u8)) {
+fn assert_activity(activity: &Activity, expected: &Expected, sport: (u8, u8)) {
     let ctx = expected.fixture;
-    assert_eq!(session.date, expected.date, "{ctx}");
-    assert_eq!(session.name, expected.name, "{ctx}");
+    assert_eq!(activity.date, expected.date, "{ctx}");
+    assert_eq!(activity.name, expected.name, "{ctx}");
     assert_eq!(
-        session.total_elapsed_time, expected.total_elapsed_time,
+        activity.total_elapsed_time, expected.total_elapsed_time,
         "{ctx}"
     );
-    assert_eq!(session.active_time, expected.active_time, "{ctx}");
-    assert_eq!(session.active_calories, expected.active_calories, "{ctx}");
-    assert_eq!(session.training_load, expected.training_load, "{ctx}");
-    assert_eq!((session.sport, session.sub_sport), sport, "{ctx}");
-    assert_eq!(session.steps.len(), expected.sets, "{ctx}");
+    assert_eq!(activity.active_time, expected.active_time, "{ctx}");
+    assert_eq!(activity.active_calories, expected.active_calories, "{ctx}");
+    assert_eq!(activity.training_load, expected.training_load, "{ctx}");
+    assert_eq!((activity.sport, activity.sub_sport), sport, "{ctx}");
+    assert_eq!(activity.steps.len(), expected.sets, "{ctx}");
 
-    let additional_data = session.data.as_ref().expect(ctx);
-    assert_eq!(additional_data.session, expected.date, "{ctx}");
+    let additional_data = activity.data.as_ref().expect(ctx);
+    assert_eq!(additional_data.activity, expected.date, "{ctx}");
     assert_eq!(
         additional_data.heart_rates.as_ref().map(Vec::len),
         Some(expected.records),
@@ -205,17 +205,17 @@ fn assert_session(session: &Session, expected: &Expected, sport: (u8, u8)) {
 }
 
 #[test]
-fn parses_strength_sessions() {
+fn parses_strength_activities() {
     for expected in &STRENGTH {
-        let session = parse_fixture(expected.fixture);
-        assert_session(&session, expected, (STRENGTH_SPORT, STRENGTH_SUB_SPORT));
+        let activity = parse_fixture(expected.fixture);
+        assert_activity(&activity, expected, (STRENGTH_SPORT, STRENGTH_SUB_SPORT));
 
-        // Only stored workouts have an id, set when the session is stored
-        assert_eq!(session.workout, None);
-        assert_eq!(session.name, expected.name, "{}", expected.fixture);
-        assert!(session.laps.is_empty(), "{}", expected.fixture);
+        // Only stored workouts have an id, set when the activity is stored
+        assert_eq!(activity.workout, None);
+        assert_eq!(activity.name, expected.name, "{}", expected.fixture);
+        assert!(activity.laps.is_empty(), "{}", expected.fixture);
 
-        let workout = session.workout_obj.as_ref().unwrap();
+        let workout = activity.workout_obj.as_ref().unwrap();
         assert_eq!(workout.name, expected.name, "{}", expected.fixture);
         assert!(!workout.steps.is_empty(), "{}", expected.fixture);
         for (idx, step) in workout.steps.iter().enumerate() {
@@ -226,8 +226,8 @@ fn parses_strength_sessions() {
             }
         }
 
-        for (idx, set) in session.steps.iter().enumerate() {
-            assert_eq!(set.session, expected.date);
+        for (idx, set) in activity.steps.iter().enumerate() {
+            assert_eq!(set.activity, expected.date);
             assert_eq!(set.idx as usize, idx);
             assert_eq!(set.exercise.is_some(), set.ex_cat.is_some());
             if set.kind == StepType::Rest {
@@ -238,7 +238,7 @@ fn parses_strength_sessions() {
             }
         }
 
-        let additional_data = session.data.unwrap();
+        let additional_data = activity.data.unwrap();
         assert!(
             additional_data.coordinates.is_none(),
             "{}",
@@ -251,8 +251,8 @@ fn parses_strength_sessions() {
 
 #[test]
 fn parses_strength_sets_in_order() {
-    let session = parse_fixture("strength_1");
-    let sets: Vec<_> = session
+    let activity = parse_fixture("strength_1");
+    let sets: Vec<_> = activity
         .steps
         .iter()
         .take(4)
@@ -272,8 +272,8 @@ fn parses_strength_sets_in_order() {
 
 #[test]
 fn parses_strength_sets_with_fractional_weight() {
-    let session = parse_fixture("strength_2");
-    let last = session
+    let activity = parse_fixture("strength_2");
+    let last = activity
         .steps
         .iter()
         .rfind(|s| s.kind != StepType::Rest)
@@ -286,29 +286,29 @@ fn parses_strength_sets_with_fractional_weight() {
 }
 
 #[test]
-fn parses_walk_sessions() {
+fn parses_walk_activities() {
     for (expected, city, distance, laps) in &WALKS {
         let ctx = expected.fixture;
-        let session = parse_fixture(ctx);
-        assert_session(&session, expected, (WALKING_SPORT, WALKING_SUB_SPORT));
+        let activity = parse_fixture(ctx);
+        assert_activity(&activity, expected, (WALKING_SPORT, WALKING_SUB_SPORT));
 
-        assert!(session.workout.is_none(), "{ctx}");
-        assert!(session.workout_obj.is_none(), "{ctx}");
+        assert!(activity.workout.is_none(), "{ctx}");
+        assert!(activity.workout_obj.is_none(), "{ctx}");
 
         // The first lap is dropped by the parser
-        assert_eq!(session.laps.len(), *laps, "{ctx}");
-        for (idx, lap) in session.laps.iter().enumerate() {
-            assert_eq!(lap.session, expected.date);
+        assert_eq!(activity.laps.len(), *laps, "{ctx}");
+        for (idx, lap) in activity.laps.iter().enumerate() {
+            assert_eq!(lap.activity, expected.date);
             assert_eq!(lap.idx as usize, idx);
-            let lat = lap.start_latitude.unwrap() as f64 * SessionData::SEMICIRCLE_TO_DEGREES;
-            let lon = lap.start_longitude.unwrap() as f64 * SessionData::SEMICIRCLE_TO_DEGREES;
+            let lat = lap.start_latitude.unwrap() as f64 * ActivityData::SEMICIRCLE_TO_DEGREES;
+            let lon = lap.start_longitude.unwrap() as f64 * ActivityData::SEMICIRCLE_TO_DEGREES;
             assert!(
                 (lat - city.0).abs() < 0.1 && (lon - city.1).abs() < 0.1,
                 "{ctx}: lap at {lat},{lon}"
             );
         }
 
-        let additional_data = session.data.unwrap();
+        let additional_data = activity.data.unwrap();
         assert_eq!(additional_data.distance, Some(*distance), "{ctx}");
         assert_eq!(
             additional_data.get_speeds().map(|v| v.len()),
@@ -335,7 +335,7 @@ fn parses_walk_sessions() {
 }
 
 #[test]
-fn parses_indoor_biking_session() {
+fn parses_indoor_biking_activity() {
     let expected = Expected {
         fixture: "indoor_biking",
         date: 1703262819,
@@ -348,19 +348,19 @@ fn parses_indoor_biking_session() {
         records: 3773,
     };
     let ctx = expected.fixture;
-    let session = parse_fixture(ctx);
-    assert_session(
-        &session,
+    let activity = parse_fixture(ctx);
+    assert_activity(
+        &activity,
         &expected,
         (CYCLING_SPORT, INDOOR_CYCLING_SUB_SPORT),
     );
 
-    assert!(session.workout.is_none(), "{ctx}");
-    assert!(session.workout_obj.is_none(), "{ctx}");
-    assert!(session.laps.is_empty(), "{ctx}");
+    assert!(activity.workout.is_none(), "{ctx}");
+    assert!(activity.workout_obj.is_none(), "{ctx}");
+    assert!(activity.laps.is_empty(), "{ctx}");
 
     // Distance and speed come from the speed sensor, but there is no GPS nor barometer data
-    let additional_data = session.data.unwrap();
+    let additional_data = activity.data.unwrap();
     assert_eq!(additional_data.distance, Some(19731.78), "{ctx}");
     let speeds = additional_data.get_speeds().unwrap();
     assert_eq!(speeds.len(), expected.records, "{ctx}");

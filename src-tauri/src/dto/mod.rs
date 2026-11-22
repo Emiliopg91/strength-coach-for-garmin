@@ -1,3 +1,4 @@
+pub mod activities;
 pub mod app;
 pub mod body_metrics;
 pub mod connect;
@@ -7,7 +8,6 @@ pub mod export;
 pub mod notifications;
 pub mod prompts;
 pub mod report;
-pub mod sessions;
 pub mod workouts;
 
 use std::collections::HashSet;

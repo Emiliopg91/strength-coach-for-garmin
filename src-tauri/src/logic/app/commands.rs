@@ -17,7 +17,7 @@ pub async fn get_settings(settings: State<'_, SettingsLock>) -> Result<Settings,
 
 /// Signals that the main window has mounted. Shows it and, in the background: installs the udev rules if missing (exits the app if that fails), syncs the
 /// Connect devices, starts the USB device watcher, sends pending workouts to Connect, geocodes
-/// pending sessions and checks for updates.
+/// pending activities and checks for updates.
 #[traced_command]
 #[tauri::command]
 pub async fn notify_frontend_ready(app: AppHandle) {

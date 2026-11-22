@@ -136,7 +136,7 @@ export function WorkoutModal({
             <DialogContent dividers>
                 <div style={{ display: "flex" }}>
                     <div style={{ flex: 1 }}>
-                        <div className="session-details-row">
+                        <div className="activity-details-row">
                             <table id="workout-details-table">
                                 <colgroup>
                                     <col className="col-200" />
@@ -144,15 +144,15 @@ export function WorkoutModal({
                                     <col />
                                 </colgroup>
                                 <tbody>
-                                    {workout.session_count > 0 && (
+                                    {workout.activity_count > 0 && (
                                         <>
                                             <tr>
                                                 <td>
-                                                    {translate("sessions")}:
+                                                    {translate("activities")}:
                                                 </td>
                                                 <td>
                                                     {formatNumber(
-                                                        workout.session_count,
+                                                        workout.activity_count,
                                                         0,
                                                     )}
                                                 </td>
@@ -160,13 +160,13 @@ export function WorkoutModal({
                                             <tr>
                                                 <td>
                                                     {translate(
-                                                        "latest_session",
+                                                        "latest_activity",
                                                     )}
                                                 </td>
                                                 <td>
-                                                    {workout.latest_session &&
+                                                    {workout.latest_activity &&
                                                         formatTimeDate(
-                                                            workout.latest_session,
+                                                            workout.latest_activity,
                                                         )}
                                                 </td>
                                             </tr>
@@ -245,7 +245,7 @@ export function WorkoutModal({
                             </table>
                             {(workout.primary_muscles.length > 0 ||
                                 workout.secondary_muscles.length > 0) && (
-                                <div className="session-muscle-model">
+                                <div className="activity-muscle-model">
                                     <MuscleModel
                                         primary={workout.primary_muscles}
                                         secondary={workout.secondary_muscles}
@@ -293,15 +293,17 @@ export function WorkoutModal({
                         </AccordionDetails>
                     </Accordion>
                 )}
-                {workout.sessions.length > 1 && (
+                {workout.activities.length > 1 && (
                     <>
                         <hr />
                         {workout.avg_volume > 0 && (
-                            <WorkoutVolumeChart sessions={workout.sessions} />
+                            <WorkoutVolumeChart
+                                activities={workout.activities}
+                            />
                         )}
                     </>
                 )}
-                {workout.session_count > 0 && (
+                {workout.activity_count > 0 && (
                     <>
                         <hr />
                         <table>
@@ -334,35 +336,35 @@ export function WorkoutModal({
                                 </tr>
                             </thead>
                             <tbody>
-                                {workout.sessions.map((session, idx) => (
+                                {workout.activities.map((activity, idx) => (
                                     <tr key={idx} className="divider-bottom">
                                         <td className="text-center">
-                                            {formatTimeDate(session.date)}
+                                            {formatTimeDate(activity.date)}
                                         </td>
                                         <td className="text-center">
-                                            {formatDuration(session.time)}
+                                            {formatDuration(activity.time)}
                                         </td>
                                         {workout.avg_volume > 0 && (
                                             <td className="text-center">
                                                 {formatNumber(
-                                                    fromKg(session.volume),
+                                                    fromKg(activity.volume),
                                                     1,
                                                 )}{" "}
                                                 {getWeightUnit()}
                                                 {idx <
-                                                    workout.sessions.length -
+                                                    workout.activities.length -
                                                         1 &&
                                                     " (" +
                                                         formatPercent(
-                                                            (workout.sessions[
+                                                            (workout.activities[
                                                                 idx
                                                             ].volume -
                                                                 workout
-                                                                    .sessions[
+                                                                    .activities[
                                                                     idx + 1
                                                                 ].volume) /
                                                                 workout
-                                                                    .sessions[
+                                                                    .activities[
                                                                     idx + 1
                                                                 ].volume,
                                                             2,

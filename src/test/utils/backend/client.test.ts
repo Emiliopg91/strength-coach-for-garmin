@@ -25,13 +25,13 @@ describe("BackendClient", () => {
     it("passes arguments using the backend parameter names", async () => {
         invokeMock.mockResolvedValue(undefined);
 
-        await BackendClient.getSessions(5);
+        await BackendClient.getActivities(5);
         await BackendClient.getExerciseDetails(1, 2);
         await BackendClient.setWorkoutStatus(3, false);
         await BackendClient.uploadToCloud(CloudProvider.DropBox);
 
         expect(invokeMock.mock.calls).toEqual([
-            ["get_sessions", { limit: 5 }],
+            ["get_activities", { limit: 5 }],
             ["get_exercise_details", { category: 1, id: 2 }],
             ["set_workout_status", { workout: 3, status: false }],
             ["upload_to_cloud", { provider: CloudProvider.DropBox }],

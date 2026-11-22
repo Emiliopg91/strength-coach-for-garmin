@@ -5,7 +5,7 @@ description: Orientation guide for the Strength Coach for Garmin repo (taurfit) 
 
 # Strength Coach for Garmin — working guide
 
-A Linux-only desktop app that imports strength sessions from Garmin watches, suggests
+A Linux-only desktop app that imports strength activities from Garmin watches, suggests
 progressions, and pushes workouts back to the watch. Single user, offline-first, data in a local
 SQLite file. Package/binary name: `strength-coach-for-garmin` (the repo folder is `taurfit`).
 
@@ -16,7 +16,7 @@ fit together and the conventions the code follows.
 
 | Path | What lives there |
 |---|---|
-| `src-tauri/src/logic/<domain>/` | Backend features. `commands.rs` holds thin `#[traced_command] #[tauri::command]` wrappers; `mod.rs` holds the real logic; `helpers.rs` the shared pieces. Domains: app, body_metrics, connect, devices, exercises, export, prompts, report, sessions, workouts |
+| `src-tauri/src/logic/<domain>/` | Backend features. `commands.rs` holds thin `#[traced_command] #[tauri::command]` wrappers; `mod.rs` holds the real logic; `helpers.rs` the shared pieces. Domains: app, body_metrics, connect, devices, exercises, export, prompts, report, activities, workouts |
 | `src-tauri/src/dao/` | One file per table: rusqlite_orm entities + repository queries |
 | `src-tauri/src/dto/` | Types that cross the IPC boundary (serde) |
 | `src-tauri/src/fit/` | FIT parser and writer (activities in, workouts/schedules out) |
@@ -25,7 +25,7 @@ fit together and the conventions the code follows.
 | `src-tauri/src/rclone/` | Cloud backup via the `rclone` binary |
 | `src-tauri/src/tests/` | Backend tests (`#[cfg(test)] mod tests` in `lib.rs`) |
 | `src-tauri-macros/` | `traced_command`, translation macros |
-| `src/components/<Area>/` | React UI per tab: Home, Sessions, Exercises, Workouts, BodyMetrics, Settings, Report |
+| `src/components/<Area>/` | React UI per tab: Home, Activities, Exercises, Workouts, BodyMetrics, Settings, Report |
 | `src/context/` | Providers: App, Device, I18nSettings, Loading |
 | `src/hooks/` | `useBackendList`, `useBackendEvent`, `useLoadingTask`, … |
 | `src/utils/backend/` | **Generated** `client.ts`, `listener.ts`, `models.ts` — never edit by hand |

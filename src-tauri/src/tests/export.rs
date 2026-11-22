@@ -3,8 +3,8 @@ use serde_json::Value;
 
 use crate::{
     dao::{
+        activity_data::ActivityData,
         body_metric::{BodyMetric, BodyMetricRepository},
-        session_data::SessionData,
     },
     dto::export::Export,
     tests::common,
@@ -26,7 +26,13 @@ async fn empty_database_export() {
     let db = common::test_db().await;
     let json = export_json(&db).await;
 
-    for key in ["body_metrics", "exercises", "workouts", "sessions", "laps"] {
+    for key in [
+        "body_metrics",
+        "exercises",
+        "workouts",
+        "activities",
+        "laps",
+    ] {
         assert_eq!(json[key].as_array().unwrap().len(), 0, "{key}");
     }
     assert!(!json["settings"].as_array().unwrap().is_empty());
@@ -41,23 +47,23 @@ async fn empty_database_export() {
 async fn export_contains_all_data() {
     let db = common::test_db().await;
 
-    let mut strength = common::session(1);
+    let mut strength = common::activity(1);
     strength.steps = vec![
         common::set(1, 0, (28, 0), 5, 100.0),
         common::set(1, 1, (28, 0), 5, 100.0),
         common::set(1, 2, (0, 0), 8, 60.0),
     ];
 
-    let mut run = common::session(2);
+    let mut run = common::activity(2);
     run.laps = vec![common::lap(2, 0, Some((0, 0)))];
     let mut data = common::additional_data(2);
-    data.coordinates = Some(SessionData::build_coordinates_blob(&[(0, 0)]));
+    data.coordinates = Some(ActivityData::build_coordinates_blob(&[(0, 0)]));
     data.heart_rates = Some(vec![120]);
     run.data = Some(data);
 
     db.run_in_transaction(async move |tx| {
-        common::insert_session(tx, strength.clone()).await;
-        common::insert_session(tx, run.clone()).await;
+        common::insert_activity(tx, strength.clone()).await;
+        common::insert_activity(tx, run.clone()).await;
         BodyMetricRepository::insert()
             .item(&mut BodyMetric {
                 date: 1,
@@ -83,14 +89,14 @@ async fn export_contains_all_data() {
         "only used exercises are exported"
     );
 
-    let sessions = json["sessions"].as_array().unwrap();
-    assert_eq!(sessions.len(), 2);
+    let activities = json["activities"].as_array().unwrap();
+    assert_eq!(activities.len(), 2);
 
-    let strength = sessions.iter().find(|s| s["date"] == 1).unwrap();
+    let strength = activities.iter().find(|s| s["date"] == 1).unwrap();
     assert_eq!(strength["sets"].as_array().unwrap().len(), 3);
     assert!(strength.get("coordinates").is_none());
 
-    let run = sessions.iter().find(|s| s["date"] == 2).unwrap();
+    let run = activities.iter().find(|s| s["date"] == 2).unwrap();
     assert!(run.get("sets").is_none());
     assert_eq!(run["coordinates"].as_array().unwrap().len(), 1);
     assert_eq!(run["heart_rates"][0], 120);

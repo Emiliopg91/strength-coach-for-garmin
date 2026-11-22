@@ -9,8 +9,8 @@ use rusqlite_orm::{
 use serde::{Deserialize, Serialize};
 
 use crate::dao::{
+    activity::{ActivityRepository, entity::columns as activity_cols},
     exercise::Exercise,
-    session::{SessionRepository, entity::columns as session_cols},
     workout_device::{
         WorkoutDevice, WorkoutDeviceRepository, entity::columns as workout_device_cols,
     },
@@ -156,7 +156,7 @@ impl Workout {
             .map(|workout| workout.id))
     }
 
-    /// Workouts recorded in sessions of the device `serial` that have no steps stored yet.
+    /// Workouts recorded in activities of the device `serial` that have no steps stored yet.
     pub async fn get_without_steps(
         conn: &Connection,
         serial: &str,
@@ -172,9 +172,9 @@ impl Workout {
                 ),
                 Where::InSub(
                     entity::columns::ID,
-                    SessionRepository::select()
-                        .distinct(&[session_cols::WORKOUT])
-                        .where_(Where::Eq(session_cols::DEVICE, serial.into()))
+                    ActivityRepository::select()
+                        .distinct(&[activity_cols::WORKOUT])
+                        .where_(Where::Eq(activity_cols::DEVICE, serial.into()))
                         .to_subquery(),
                 ),
             ]))

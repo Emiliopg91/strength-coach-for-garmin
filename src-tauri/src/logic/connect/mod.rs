@@ -11,10 +11,9 @@ use crate::{
     connect::client::CalendarItemType,
     dao::{body_metric::BodyMetric, device::Device},
     logic::{
+        activities::helpers::{finish_activity_import, import_pending_activities},
         devices::helpers::{notify_workout_sent, set_workout_on_device, workout_name},
-        pool, report_error,
-        sessions::helpers::{finish_session_import, import_pending_sessions},
-        settings_language,
+        pool, report_error, settings_language,
     },
 };
 
@@ -54,14 +53,14 @@ pub async fn import_from_connect<R: Runtime>(
             .map_err(|e| e.to_string())?;
 
         // The mark only follows what Connect has listed, so activities uploaded late are not
-        // missed. Their places are looked up once finished, with the rest of sessions pending it.
-        import_pending_sessions(app, files, &mut device, lang, None)
+        // missed. Their places are looked up once finished, with the rest of activities pending it.
+        import_pending_activities(app, files, &mut device, lang, None)
             .await
             .map_err(|e: DatabaseError| e.to_string())
     }
     .await;
 
-    finish_session_import(app, res)
+    finish_activity_import(app, res)
 }
 
 pub async fn import_weight_from_connect<R: Runtime>(
