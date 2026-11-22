@@ -115,6 +115,7 @@ export interface MuscleExercise {
 export interface PercentLoadBase {
   ex_cat: number;
   ex_id: number;
+  increment: number;
   one_rm: number;
 }
 

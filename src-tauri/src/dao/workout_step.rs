@@ -271,7 +271,7 @@ impl WorkoutStep {
 
     /// Resolves the steps loaded with a percentage of the 1RM, of the exercises in `exercises` or
     /// of every exercise with `None`, against the best estimated 1RM of the sets performed in the
-    /// [`ONE_RM_WINDOW_WEEKS`] before `now`, rounded to the nearest whole kg. A
+    /// [`ONE_RM_WINDOW_WEEKS`] before `now`, rounded to the weight increment of the exercise. A
     /// step without sets to estimate from goes unloaded. Workouts with a changed load are queued
     /// for the devices; returns their ids.
     pub async fn refresh_percent_loads(
@@ -348,9 +348,10 @@ impl WorkoutStep {
             pct,
         } in steps
         {
+            let increment = exercises.get(&exercise).map_or(0.0, |e| e.weight);
             let load = one_rms
                 .get(&exercise)
-                .map(|&one_rm| percent_load(one_rm, pct))
+                .map(|&one_rm| percent_load(one_rm, pct, increment))
                 .filter(|&load| load > 0.0);
             if load == weight {
                 continue;
