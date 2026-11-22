@@ -115,7 +115,7 @@ export function PlanningPanel({
                     onChange={(value) => {
                         if (value != null) onSelectDay(value);
                     }}
-                    showDaysOutsideCurrentMonth
+                    // Days of other months are left as blank fillers, still six weeks tall
                     fixedWeekNumber={6}
                     slots={{ calendarHeader: NoCalendarHeader }}
                     slotProps={{
