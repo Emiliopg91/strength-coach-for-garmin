@@ -6,7 +6,6 @@ use rusqlite_orm::errors::DatabaseError;
 use tauri::{AppHandle, Emitter, Manager, Runtime};
 use tauri_plugin_log::log::{error, info};
 
-use super::import_from_device;
 use crate::{
     ConnectLock, MtpLock,
     dao::{
@@ -23,8 +22,8 @@ use crate::{
         writer::{FitWriter, ToFitMessages},
     },
     logic::{
-        connect::helpers::queue_workout_on_connect, fit_settings, language,
-        notifications::show_notification, pool, store_pending_files,
+        connect::helpers::queue_workout_on_connect, devices::import_from_device, fit_settings,
+        language, notifications::show_notification, pool, store_pending_files,
     },
     utils::{
         constants,

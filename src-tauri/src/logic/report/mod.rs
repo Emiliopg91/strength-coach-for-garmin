@@ -4,11 +4,13 @@ pub mod helpers;
 use tauri::{AppHandle, Runtime, WebviewWindow};
 use tauri_plugin_log::log::info;
 
-use self::helpers::report_data;
 use crate::{
     SettingsLock,
     dto::report::ReportData,
-    logic::{language, open_window, pool, print_to_pdf, report_error, settings_language},
+    logic::{
+        language, open_window, pool, print_to_pdf, report::helpers::report_data, report_error,
+        settings_language,
+    },
     utils::translations::translate,
 };
 

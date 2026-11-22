@@ -5,7 +5,7 @@ use rustyfit::profile::typedef::Intensity;
 
 use crate::{
     dao::{
-        exercise::{self, ExerciseRepository},
+        exercise::{self, Exercise, ExerciseRepository},
         workout::{Workout, WorkoutRepository},
         workout_device::{WorkoutDevice, WorkoutDeviceRepository, entity::columns as wd_cols},
         workout_step::{WorkoutStep, WorkoutStepRepository, entity::columns as step_cols},
@@ -244,7 +244,7 @@ async fn unilateral_exercises_estimate_from_half_their_reps() {
     assert_eq!(step_weight(&db, workout, 0).await, Some(85.0));
 
     db.run_in_connection(async |conn| {
-        Ok(crate::dao::exercise::Exercise::set_unilateral(conn, BENCH.0, BENCH.1, true).await?)
+        Ok(Exercise::set_unilateral(conn, BENCH.0, BENCH.1, true).await?)
     })
     .await
     .unwrap();

@@ -6,13 +6,14 @@ use tauri::{AppHandle, State};
 use crate::{
     SettingsLock,
     dto::app::{AppEnvironment, Settings},
+    logic::app,
 };
 
 /// Current in-memory settings (units, language and startup behaviour).
 #[traced_command]
 #[tauri::command]
 pub async fn get_settings(settings: State<'_, SettingsLock>) -> Result<Settings, String> {
-    super::get_settings(&settings).await
+    app::get_settings(&settings).await
 }
 
 /// Signals that the main window has mounted. Shows it and, in the background: installs the udev rules if missing (exits the app if that fails), syncs the
@@ -21,14 +22,14 @@ pub async fn get_settings(settings: State<'_, SettingsLock>) -> Result<Settings,
 #[traced_command]
 #[tauri::command]
 pub async fn notify_frontend_ready(app: AppHandle) {
-    super::notify_frontend_ready(&app).await
+    app::notify_frontend_ready(&app).await
 }
 
 /// Whether this is a debug or a release build.
 #[traced_command]
 #[tauri::command]
 pub async fn get_environment() -> AppEnvironment {
-    super::get_environment().await
+    app::get_environment().await
 }
 
 /// Stores the setting `name` (a `settings_keys` constant) as `value`, given as text (`"true"` /
@@ -39,7 +40,7 @@ pub async fn get_environment() -> AppEnvironment {
 #[traced_command]
 #[tauri::command]
 pub async fn update_settings_value(app: AppHandle, name: &str, value: &str) -> Result<(), String> {
-    super::update_settings_value(&app, name, value).await
+    app::update_settings_value(&app, name, value).await
 }
 
 /// Every translation key resolved to the current language, to bootstrap the frontend i18n.
@@ -48,5 +49,5 @@ pub async fn update_settings_value(app: AppHandle, name: &str, value: &str) -> R
 pub async fn get_translations(
     settings: State<'_, SettingsLock>,
 ) -> Result<HashMap<String, String>, String> {
-    super::get_translations(&settings).await
+    app::get_translations(&settings).await
 }

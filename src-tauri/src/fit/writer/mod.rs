@@ -17,10 +17,9 @@ use rustyfit::{
 
 use crate::{
     dao::settings::WeightUnit,
+    fit::writer::errors::WriteFitFileError,
     utils::{constants, translations::Languages},
 };
-
-use self::errors::WriteFitFileError;
 
 /// FNV-1a hash of `bytes`, stable across builds.
 pub(crate) fn fnv1a(bytes: impl IntoIterator<Item = u8>) -> u32 {

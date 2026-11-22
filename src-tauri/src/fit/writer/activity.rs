@@ -23,7 +23,7 @@ use crate::{
         workout::Workout,
         workout_step::{StepType, WorkoutStep},
     },
-    fit::writer::{FitWriter, ToFitMessages},
+    fit::writer::{FitWriter, ToFitMessages, errors},
     utils::translations::{Languages, translate},
 };
 
@@ -180,7 +180,7 @@ fn workout_messages(
     activity: &Activity,
     lang: Languages,
     weight_unit: WeightUnit,
-) -> super::errors::Result<Vec<Message>> {
+) -> errors::Result<Vec<Message>> {
     if activity.steps.is_empty() && activity.name.is_empty() {
         return Ok(vec![]);
     }
@@ -354,7 +354,7 @@ impl ToFitMessages for Activity {
         &self,
         lang: Languages,
         weight_unit: WeightUnit,
-    ) -> super::errors::Result<Vec<Message>> {
+    ) -> errors::Result<Vec<Message>> {
         let mut messages = Vec::new();
 
         if let Some(unit_id) = unit_id(self) {

@@ -2,6 +2,22 @@
 pub mod client;
 pub mod errors;
 
+use std::{
+    collections::{BTreeSet, HashMap},
+    io::{Cursor, Read},
+    sync::Arc,
+    time::Duration,
+};
+
+use bytes::Bytes;
+use chrono::{Datelike, Local, NaiveDate, TimeZone, Utc};
+use futures_util::{
+    future::BoxFuture,
+    stream::{self, StreamExt, TryStreamExt},
+};
+use serde::{Serialize, de::DeserializeOwned};
+use tauri_plugin_log::log::{error, info, warn};
+
 use crate::{
     connect::{
         client::{
@@ -16,21 +32,6 @@ use crate::{
     fit::FitFile,
     utils::constants,
 };
-use bytes::Bytes;
-use chrono::{Datelike, Local, NaiveDate, TimeZone, Utc};
-use futures_util::{
-    future::BoxFuture,
-    stream::{self, StreamExt, TryStreamExt},
-};
-use serde::{Serialize, de::DeserializeOwned};
-use std::{
-    collections::{BTreeSet, HashMap},
-    io::{Cursor, Read},
-    sync::Arc,
-    time::Duration,
-};
-
-use tauri_plugin_log::log::{error, info, warn};
 
 const KEYRING_EMAIL: &str = "garmin-email";
 const KEYRING_OAUTH1: &str = "garmin-oauth1";

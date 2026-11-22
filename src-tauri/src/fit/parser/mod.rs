@@ -1,4 +1,6 @@
 pub mod activity;
+pub mod errors;
+pub mod workout;
 
 use std::io::Cursor;
 #[cfg(any(test, debug_assertions))]
@@ -9,12 +11,9 @@ use embedded_io_adapters::std::FromStd;
 use ouroboros::self_referencing;
 use rustyfit::{Decoder, StreamDecoder};
 
-#[cfg(any(test, debug_assertions))]
-use self::errors::ParseFitFileError;
 use crate::fit::FitFile;
-
-pub mod errors;
-pub mod workout;
+#[cfg(any(test, debug_assertions))]
+use crate::fit::parser::errors::ParseFitFileError;
 
 #[self_referencing]
 pub struct FitParser {

@@ -1,28 +1,30 @@
 use std::collections::BTreeSet;
 
 use chrono::{Local, NaiveDate, TimeZone};
-
-use crate::connect::{
-    activity_search_range, calendar_months, calendar_page_items,
-    client::{
-        ActivitySummary, CalendarItem, CalendarItemType, CalendarMonth, ExerciseSetType,
-        ExerciseSets, ScheduledWorkout, WorkoutSchedule, WorkoutScheduleExport,
-        WorkoutScheduleRequest,
-        api::{calendar_month_path, workout_schedule_path},
-        models::ActivityDescriptionUpdate,
-    },
-    connect_activity_id, next_schedule_window, take_activity_locations,
-};
 use serde_json::{Value, json};
 
-use crate::dao::{
-    exercise::Exercise,
-    exercise_category::ExerciseCategory,
-    settings::WeightUnit,
-    workout::Workout,
-    workout_step::{StepType, WorkoutStep},
+use crate::{
+    connect::{
+        activity_search_range, calendar_months, calendar_page_items,
+        client::{
+            ActivitySummary, CalendarItem, CalendarItemType, CalendarMonth, ExerciseSetType,
+            ExerciseSets, ScheduledWorkout, WorkoutSchedule, WorkoutScheduleExport,
+            WorkoutScheduleRequest,
+            api::{calendar_month_path, workout_schedule_path},
+            models::ActivityDescriptionUpdate,
+        },
+        connect_activity_id, next_schedule_window, take_activity_locations,
+    },
+    dao::{
+        exercise::{Exercise, GENERIC_EXERCISE_ID},
+        exercise_category::ExerciseCategory,
+        settings::WeightUnit,
+        workout::Workout,
+        workout_step::{StepType, WorkoutStep},
+    },
+    dto::connect::{self, ConnectWorkout},
+    tests::common,
 };
-use crate::dto::connect::{self, ConnectWorkout};
 
 fn step(idx: u16, kind: StepType) -> WorkoutStep {
     WorkoutStep {
@@ -592,7 +594,7 @@ fn calendar_page_keeps_only_its_month_inside_the_window() {
 
 #[tokio::test]
 async fn step_exercises_are_filled_with_their_category() {
-    let db = crate::tests::common::test_db().await;
+    let db = common::test_db().await;
     let mut steps = vec![
         WorkoutStep {
             ex_cat: Some(0),
@@ -719,9 +721,9 @@ fn connect_activity_is_the_one_started_with_the_activity() {
 #[test]
 fn generic_exercise_goes_with_its_category_only() {
     let mut step = exercise_step(0);
-    step.ex_id = Some(crate::dao::exercise::GENERIC_EXERCISE_ID);
+    step.ex_id = Some(GENERIC_EXERCISE_ID);
     if let Some(exercise) = step.exercise.as_mut() {
-        exercise.id = crate::dao::exercise::GENERIC_EXERCISE_ID;
+        exercise.id = GENERIC_EXERCISE_ID;
         exercise.name = String::new();
     }
     let json = steps_json(&[step]);

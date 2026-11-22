@@ -5,11 +5,6 @@ use chrono::{Local, TimeZone};
 use tauri::{AppHandle, Emitter, Runtime};
 use tauri_plugin_log::log::info;
 
-use self::helpers::{
-    activity_file_name, apply_activity_changes, fetch_activities, fetch_activity_details,
-    heatmap_data, import_file_paths, notify_new_prs, notify_progression_available,
-    retrieve_activity_connect_id, spawn_percent_load_sync, write_activity_fit,
-};
 use crate::{
     SettingsLock,
     dao::activity::Activity,
@@ -18,8 +13,16 @@ use crate::{
         notifications::{NotificationDefinition, NotificationKind},
     },
     logic::{
-        ask_open_paths, ask_save_path, connect::helpers::sync_activity_sets_connect, fit_settings,
-        notifications::show_notification, pool, report_error, settings_language,
+        activities::helpers::{
+            activity_file_name, apply_activity_changes, fetch_activities, fetch_activity_details,
+            heatmap_data, import_file_paths, notify_new_prs, notify_progression_available,
+            retrieve_activity_connect_id, spawn_percent_load_sync, write_activity_fit,
+        },
+        ask_open_paths, ask_save_path,
+        connect::helpers::sync_activity_sets_connect,
+        fit_settings,
+        notifications::show_notification,
+        pool, report_error, settings_language,
     },
     utils::{
         constants,

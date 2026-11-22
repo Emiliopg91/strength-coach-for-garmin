@@ -1,13 +1,13 @@
 use strength_coach_for_garmin_macros::traced_command;
 use tauri::{AppHandle, State};
 
-use crate::{SettingsLock, rclone::providers::CloudProvider};
+use crate::{SettingsLock, logic::export, rclone::providers::CloudProvider};
 
 /// Whether uploading to the cloud is possible, i.e. the optional rclone dependency is installed.
 #[traced_command]
 #[tauri::command]
 pub async fn is_cloud_upload_available() -> bool {
-    super::is_cloud_upload_available().await
+    export::is_cloud_upload_available().await
 }
 
 /// Uploads the database file to `provider` through rclone, configuring the remote first if needed
@@ -19,7 +19,7 @@ pub async fn upload_to_cloud(
     settings: State<'_, SettingsLock>,
     provider: CloudProvider,
 ) -> Result<(), String> {
-    super::upload_to_cloud(&settings, provider).await
+    export::upload_to_cloud(&settings, provider).await
 }
 
 /// Asks where to save the whole database as JSON (defaulting to a timestamped file in the home dir)
@@ -31,5 +31,5 @@ pub async fn export_database(
     app: AppHandle,
     settings: State<'_, SettingsLock>,
 ) -> Result<(), String> {
-    super::export_database(&app, &settings).await
+    export::export_database(&app, &settings).await
 }

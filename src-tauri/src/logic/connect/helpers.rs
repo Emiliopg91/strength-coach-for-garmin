@@ -5,10 +5,10 @@ use tauri_plugin_log::log::{error, info};
 
 use crate::{
     ConnectLock, SettingsLock,
-    connect::ConnectClient,
+    connect::{ConnectClient, client::ExerciseCandidate},
     dao::{
-        activity::Activity, device::Device, exercise::Exercise, workout::Workout,
-        workout_device::WorkoutDevice, workout_planning::WorkoutPlanning,
+        activity::Activity, device::Device, exercise::Exercise, settings::WeightUnit,
+        workout::Workout, workout_device::WorkoutDevice, workout_planning::WorkoutPlanning,
     },
     dto::{
         activities::ActivityStepDto,
@@ -181,7 +181,7 @@ async fn upload_loaded_workout_connect<R: Runtime>(
     app: &AppHandle<R>,
     connect: &ConnectLock,
     mut workout: Workout,
-    weight_unit: crate::dao::settings::WeightUnit,
+    weight_unit: WeightUnit,
 ) -> Result<String, String> {
     let mut client = connect.lock().await;
     let original_id = workout.connect_id.clone();
@@ -413,7 +413,7 @@ pub(super) async fn update_activity_sets(
         // Stored in kg, Connect expects grams
         target.weight = set.weight.map(|v| (v as f64 * 1000.0).round());
         target.repetition_count = set.reps;
-        target.exercises = vec![crate::connect::client::ExerciseCandidate {
+        target.exercises = vec![ExerciseCandidate {
             category: set.exercise_category.clone(),
             // Generic exercises go without name, just with their category
             name: Some(set.exercise_id.clone()).filter(|name| !name.is_empty()),

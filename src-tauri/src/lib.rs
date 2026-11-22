@@ -15,22 +15,28 @@ mod tests;
 
 use std::{process::exit, sync::RwLock, time::Duration};
 
-use rusqlite_orm::database::{
-    DatabasePool, DdlVersion,
-    builder::{DatabaseConnectionBuilder, JournalMode},
+use rusqlite_orm::{
+    database::{
+        DatabasePool, DdlVersion,
+        builder::{DatabaseConnectionBuilder, JournalMode},
+    },
+    ddls,
 };
-use rusqlite_orm::ddls;
 use tauri::{AppHandle, Emitter, Manager, RunEvent, WindowEvent};
 use tauri_plugin_log::{
     Target, TargetKind,
     log::{LevelFilter, debug, error, info, warn},
 };
+use tokio::signal::unix::{SignalKind, signal};
 
-#[cfg(debug_assertions)]
-use crate::logic::exercises::helpers::update_all_prs;
 use crate::{
     connect::ConnectClient,
-    dao::body_metric::migration_21,
+    dao::{
+        body_metric::migration_21,
+        settings::{self, settings_keys},
+        workout_device::WorkoutDevice,
+        workout_step::WorkoutStep,
+    },
     dto::app::Settings,
     logic::{
         activities::{
@@ -74,11 +80,14 @@ use crate::{
     utils::{constants, single_instance::SingleInstance},
 };
 
+#[cfg(debug_assertions)]
+use crate::logic::exercises::helpers::update_all_prs;
+
 pub fn check_running() -> bool {
     SingleInstance::is_app_running().0
 }
 
-pub fn force_write_mtp_rules(auto_run: bool) -> crate::udev::errors::Result<()> {
+pub fn force_write_mtp_rules(auto_run: bool) -> udev::errors::Result<()> {
     UdevManager::write_rules_file(auto_run)
 }
 
@@ -115,9 +124,9 @@ fn initialize(app: &AppHandle) -> (DatabasePool, Settings, ConnectClient, MtpCli
                 debug!("Loading settings...");
                 let settings = Settings::load(&database).await;
 
-                crate::dao::settings::Settings::set(
+                settings::Settings::set(
                     &database,
-                    crate::dao::settings::settings_keys::VERSION,
+                    settings_keys::VERSION,
                     &*constants::APP_SEM_VERSION,
                 )
                 .await
@@ -127,17 +136,11 @@ fn initialize(app: &AppHandle) -> (DatabasePool, Settings, ConnectClient, MtpCli
                 // on their next push and Connect with the pending uploads retried once logged in
                 if let Err(e) = database
                     .run_in_transaction(async |tx| {
-                        let changed = crate::dao::workout_step::WorkoutStep::refresh_percent_loads(
-                            tx,
-                            None,
-                            utils::time::now(),
-                        )
-                        .await?;
+                        let changed =
+                            WorkoutStep::refresh_percent_loads(tx, None, utils::time::now())
+                                .await?;
                         if !changed.is_empty() {
-                            crate::dao::workout_device::WorkoutDevice::set_connect_pending(
-                                tx, &changed, true,
-                            )
-                            .await?;
+                            WorkoutDevice::set_connect_pending(tx, &changed, true).await?;
                         }
                         Ok(())
                     })
@@ -198,8 +201,6 @@ fn schema_ddls() -> Vec<DdlVersion> {
 
 /// Turns SIGTERM/SIGINT/SIGHUP into a regular `app.exit(0)` so they are logged instead of killing the process.
 fn listen_for_signals(app: &AppHandle) {
-    use tokio::signal::unix::{SignalKind, signal};
-
     for (kind, name) in [
         (SignalKind::terminate(), "SIGTERM"),
         (SignalKind::interrupt(), "SIGINT"),

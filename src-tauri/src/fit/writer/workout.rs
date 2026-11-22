@@ -17,7 +17,7 @@ use crate::{
         workout::Workout,
         workout_step::{StepType, WorkoutStep},
     },
-    fit::writer::{ToFitMessages, fnv1a},
+    fit::writer::{ToFitMessages, errors, fnv1a},
     utils::translations::{Languages, translate},
 };
 
@@ -126,7 +126,7 @@ impl ToFitMessages for Workout {
         &self,
         lang: Languages,
         weight_unit: WeightUnit,
-    ) -> super::errors::Result<Vec<Message>> {
+    ) -> errors::Result<Vec<Message>> {
         let mut workout = FitWorkout::new();
         workout.capabilities = WorkoutCapabilities::TCX;
         workout.sport = Sport::TRAINING;

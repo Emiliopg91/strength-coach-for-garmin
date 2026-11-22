@@ -1,15 +1,16 @@
-use crate::{
-    dao::{workout::Workout, workout_step::WorkoutStep},
-    fit::parser::{
-        FitParser,
-        errors::{self, ParseFitFileError},
-    },
-};
 use rustyfit::{
     DecoderEvent, StreamingIterator,
     profile::{
         mesgdef,
         typedef::{Intensity, MesgNum, Sport, SubSport, WktStepDuration},
+    },
+};
+
+use crate::{
+    dao::{workout::Workout, workout_step::WorkoutStep},
+    fit::parser::{
+        FitParser,
+        errors::{self, ParseFitFileError},
     },
 };
 

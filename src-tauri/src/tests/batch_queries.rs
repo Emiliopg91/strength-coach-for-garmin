@@ -1,6 +1,6 @@
-use rusqlite_orm::{dao::Repository, database::DatabasePool, types::where_clause::Where};
-
 use std::collections::{BTreeSet, HashSet};
+
+use rusqlite_orm::{dao::Repository, database::DatabasePool, types::where_clause::Where};
 
 use crate::{
     dao::{
@@ -8,6 +8,7 @@ use crate::{
         body_metric::{BodyMetric, BodyMetricRepository},
         exercise::{self, Exercise, ExerciseRepository},
     },
+    dto::{activities::ActivityDetails, exercises::ExerciseDetails},
     logic::{
         activities::helpers::{fetch_activities_details, fetch_activity_details},
         exercises::helpers::{fetch_exercise_details, fetch_exercises_details},
@@ -70,7 +71,7 @@ async fn batched_muscles_match_the_relationship_fetcher() {
 }
 
 /// Details as JSON with their muscle lists sorted, as they come from a `HashSet` in any order.
-fn normalized(details: &[crate::dto::activities::ActivityDetails]) -> serde_json::Value {
+fn normalized(details: &[ActivityDetails]) -> serde_json::Value {
     let mut value = serde_json::to_value(details).unwrap();
     for detail in value.as_array_mut().unwrap() {
         for key in ["primary_muscles", "secondary_muscles"] {
@@ -137,7 +138,7 @@ async fn no_activities_give_no_details() {
 
 /// Exercise details as JSON with their muscle lists sorted, as the batched and the relationship
 /// fetchers may list them in different orders.
-fn normalized_exercises(details: &[crate::dto::exercises::ExerciseDetails]) -> serde_json::Value {
+fn normalized_exercises(details: &[ExerciseDetails]) -> serde_json::Value {
     let mut value = serde_json::to_value(details).unwrap();
     for detail in value.as_array_mut().unwrap() {
         for key in ["primary_muscles", "secondary_muscles"] {

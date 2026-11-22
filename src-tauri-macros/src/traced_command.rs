@@ -20,7 +20,7 @@ fn parse_traced_command_attrs(attrs: TokenStream) -> syn::Result<Args> {
         if meta.path.is_ident("log_payload") {
             let lit = meta.value()?.parse::<LitBool>()?;
             args.log_payload = lit.value();
-        } 
+        }
         Ok(())
     });
     parser.parse(attrs)?;

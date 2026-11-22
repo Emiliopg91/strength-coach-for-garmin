@@ -6,7 +6,6 @@ use std::collections::{HashMap, HashSet};
 use tauri::{AppHandle, Emitter, Runtime, WebviewWindow};
 use tauri_plugin_log::log::info;
 
-use self::helpers::{workout_details, workout_list};
 use crate::{
     ConnectLock, SettingsLock,
     dao::{
@@ -28,6 +27,7 @@ use crate::{
         exercises::helpers::progression_suggestions,
         notifications::show_notification,
         open_window, pool, print_to_pdf, report_error, settings_language,
+        workouts::helpers::{workout_details, workout_list},
     },
     utils::{
         time::{now, today_local_midnight},

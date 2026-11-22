@@ -6,16 +6,16 @@ use rusqlite_orm::errors::DatabaseError;
 use tauri::{AppHandle, Manager, Runtime};
 use tauri_plugin_log::log::{error, info};
 
-use self::helpers::{
-    notify_workout_pending, notify_workout_sent, register_workout_on_device,
-    send_workout_to_device, set_workout_on_device, workout_name,
-};
 use crate::{
     MtpLock, SettingsLock,
     dao::device::Device,
     dto::devices::DeviceListItem,
     logic::{
         activities::helpers::{finish_activity_import, import_pending_activities},
+        devices::helpers::{
+            notify_workout_pending, notify_workout_sent, register_workout_on_device,
+            send_workout_to_device, set_workout_on_device, workout_name,
+        },
         fit_settings, language, pool, report_error,
     },
     utils::constants,

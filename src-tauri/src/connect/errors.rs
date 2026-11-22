@@ -1,15 +1,17 @@
 use thiserror::Error;
 
+use crate::connect::client::GarminError;
+
 #[derive(Error, Debug)]
 pub enum ConnectError {
     #[error("Error on OAuth2 login: {0}")]
-    Login(#[source] crate::connect::client::GarminError),
+    Login(#[source] GarminError),
     #[error("Login required")]
     LoginRequired(),
     #[error("Login Cancelled by user")]
     LoginCancelledByUser(),
     #[error("OAuth error: {0}")]
-    OAuthRefresh(#[source] crate::connect::client::GarminError),
+    OAuthRefresh(#[source] GarminError),
     #[error("Keyring error: {0}")]
     Keyring(#[from] keyring::Error),
     #[error("Token serialization error: {0}")]
@@ -17,11 +19,11 @@ pub enum ConnectError {
     #[error("Invalid timestamp: {0}")]
     InvalidTimestamp(u32),
     #[error("Error fetching activities: {0}")]
-    FetchActivities(#[source] crate::connect::client::GarminError),
+    FetchActivities(#[source] GarminError),
     #[error("Error fetching weight: {0}")]
-    FetchWeight(#[source] crate::connect::client::GarminError),
+    FetchWeight(#[source] GarminError),
     #[error("Error downloading activity '{0}': {1}")]
-    DownloadActivity(u64, #[source] crate::connect::client::GarminError),
+    DownloadActivity(u64, #[source] GarminError),
     #[error("Error unzipping activity '{0}': {1}")]
     UnzipActivity(u64, #[source] zip::result::ZipError),
     #[error("Error extracting activity '{0}': {1}")]
@@ -29,35 +31,31 @@ pub enum ConnectError {
     #[error("Error joining extraction task for activity '{0}': {1}")]
     ExtractTask(u64, #[source] tokio::task::JoinError),
     #[error("Error fetching devices: {0}")]
-    FetchDevices(#[source] crate::connect::client::GarminError),
+    FetchDevices(#[source] GarminError),
     #[error("Error fetching calendar: {0}")]
-    FetchCalendar(#[source] crate::connect::client::GarminError),
+    FetchCalendar(#[source] GarminError),
     #[error("Error fetching workouts: {0}")]
-    FetchWorkouts(#[source] crate::connect::client::GarminError),
+    FetchWorkouts(#[source] GarminError),
     #[error("Error creating workout: {0}")]
-    CreateWorkout(#[source] crate::connect::client::GarminError),
+    CreateWorkout(#[source] GarminError),
     #[error("Error updating workout '{0}': {1}")]
-    UpdateWorkout(u64, #[source] crate::connect::client::GarminError),
+    UpdateWorkout(u64, #[source] GarminError),
     #[error("Error fetching activity '{0}': {1}")]
-    FetchActivity(u64, #[source] crate::connect::client::GarminError),
+    FetchActivity(u64, #[source] GarminError),
     #[error("Error updating activity '{0}': {1}")]
-    UpdateActivity(u64, #[source] crate::connect::client::GarminError),
+    UpdateActivity(u64, #[source] GarminError),
     #[error("Error fetching exercise sets of activity '{0}': {1}")]
-    FetchExerciseSets(u64, #[source] crate::connect::client::GarminError),
+    FetchExerciseSets(u64, #[source] GarminError),
     #[error("Error updating exercise sets of activity '{0}': {1}")]
-    UpdateExerciseSets(u64, #[source] crate::connect::client::GarminError),
+    UpdateExerciseSets(u64, #[source] GarminError),
     #[error("Error sending workout '{0}' to device '{1}': {2}")]
-    SendWorkout(u64, u64, #[source] crate::connect::client::GarminError),
+    SendWorkout(u64, u64, #[source] GarminError),
     #[error("Error scheduling workout '{0}' on {1}: {2}")]
-    ScheduleWorkout(
-        u64,
-        chrono::NaiveDate,
-        #[source] crate::connect::client::GarminError,
-    ),
+    ScheduleWorkout(u64, chrono::NaiveDate, #[source] GarminError),
     #[error("Error fetching workout schedules: {0}")]
-    FetchWorkoutSchedules(#[source] crate::connect::client::GarminError),
+    FetchWorkoutSchedules(#[source] GarminError),
     #[error("Error deleting workout schedule '{0}': {1}")]
-    DeleteWorkoutSchedule(u64, #[source] crate::connect::client::GarminError),
+    DeleteWorkoutSchedule(u64, #[source] GarminError),
 }
 
 pub type Result<T> = std::result::Result<T, ConnectError>;

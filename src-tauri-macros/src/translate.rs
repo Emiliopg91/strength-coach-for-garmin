@@ -1,6 +1,7 @@
+use std::{collections::BTreeMap, fs, sync::LazyLock};
+
 use proc_macro::TokenStream;
 use quote::quote;
-use std::{collections::BTreeMap, fs, sync::LazyLock};
 use syn::{Expr, Lit, Token, parse::Parser, punctuated::Punctuated, spanned::Spanned};
 
 pub static TRANSLATIONS: LazyLock<BTreeMap<String, String>> = LazyLock::new(|| {

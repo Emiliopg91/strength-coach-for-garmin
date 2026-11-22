@@ -1,7 +1,16 @@
+use rustyfit::{
+    DecoderEvent, StreamingIterator,
+    profile::{
+        mesgdef,
+        typedef::{DeviceIndex, MesgNum},
+    },
+};
+
 use crate::{
     dao::{
         activity::Activity,
         activity_data::ActivityData,
+        activity_lap::ActivityLap,
         activity_step::ActivityStep,
         device::Device,
         exercise::Exercise,
@@ -14,13 +23,6 @@ use crate::{
         FitParser,
         errors::{self, ParseFitFileError},
         workout::WorkoutAccumulator,
-    },
-};
-use rustyfit::{
-    DecoderEvent, StreamingIterator,
-    profile::{
-        mesgdef,
-        typedef::{DeviceIndex, MesgNum},
     },
 };
 
@@ -225,11 +227,11 @@ fn set_kind(wkt_step: Option<&WorkoutStep>, has_exercise: bool) -> StepType {
     }
 }
 
-fn handle_lap_message(msg: mesgdef::Lap, laps: &mut Vec<crate::dao::activity_lap::ActivityLap>) {
+fn handle_lap_message(msg: mesgdef::Lap, laps: &mut Vec<ActivityLap>) {
     let start_latitude = (msg.start_position_lat != i32::MAX).then_some(msg.start_position_lat);
     let start_longitude = (msg.start_position_long != i32::MAX).then_some(msg.start_position_long);
 
-    laps.push(crate::dao::activity_lap::ActivityLap {
+    laps.push(ActivityLap {
         activity: 0,
         idx: 0,
         start_latitude,

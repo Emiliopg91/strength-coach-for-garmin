@@ -5,13 +5,15 @@ use rusqlite_orm::errors::DatabaseError;
 use tauri::{AppHandle, Runtime};
 use tauri_plugin_log::log::info;
 
-use self::helpers::{get_devices_from_connect, queue_workout_on_connect, up_to_date_connect};
 use crate::{
     ConnectLock, SettingsLock,
     connect::client::CalendarItemType,
     dao::{body_metric::BodyMetric, device::Device},
     logic::{
         activities::helpers::{finish_activity_import, import_pending_activities},
+        connect::helpers::{
+            get_devices_from_connect, queue_workout_on_connect, up_to_date_connect,
+        },
         devices::helpers::{notify_workout_sent, set_workout_on_device, workout_name},
         pool, report_error, settings_language,
     },

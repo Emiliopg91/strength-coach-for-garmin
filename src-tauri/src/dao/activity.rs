@@ -12,7 +12,7 @@ use crate::{
     dao::{
         activity_data::{self, ActivityData, ActivityDataRepository},
         activity_lap::{self, ActivityLap, ActivityLapRepository},
-        activity_step::{self, ActivityStepRepository},
+        activity_step::{self, ActivityStep, ActivityStepRepository},
         device::{self, Device},
         sub_sport::{self, SubSport},
         workout::{self, Workout, WorkoutRepository, entity::columns as workout_cols},
@@ -21,8 +21,6 @@ use crate::{
     },
     utils::time::local_midnight,
 };
-
-use super::activity_step::ActivityStep;
 
 #[derive(Entity, Clone, Serialize, Deserialize)]
 #[primary_key(date)]

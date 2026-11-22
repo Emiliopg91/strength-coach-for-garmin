@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use rusqlite_orm::dao::Repository;
 use serde_json::Value;
 
@@ -7,6 +9,7 @@ use crate::{
         body_metric::{BodyMetric, BodyMetricRepository},
     },
     dto::export::Export,
+    logic::ensure_extension,
     tests::common,
     utils::translations::Languages,
 };
@@ -104,10 +107,6 @@ async fn export_contains_all_data() {
 
 #[test]
 fn save_path_gets_its_extension_only_when_missing() {
-    use std::path::PathBuf;
-
-    use crate::logic::ensure_extension;
-
     assert_eq!(
         ensure_extension(PathBuf::from("/tmp/backup"), "json"),
         PathBuf::from("/tmp/backup.json")

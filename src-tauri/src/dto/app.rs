@@ -1,16 +1,16 @@
 use rusqlite_orm::{dao::Repository, database::DatabasePool};
 use serde::{Deserialize, Serialize};
 
+use crate::{
+    dao::settings::{self, DistanceUnit, SettingsRepository, WeightUnit, settings_keys},
+    utils::translations::Languages,
+};
+
 #[derive(Serialize)]
 pub enum AppEnvironment {
     Debug,
     Release,
 }
-
-use crate::{
-    dao::settings::{self, DistanceUnit, SettingsRepository, WeightUnit, settings_keys},
-    utils::translations::Languages,
-};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Settings {

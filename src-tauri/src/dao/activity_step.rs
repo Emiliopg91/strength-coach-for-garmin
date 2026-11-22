@@ -13,11 +13,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::dao::{
     activity::{ActivityRepository, entity::columns as activity_cols},
-    exercise::{self},
+    exercise::{self, Exercise},
     workout_step::StepType,
 };
-
-use super::exercise::Exercise;
 
 #[derive(Entity, Clone, Serialize, Deserialize)]
 #[entity("activity_step")]

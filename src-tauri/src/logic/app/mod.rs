@@ -7,7 +7,6 @@ use tauri::{AppHandle, Manager, Runtime};
 use tauri_plugin_autostart::ManagerExt;
 use tauri_plugin_log::log::{error, info};
 
-use self::helpers::{check_for_update, install_udev_rules, show_main_window};
 use crate::{
     SettingsLock, constants,
     dao::settings::settings_keys::{
@@ -19,6 +18,7 @@ use crate::{
     },
     logic::{
         activities::helpers::spawn_geolocation_update,
+        app::helpers::{check_for_update, install_udev_rules, show_main_window},
         connect::helpers::{get_devices_from_connect, up_to_date_connect},
         devices::helpers::start_device_watcher,
         notifications::show_notification,

@@ -37,7 +37,7 @@ use crate::{
         pool, report_error, store_pending_files,
     },
     utils::{
-        constants,
+        constants, http,
         time::now,
         translations::{Languages, translate, translate_and_replace},
     },
@@ -442,7 +442,7 @@ async fn name_after_locations<R: Runtime>(app: &AppHandle<R>, locations: Vec<(u3
 async fn geocode(lat: f64, lon: f64) -> Result<Option<String>, String> {
     let url =
         format!("https://nominatim.openstreetmap.org/reverse?format=json&lat={lat}&lon={lon}");
-    let response = crate::utils::http::client()
+    let response = http::client()
         .get(&url)
         .header(reqwest::header::USER_AGENT, "strength-coach-for-garmin")
         .header(reqwest::header::ACCEPT, "application/json")

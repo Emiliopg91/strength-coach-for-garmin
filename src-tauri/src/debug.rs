@@ -2,7 +2,10 @@
 
 use std::path::Path;
 
-use crate::fit::parser::FitParser;
+use crate::{
+    fit::parser::{FitParser, debug_encode},
+    mtp::dump,
+};
 
 fn decode_files<P>(paths: &[P])
 where
@@ -31,7 +34,7 @@ where
     P: AsRef<Path>,
 {
     for path in paths {
-        if let Err(e) = crate::fit::parser::debug_encode(path) {
+        if let Err(e) = debug_encode(path) {
             eprintln!("Error handling '{}': \n  {}", path.as_ref().display(), e)
         }
     }
@@ -39,14 +42,14 @@ where
 
 /// Incremental dump of the connected Garmin device into `./dump`.
 fn dump_device() {
-    if let Err(e) = crate::mtp::dump::run(Path::new("dump")) {
+    if let Err(e) = dump::run(Path::new("dump")) {
         eprintln!("Error dumping device: {e}");
     }
 }
 
 /// Removes a dumped file from the connected Garmin device and from `./dump`. Returns the exit code.
 fn delete_dumped_file(path: &str) -> i32 {
-    match crate::mtp::dump::delete(Path::new(path), Path::new("dump")) {
+    match dump::delete(Path::new(path), Path::new("dump")) {
         Ok(()) => 0,
         Err(e) => {
             eprintln!("Error deleting '{path}': {e}");
@@ -57,7 +60,7 @@ fn delete_dumped_file(path: &str) -> i32 {
 
 /// Lists a path of the connected Garmin device. Returns the exit code.
 fn list_device_path(path: &str) -> i32 {
-    match crate::mtp::dump::ls(path) {
+    match dump::ls(path) {
         Ok(()) => 0,
         Err(e) => {
             eprintln!("Error listing '{path}': {e}");

@@ -1,7 +1,7 @@
 use strength_coach_for_garmin_macros::traced_command;
 use tauri::{AppHandle, State};
 
-use crate::{ConnectLock, SettingsLock};
+use crate::{ConnectLock, SettingsLock, logic::connect};
 
 /// Downloads and imports the Connect activities of the last 15 days not stored yet. Files that fail
 /// to parse are kept as pending; new activities are geocoded in the background. Resolves to the
@@ -14,7 +14,7 @@ pub async fn import_from_connect(
     settings: State<'_, SettingsLock>,
     connect: State<'_, ConnectLock>,
 ) -> Result<usize, String> {
-    super::import_from_connect(&app, &settings, &connect).await
+    connect::import_from_connect(&app, &settings, &connect).await
 }
 
 /// Imports the Connect weight entries logged since the newest stored measurement, skipping dates
@@ -27,7 +27,7 @@ pub async fn import_weight_from_connect(
     settings: State<'_, SettingsLock>,
     connect: State<'_, ConnectLock>,
 ) -> Result<usize, String> {
-    super::import_weight_from_connect(&app, &settings, &connect).await
+    connect::import_weight_from_connect(&app, &settings, &connect).await
 }
 
 /// Name of the user logged into Connect, `null` if none.
@@ -36,7 +36,7 @@ pub async fn import_weight_from_connect(
 pub async fn connect_logged_user(
     connect: State<'_, ConnectLock>,
 ) -> Result<Option<String>, String> {
-    super::connect_logged_user(&connect).await
+    connect::connect_logged_user(&connect).await
 }
 
 /// Asks for the Connect credentials (and MFA code, if required) through the frontend prompts until
@@ -48,14 +48,14 @@ pub async fn connect_login(
     app: AppHandle,
     connect: State<'_, ConnectLock>,
 ) -> Result<Option<String>, String> {
-    super::connect_login(&app, &connect).await
+    connect::connect_login(&app, &connect).await
 }
 
 /// Logs out of Connect, discarding the stored session.
 #[traced_command]
 #[tauri::command]
 pub async fn connect_logout(connect: State<'_, ConnectLock>) -> Result<(), String> {
-    super::connect_logout(&connect).await
+    connect::connect_logout(&connect).await
 }
 
 /// Queues `workout` in Connect for delivery to the device `serial`, uploading it first if Connect
@@ -69,5 +69,5 @@ pub async fn send_to_connect(
     workout: u16,
     serial: &str,
 ) -> Result<(), String> {
-    super::send_to_connect(&app, &settings, workout, serial).await
+    connect::send_to_connect(&app, &settings, workout, serial).await
 }

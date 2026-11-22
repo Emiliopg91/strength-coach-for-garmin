@@ -1,3 +1,4 @@
+use chrono::TimeZone;
 use rustyfit::profile::{
     mesgdef,
     typedef::{self, Bool, Intensity, Manufacturer, MesgNum},
@@ -370,7 +371,6 @@ fn workout_file_id_without_connect_creation_time_takes_now() {
 
 /// UTC timestamp of the local midnight of `day`, as plans store their date
 fn plan_date(year: i32, month: u32, day: u32) -> u32 {
-    use chrono::TimeZone;
     let midnight = chrono::NaiveDate::from_ymd_opt(year, month, day)
         .unwrap()
         .and_hms_opt(0, 0, 0)

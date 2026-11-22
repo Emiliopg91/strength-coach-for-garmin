@@ -1,8 +1,8 @@
-use rusqlite_orm::Entity;
-use rusqlite_orm::{dao::Repository, database::DatabasePool};
+use std::fmt;
+
+use rusqlite_orm::{Entity, dao::Repository, database::DatabasePool};
 use semver::Version;
 use serde::{Deserialize, Serialize};
-use std::fmt;
 
 use crate::utils::{constants, translations::Languages};
 

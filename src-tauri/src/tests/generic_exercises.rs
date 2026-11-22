@@ -9,7 +9,7 @@ use crate::{
     },
     logic::exercises::helpers::exercises_catalog,
     schema_ddls,
-    tests::common,
+    tests::{common, schema::insert_legacy_activity},
 };
 
 #[tokio::test]
@@ -26,7 +26,7 @@ async fn migration_29_moves_hyperextensions_to_the_generic() {
 
     db.run_in_transaction(async move |tx| {
         // Raw SQL: the entities follow the current schema, not the one before migration 29
-        super::schema::insert_legacy_activity(tx, 1).await?;
+        insert_legacy_activity(tx, 1).await?;
         tx.execute_batch(
             "INSERT INTO SESSION_STEP (session, idx, kind, exercise_category, exercise_id, reps, weight, pr)
              VALUES (1, 0, 'Exercise', 13, 1, 15, 10, 0), (1, 1, 'Exercise', 13, 0, 12, 0, 0);

@@ -10,7 +10,7 @@ use tauri_plugin_log::log::warn;
 
 use crate::{
     dao::{settings::WeightUnit, workout_planning::WorkoutPlanning},
-    fit::writer::{FitWriter, ToFitMessages, fnv1a},
+    fit::writer::{FitWriter, ToFitMessages, errors, fnv1a},
     utils::translations::Languages,
 };
 
@@ -86,7 +86,7 @@ impl ToFitMessages for Vec<WorkoutPlanning> {
         &self,
         _lang: Languages,
         _weight_unit: WeightUnit,
-    ) -> super::errors::Result<Vec<Message>> {
+    ) -> errors::Result<Vec<Message>> {
         Ok(self.iter().filter_map(schedule_message).collect())
     }
 }

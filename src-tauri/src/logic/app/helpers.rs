@@ -15,7 +15,10 @@ use crate::{
         language, notifications::show_notification, open_window, prompts::helpers::request_prompt,
     },
     udev::{UdevManager, errors::UdevError},
-    utils::translations::{translate, translate_and_replace},
+    utils::{
+        http,
+        translations::{translate, translate_and_replace},
+    },
 };
 
 pub(crate) fn show_main_window<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
@@ -100,7 +103,7 @@ pub(super) async fn check_for_update<R: Runtime>(app: &AppHandle<R>) {
 
 /// Latest version published on GitHub.
 async fn latest_version() -> Result<Version, String> {
-    let response = crate::utils::http::client()
+    let response = http::client()
         .get(constants::URL)
         .header(reqwest::header::USER_AGENT, "strength-coach-for-garmin")
         .header(reqwest::header::ACCEPT, "application/vnd.github+json")

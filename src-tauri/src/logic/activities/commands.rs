@@ -4,6 +4,7 @@ use tauri::{AppHandle, State};
 use crate::{
     SettingsLock,
     dto::activities::{ActivityDetails, ActivityListItem, ActivityStepsUpdate},
+    logic::activities,
 };
 
 // Tauri commands: thin entry points over the logic of each module, which is what tests call
@@ -17,7 +18,7 @@ pub async fn get_activities(
     settings: State<'_, SettingsLock>,
     limit: Option<i32>,
 ) -> Result<Vec<ActivityListItem>, String> {
-    super::get_activities(&app, &settings, limit).await
+    activities::get_activities(&app, &settings, limit).await
 }
 
 /// Full details of the activity at `timestamp`: sets, laps, heart rate, GPS, speeds and device. If
@@ -30,7 +31,7 @@ pub async fn get_activity_details(
     settings: State<'_, SettingsLock>,
     timestamp: u32,
 ) -> Result<ActivityDetails, String> {
-    super::get_activity_details(&app, &settings, timestamp).await
+    activities::get_activity_details(&app, &settings, timestamp).await
 }
 
 /// Asks where to save the activity at `timestamp` as a FIT file (defaulting to `<date> <name>.fit`
@@ -44,7 +45,7 @@ pub async fn download_activity(
     settings: State<'_, SettingsLock>,
     timestamp: u32,
 ) -> Result<(), String> {
-    super::download_activity(&app, &settings, timestamp).await
+    activities::download_activity(&app, &settings, timestamp).await
 }
 
 /// Stores the edited notes and sets (reps, weight, exercise) of an activity and recomputes the
@@ -58,7 +59,7 @@ pub async fn save_activity_changes(
     settings: State<'_, SettingsLock>,
     details: ActivityStepsUpdate,
 ) -> Result<(), String> {
-    super::save_activity_changes(&app, &settings, details).await
+    activities::save_activity_changes(&app, &settings, details).await
 }
 
 /// Asks for `.fit` files and imports them as activities. Notifies the result (files that failed to
@@ -72,7 +73,7 @@ pub async fn import_from_files(
     app: AppHandle,
     settings: State<'_, SettingsLock>,
 ) -> Result<usize, String> {
-    super::import_from_files(&app, &settings).await
+    activities::import_from_files(&app, &settings).await
 }
 
 /// Activity of the last 12 months as a 12x31 grid indexed by month and day (0-based): each cell
@@ -80,5 +81,5 @@ pub async fn import_from_files(
 #[traced_command]
 #[tauri::command]
 pub async fn get_heatmap_data(app: AppHandle) -> Result<Vec<Vec<(u32, u16)>>, String> {
-    super::get_heatmap_data(&app).await
+    activities::get_heatmap_data(&app).await
 }

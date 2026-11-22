@@ -6,6 +6,7 @@ use tauri::{AppHandle, State};
 use crate::{
     ConnectLock, SettingsLock,
     dto::exercises::{ExerciseDetails, ExerciseListItem, ProgressionSuggestion},
+    logic::exercises,
 };
 
 /// Exercises with a personal record, annotated with it, plus those planned in some workout step
@@ -17,7 +18,7 @@ pub async fn get_exercises(
     app: AppHandle,
     settings: State<'_, SettingsLock>,
 ) -> Result<Vec<ExerciseListItem>, String> {
-    super::get_exercises(&app, &settings).await
+    exercises::get_exercises(&app, &settings).await
 }
 
 /// Personal record and full per-activity set history of the exercise `category`/`id`. On failure,
@@ -30,7 +31,7 @@ pub async fn get_exercise_details(
     category: u16,
     id: u16,
 ) -> Result<ExerciseDetails, String> {
-    super::get_exercise_details(&app, &settings, category, id).await
+    exercises::get_exercise_details(&app, &settings, category, id).await
 }
 
 /// Exercises that can be picked, as exercise ids by category. A category's generic exercise is left
@@ -38,7 +39,7 @@ pub async fn get_exercise_details(
 #[traced_command]
 #[tauri::command]
 pub async fn get_exercises_catalog(app: AppHandle) -> Result<HashMap<u16, Vec<u16>>, String> {
-    super::get_exercises_catalog(&app).await
+    exercises::get_exercises_catalog(&app).await
 }
 
 /// Marks the exercise `category`/`id` as performed one side at a time, or not, and sends again the
@@ -53,7 +54,7 @@ pub async fn set_exercise_unilateral(
     id: u16,
     value: bool,
 ) -> Result<(), String> {
-    super::set_exercise_unilateral(&app, &settings, category, id, value).await
+    exercises::set_exercise_unilateral(&app, &settings, category, id, value).await
 }
 
 /// Enables or disables progression suggestions for the exercise `category`/`id`. On failure, shows
@@ -67,7 +68,7 @@ pub async fn set_exercise_progression(
     id: u16,
     value: bool,
 ) -> Result<(), String> {
-    super::set_exercise_progression(&app, &settings, category, id, value).await
+    exercises::set_exercise_progression(&app, &settings, category, id, value).await
 }
 
 /// Sets the progression parameters of the exercise `category`/`id`: the rep range `reps` (e.g.
@@ -84,7 +85,8 @@ pub async fn set_exercise_progression_parameters(
     reps: &str,
     weight: f32,
 ) -> Result<(), String> {
-    super::set_exercise_progression_parameters(&app, &settings, category, id, reps, weight).await
+    exercises::set_exercise_progression_parameters(&app, &settings, category, id, reps, weight)
+        .await
 }
 
 /// Highest load programmed for the exercise `category`/`id` across workouts, `null` if none.
@@ -95,7 +97,7 @@ pub async fn get_progression_status(
     category: u16,
     id: u16,
 ) -> Result<Option<ProgressionSuggestion>, String> {
-    super::get_progression_status(&app, category, id).await
+    exercises::get_progression_status(&app, category, id).await
 }
 
 /// Pending progression suggestion for the exercise `category`/`id`, `null` if none.
@@ -106,14 +108,14 @@ pub async fn get_progression_suggestion(
     category: u16,
     id: u16,
 ) -> Result<Option<ProgressionSuggestion>, String> {
-    super::get_progression_suggestion(&app, category, id).await
+    exercises::get_progression_suggestion(&app, category, id).await
 }
 
 /// Whether any exercise has a progression suggestion pending. `false` if it can't be checked.
 #[traced_command]
 #[tauri::command]
 pub async fn available_any_progression_suggestions(app: AppHandle) -> Result<bool, String> {
-    Ok(super::available_any_progression_suggestions(&app).await)
+    Ok(exercises::available_any_progression_suggestions(&app).await)
 }
 
 /// Raises to `suggestion` the steps programming the exercise `category`/`id` below it, then
@@ -130,7 +132,8 @@ pub async fn apply_progression_suggestion(
     id: u16,
     suggestion: ProgressionSuggestion,
 ) -> Result<(), String> {
-    super::apply_progression_suggestion(&app, &settings, &connect, category, id, suggestion).await
+    exercises::apply_progression_suggestion(&app, &settings, &connect, category, id, suggestion)
+        .await
 }
 
 /// Stores the notes of the exercise `category`/`id` (blank clears them) and re-sends, to Connect
@@ -145,5 +148,5 @@ pub async fn save_exercise_notes(
     id: u16,
     notes: &str,
 ) -> Result<(), String> {
-    super::save_exercise_notes(&app, &settings, &connect, category, id, notes).await
+    exercises::save_exercise_notes(&app, &settings, &connect, category, id, notes).await
 }

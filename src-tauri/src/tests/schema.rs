@@ -2,10 +2,14 @@ use rusqlite_orm::{dao::Repository, database::builder::DatabaseConnectionBuilder
 
 use crate::{
     dao::{
-        activity::ActivityRepository, activity_data::ActivityDataRepository,
-        activity_lap::ActivityLapRepository, activity_step::ActivityStepRepository,
-        body_metric::BodyMetricRepository, workout::WorkoutRepository,
-        workout_device::WorkoutDeviceRepository, workout_step::StepType,
+        activity::ActivityRepository,
+        activity_data::ActivityDataRepository,
+        activity_lap::ActivityLapRepository,
+        activity_step::ActivityStepRepository,
+        body_metric::BodyMetricRepository,
+        workout::{self, Workout, WorkoutRepository},
+        workout_device::WorkoutDeviceRepository,
+        workout_step::StepType,
     },
     schema_ddls,
     tests::common,
@@ -140,7 +144,7 @@ async fn activity_roundtrip_with_relationships() {
 
     let mut tx_activity = activity.clone();
     db.run_in_transaction(async move |tx| {
-        let mut workout = crate::dao::workout::Workout {
+        let mut workout = Workout {
             id: 0,
             name: "Leg day".to_string(),
             enabled: true,
@@ -487,7 +491,7 @@ async fn migration_28_drops_chart_flag_and_cascades_workout_device() {
 
     WorkoutRepository::delete()
         .where_(rusqlite_orm::types::where_clause::Where::Eq(
-            crate::dao::workout::entity::columns::NAME,
+            workout::entity::columns::NAME,
             "a".into(),
         ))
         .execute(&db)

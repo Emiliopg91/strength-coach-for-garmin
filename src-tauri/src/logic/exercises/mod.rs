@@ -7,17 +7,19 @@ use rusqlite_orm::errors::DatabaseError;
 use tauri::{AppHandle, Runtime};
 use tauri_plugin_log::log::info;
 
-use self::helpers::{
-    any_progression_suggestion, exercise_list, exercises_catalog, fetch_exercise_details,
-    fetch_progression_suggestion,
-};
 use crate::{
     ConnectLock, SettingsLock,
     dao::{exercise::Exercise, workout::Workout, workout_step::WorkoutStep},
     dto::exercises::{ExerciseDetails, ExerciseListItem, ProgressionSuggestion},
     logic::{
-        activities::helpers::spawn_percent_load_sync, connect::helpers::sync_workouts_connect,
-        devices::helpers::push_pending_to_usb, pool, report_error,
+        activities::helpers::spawn_percent_load_sync,
+        connect::helpers::sync_workouts_connect,
+        devices::helpers::push_pending_to_usb,
+        exercises::helpers::{
+            any_progression_suggestion, exercise_list, exercises_catalog, fetch_exercise_details,
+            fetch_progression_suggestion,
+        },
+        pool, report_error,
     },
     utils::time::now,
 };

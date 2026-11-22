@@ -5,6 +5,7 @@ use crate::{
     ConnectLock, SettingsLock,
     dao::workout::Workout,
     dto::workouts::{PercentLoadBase, WorkoutDetails, WorkoutListItem, WorkoutPlanListItem},
+    logic::workouts,
 };
 
 /// Every workout with its activity stats (count, average time and load, latest date), by name. On
@@ -15,7 +16,7 @@ pub async fn get_workout_list(
     app: AppHandle,
     settings: State<'_, SettingsLock>,
 ) -> Result<Vec<WorkoutListItem>, String> {
-    super::get_workout_list(&app, &settings).await
+    workouts::get_workout_list(&app, &settings).await
 }
 
 /// The workout `id` with its steps, worked muscles and every activity with its volume. On failure,
@@ -27,7 +28,7 @@ pub async fn get_workout_details(
     settings: State<'_, SettingsLock>,
     id: u16,
 ) -> Result<WorkoutDetails, String> {
-    super::get_workout_details(&app, &settings, id).await
+    workouts::get_workout_details(&app, &settings, id).await
 }
 
 /// Enables or disables `workout`. Enabling pushes it to the connected USB devices and the Connect
@@ -35,7 +36,7 @@ pub async fn get_workout_details(
 #[traced_command]
 #[tauri::command]
 pub async fn set_workout_status(app: AppHandle, workout: u16, status: bool) -> Result<(), String> {
-    super::set_workout_status(&app, workout, status).await
+    workouts::set_workout_status(&app, workout, status).await
 }
 
 /// Enables or disables progression for `workout`: suggestions for its exercises and the exercise
@@ -51,7 +52,7 @@ pub async fn set_workout_progression(
     workout: u16,
     value: bool,
 ) -> Result<(), String> {
-    super::set_workout_progression(&app, &settings, &connect, workout, value).await
+    workouts::set_workout_progression(&app, &settings, &connect, workout, value).await
 }
 
 /// Creates `workout`, or replaces the name, notes and steps of the existing one with its id when
@@ -68,7 +69,7 @@ pub async fn save_workout(
     edit: bool,
     workout: Workout,
 ) -> Result<(), String> {
-    super::save_workout(&app, &settings, &connect, edit, workout).await
+    workouts::save_workout(&app, &settings, &connect, edit, workout).await
 }
 
 /// Opens the hidden workout window for `workout`. It prints itself to PDF once it calls
@@ -76,7 +77,7 @@ pub async fn save_workout(
 #[traced_command]
 #[tauri::command]
 pub async fn load_workout_page(app: AppHandle, workout: u16) -> Result<(), String> {
-    super::load_workout_page(&app, workout).await
+    workouts::load_workout_page(&app, workout).await
 }
 
 /// Called by the workout window once rendered: asks where to save the PDF (defaulting to
@@ -85,7 +86,7 @@ pub async fn load_workout_page(app: AppHandle, workout: u16) -> Result<(), Strin
 #[traced_command]
 #[tauri::command]
 pub async fn workout_print_ready(window: WebviewWindow, workout: &str) -> Result<(), String> {
-    super::workout_print_ready(window, workout).await
+    workouts::workout_print_ready(window, workout).await
 }
 
 /// Current estimated 1RM (best of the last weeks) and weight increment of every exercise with
@@ -97,28 +98,28 @@ pub async fn get_percent_load_bases(
     app: AppHandle,
     settings: State<'_, SettingsLock>,
 ) -> Result<Vec<PercentLoadBase>, String> {
-    super::get_percent_load_bases(&app, &settings).await
+    workouts::get_percent_load_bases(&app, &settings).await
 }
 
 /// List planned workouts.
 #[traced_command]
 #[tauri::command]
 pub async fn get_planned_workouts(app: AppHandle) -> Result<Vec<WorkoutPlanListItem>, String> {
-    super::get_planned_workouts(&app).await
+    workouts::get_planned_workouts(&app).await
 }
 
 /// Delete planned workout.
 #[traced_command]
 #[tauri::command]
 pub async fn delete_planned_workout(app: AppHandle, date: u32, workout: u16) -> Result<(), String> {
-    super::remove_planned_workout(&app, date, workout).await
+    workouts::remove_planned_workout(&app, date, workout).await
 }
 
 /// Add planned workout.
 #[traced_command]
 #[tauri::command]
 pub async fn add_planned_workout(app: AppHandle, date: u32, workout: u16) -> Result<(), String> {
-    super::add_planned_workout(&app, date, workout).await
+    workouts::add_planned_workout(&app, date, workout).await
 }
 
 /// get next planned workout.
@@ -127,5 +128,5 @@ pub async fn add_planned_workout(app: AppHandle, date: u32, workout: u16) -> Res
 pub async fn get_next_planned_workout(
     app: AppHandle,
 ) -> Result<Option<WorkoutPlanListItem>, String> {
-    super::get_next_planned_workout(&app).await
+    workouts::get_next_planned_workout(&app).await
 }

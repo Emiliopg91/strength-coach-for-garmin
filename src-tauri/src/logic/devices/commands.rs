@@ -1,7 +1,7 @@
 use strength_coach_for_garmin_macros::traced_command;
 use tauri::{AppHandle, State};
 
-use crate::{SettingsLock, dto::devices::DeviceListItem};
+use crate::{SettingsLock, dto::devices::DeviceListItem, logic::devices};
 
 /// Sends `workout` over USB to the device `serial` if it's connected; otherwise queues it to be
 /// sent the next time it's plugged in. Either way the pair is registered so later changes are
@@ -15,7 +15,7 @@ pub async fn send_to_device(
     workout: u16,
     serial: &str,
 ) -> Result<(), String> {
-    super::send_to_device(&app, &settings, workout, serial).await
+    devices::send_to_device(&app, &settings, workout, serial).await
 }
 
 /// Downloads over USB the activities recorded by the device `serial` since its last sync and
@@ -25,12 +25,12 @@ pub async fn send_to_device(
 #[traced_command]
 #[tauri::command]
 pub async fn import_from_device(app: AppHandle, serial: &str) -> Result<usize, String> {
-    super::import_from_device(&app, serial).await
+    devices::import_from_device(&app, serial).await
 }
 
 /// Every registered device, leaving out the Connect pseudo-device.
 #[traced_command]
 #[tauri::command]
 pub async fn get_registered_devices(app: AppHandle) -> Result<Vec<DeviceListItem>, String> {
-    super::get_registered_devices(&app).await
+    devices::get_registered_devices(&app).await
 }

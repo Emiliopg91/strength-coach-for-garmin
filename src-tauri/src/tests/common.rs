@@ -10,6 +10,7 @@ use crate::{
         activity_data::{ActivityData, ActivityDataRepository},
         activity_lap::{ActivityLap, ActivityLapRepository},
         activity_step::{ActivityStep, ActivityStepRepository},
+        workout::Workout,
         workout_step::StepType,
     },
     schema_ddls,
@@ -133,7 +134,7 @@ pub fn lap(activity: u32, idx: u16, position: Option<(i32, i32)>) -> ActivityLap
 
 /// Id of the stored workout called `name`; panics if there is none.
 pub async fn workout_id(conn: &rusqlite_orm::rusqlite::Connection, name: &str) -> u16 {
-    crate::dao::workout::Workout::get_id(conn, name)
+    Workout::get_id(conn, name)
         .await
         .expect("workout lookup")
         .unwrap_or_else(|| panic!("workout {name} not stored"))

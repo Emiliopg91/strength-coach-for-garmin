@@ -2,6 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::process::exit;
+
 use strength_coach_for_garmin_lib::{check_running, force_write_mtp_rules};
 use tauri_plugin_log::log::LevelFilter;
 
