@@ -14,7 +14,7 @@ fn activity_list_item_active_calories() {
 
     assert_eq!(item.timestamp, 1_700_000_000);
     assert_eq!(item.active_calories, 100);
-    assert_eq!(item.training_load, 80);
+    assert_eq!(item.training_load, 80.0);
     assert!(!item.has_record);
 }
 

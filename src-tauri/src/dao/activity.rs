@@ -31,7 +31,7 @@ pub struct Activity {
     pub total_elapsed_time: u32,
     pub active_time: u32,
     pub active_calories: u16,
-    pub training_load: u16,
+    pub training_load: f32,
     pub device: Option<String>,
     pub workout: Option<u16>,
     pub sport: u8,

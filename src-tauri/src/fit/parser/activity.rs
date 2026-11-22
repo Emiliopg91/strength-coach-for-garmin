@@ -282,7 +282,7 @@ struct ActivityAccumulator {
     sub_sport_obj: SubSport,
     total_elapsed_time: u32,
     active_time: u32,
-    training_load: u16,
+    training_load: f32,
     total_calories: u16,
     metabolic_calories: u16,
 }
@@ -299,7 +299,7 @@ impl ActivityAccumulator {
             },
             total_elapsed_time: 0,
             active_time: 0,
-            training_load: 0,
+            training_load: 0.0,
             total_calories: 0,
             metabolic_calories: 0,
         }
@@ -339,7 +339,7 @@ impl ActivityAccumulator {
 
         self.training_load = msg
             .training_load_peak_scaled()
-            .map(|e| e.round() as u16)
+            .map(|e| e as f32)
             .ok_or_else(|| ParseFitFileError::MissingField("training_load_peak".to_string()))?;
 
         self.total_calories = (msg.total_calories != u16::MAX)

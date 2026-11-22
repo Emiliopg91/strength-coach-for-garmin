@@ -836,7 +836,7 @@ pub(super) async fn apply_activity_changes(
 }
 
 /// Training load and records of every day of the last year, by month and day of month.
-pub(crate) async fn heatmap_data(database: &DatabasePool) -> Result<Vec<Vec<(u32, u16)>>, String> {
+pub(crate) async fn heatmap_data(database: &DatabasePool) -> Result<Vec<Vec<(f32, u16)>>, String> {
     let today = Local::now().date_naive();
     let a_year_ago = today
         .checked_sub_months(Months::new(12))
@@ -855,14 +855,14 @@ pub(crate) async fn heatmap_data(database: &DatabasePool) -> Result<Vec<Vec<(u32
             let activities = Activity::get_activities(conn, Some(ts), None, None, None).await?;
             let pr_counts = ActivityStep::get_pr_counts_since(conn, ts).await?;
 
-            let mut res = vec![vec![(0_u32, 0_u16); 31]; 12];
+            let mut res = vec![vec![(0_f32, 0_u16); 31]; 12];
             for activity in activities {
                 let dt = Local
                     .timestamp_opt(activity.date as i64, 0)
                     .single()
                     .unwrap();
                 let cell = &mut res[dt.month0() as usize][dt.day0() as usize];
-                cell.0 += activity.training_load as u32;
+                cell.0 += activity.training_load;
                 cell.1 += pr_counts.get(&activity.date).copied().unwrap_or(0);
             }
 

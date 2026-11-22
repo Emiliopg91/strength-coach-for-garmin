@@ -36,7 +36,7 @@ async fn heatmap_totals_and_record_flags_match_inserted_activities() {
         for (i, &days) in tx_days_ago.iter().enumerate() {
             let date = timestamp_days_ago(days);
             let mut activity = common::activity(date);
-            activity.training_load = 40 + (i as u16) * 7;
+            activity.training_load = 40.25 + (i as f32) * 7.0;
 
             if record_indices.contains(&i) {
                 let mut set = common::set(date, 0, (0, i as u16), 5, 100.0 + i as f32);
@@ -60,7 +60,7 @@ async fn heatmap_totals_and_record_flags_match_inserted_activities() {
             .unwrap();
         let cell = &heatmap[date.month0() as usize][date.day0() as usize];
 
-        let expected_load = (40 + (i as u16) * 7) as u32;
+        let expected_load = 40.25 + (i as f32) * 7.0;
         let expected_record = record_indices.contains(&i);
 
         assert_eq!(

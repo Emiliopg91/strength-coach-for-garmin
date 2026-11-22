@@ -42,7 +42,7 @@ pub fn activity(date: u32) -> Activity {
         total_elapsed_time: 3600,
         active_time: 3000,
         active_calories: 100,
-        training_load: 80,
+        training_load: 80.0,
         device: None,
         workout: None,
         sport: STRENGTH_SPORT,

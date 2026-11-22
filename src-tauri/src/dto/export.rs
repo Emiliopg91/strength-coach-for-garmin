@@ -124,7 +124,7 @@ pub struct ActivityExport {
     pub total_elapsed_time: u32,
     pub active_time: u32,
     pub active_calories: u16,
-    pub training_load: u16,
+    pub training_load: f32,
     pub sport: u8,
     pub sub_sport: u8,
     #[serde(skip_serializing_if = "Option::is_none")]

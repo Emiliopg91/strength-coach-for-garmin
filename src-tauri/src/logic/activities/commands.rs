@@ -80,6 +80,6 @@ pub async fn import_from_files(
 /// holds the summed training load and number of records of that day.
 #[traced_command]
 #[tauri::command]
-pub async fn get_heatmap_data(app: AppHandle) -> Result<Vec<Vec<(u32, u16)>>, String> {
+pub async fn get_heatmap_data(app: AppHandle) -> Result<Vec<Vec<(f32, u16)>>, String> {
     activities::get_heatmap_data(&app).await
 }

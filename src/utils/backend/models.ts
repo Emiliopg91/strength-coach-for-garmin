@@ -72,7 +72,7 @@ export interface ActivityStepsUpdate {
   timestamp: number;
 }
 
-// From src-tauri/src/dto/app.rs:5
+// From src-tauri/src/dto/app.rs:10
 export enum AppEnvironment {
 	Debug = "Debug",
 	Release = "Release",

@@ -524,7 +524,11 @@ export function Home() {
                                                     )}
                                                 </td>
                                                 <td>
-                                                    {workout.details.avg_load}
+                                                    {formatNumber(
+                                                        workout.details
+                                                            .avg_load,
+                                                        0,
+                                                    )}
                                                 </td>
                                                 <td
                                                     onClick={(e) =>

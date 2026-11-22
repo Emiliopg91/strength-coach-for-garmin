@@ -15,8 +15,14 @@ export default function ActivitiesSection({
     activities,
     exercises: exercises_details,
 }: Props): JSX.Element {
-    const { translate, formatTimeDate, formatDuration, fromKg, getWeightUnit } =
-        useContext(I18nSettingsContext);
+    const {
+        translate,
+        formatTimeDate,
+        formatDuration,
+        fromKg,
+        getWeightUnit,
+        formatNumber,
+    } = useContext(I18nSettingsContext);
     const { exerciseName } = useContext(AppContext);
 
     return (
@@ -56,7 +62,7 @@ export default function ActivitiesSection({
                                     {activity.active_calories}
                                     <br />
                                     <b>{translate("workout_load") + ": "}</b>
-                                    {activity.training_load}
+                                    {formatNumber(activity.training_load, 0)}
                                 </div>
                                 <br />
                                 <div className="report-table">

@@ -15,7 +15,7 @@ pub struct ActivityListItem {
     pub name: String,
     pub timestamp: u32,
     pub active_calories: u16,
-    pub training_load: u16,
+    pub training_load: f32,
     pub sport: u8,
     pub sub_sport: u8,
     pub has_record: bool,
@@ -111,7 +111,7 @@ pub struct ActivityDetails {
 
     pub active_calories: u16,
 
-    pub training_load: u16,
+    pub training_load: f32,
     pub sport: u8,
     pub sub_sport: u8,
 

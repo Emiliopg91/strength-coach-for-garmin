@@ -288,7 +288,8 @@ fn session_message(activity: &Activity, num_laps: u16, lang: Languages) -> Messa
     msg.set_total_elapsed_time_scaled(activity.total_elapsed_time as f64);
     msg.set_total_timer_time_scaled(activity.total_elapsed_time as f64);
     msg.set_active_time_scaled(activity.active_time as f64);
-    msg.set_training_load_peak_scaled(activity.training_load as f64);
+    // Scaled by 65536: the scaled setter truncates, which would shift the value on every round trip
+    msg.training_load_peak = (f64::from(activity.training_load) * 65536.0).round() as i32;
     // Only active calories are kept, so the metabolic share is lost
     msg.total_calories = activity.active_calories;
     msg.metabolic_calories = 0;

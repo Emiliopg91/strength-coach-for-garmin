@@ -11,7 +11,7 @@ pub struct WorkoutListItem {
     pub latest_activity: Option<u32>,
     pub activities: u32,
     pub avg_time: u32,
-    pub avg_load: u16,
+    pub avg_load: f32,
     pub enabled: bool,
     pub has_steps: bool,
 }

@@ -20,7 +20,7 @@ struct WorkoutStats {
     activities: u32,
     total_time: u32,
     latest_activity: Option<u32>,
-    total_load: u32,
+    total_load: f32,
 }
 
 /// Every workout with its activity stats (count, average time and load, latest date), by name.
@@ -42,7 +42,7 @@ pub(super) async fn workout_list(
         stats.activities += 1;
         stats.total_time += s.total_elapsed_time;
         stats.latest_activity.get_or_insert(s.date);
-        stats.total_load += s.training_load as u32;
+        stats.total_load += s.training_load;
     }
 
     let with_steps = WorkoutStep::get_workouts_with_steps(conn).await?;
@@ -57,7 +57,11 @@ pub(super) async fn workout_list(
                 enabled: workout.enabled,
                 activities: stats.activities,
                 avg_time: stats.total_time.checked_div(stats.activities).unwrap_or(0),
-                avg_load: stats.total_load.checked_div(stats.activities).unwrap_or(0) as u16,
+                avg_load: if stats.activities > 0 {
+                    stats.total_load / stats.activities as f32
+                } else {
+                    0.0
+                },
                 latest_activity: stats.latest_activity,
                 name: workout.name,
             }

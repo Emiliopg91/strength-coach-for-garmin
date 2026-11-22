@@ -56,7 +56,7 @@ struct Expected {
     total_elapsed_time: u32,
     active_time: u32,
     active_calories: u16,
-    training_load: u16,
+    training_load: f32,
     sets: usize,
     records: usize,
 }
@@ -69,7 +69,7 @@ const STRENGTH: [Expected; 6] = [
         total_elapsed_time: 3230,
         active_time: 2012,
         active_calories: 272,
-        training_load: 62,
+        training_load: 62.12,
         sets: 33,
         records: 1377,
     },
@@ -80,7 +80,7 @@ const STRENGTH: [Expected; 6] = [
         total_elapsed_time: 4207,
         active_time: 1769,
         active_calories: 252,
-        training_load: 73,
+        training_load: 73.05,
         sets: 39,
         records: 1339,
     },
@@ -91,7 +91,7 @@ const STRENGTH: [Expected; 6] = [
         total_elapsed_time: 3179,
         active_time: 1958,
         active_calories: 248,
-        training_load: 65,
+        training_load: 64.51,
         sets: 33,
         records: 1631,
     },
@@ -102,7 +102,7 @@ const STRENGTH: [Expected; 6] = [
         total_elapsed_time: 3269,
         active_time: 1614,
         active_calories: 246,
-        training_load: 59,
+        training_load: 59.35,
         sets: 33,
         records: 1313,
     },
@@ -113,7 +113,7 @@ const STRENGTH: [Expected; 6] = [
         total_elapsed_time: 3806,
         active_time: 2538,
         active_calories: 293,
-        training_load: 76,
+        training_load: 76.29,
         sets: 33,
         records: 1848,
     },
@@ -124,7 +124,7 @@ const STRENGTH: [Expected; 6] = [
         total_elapsed_time: 2604,
         active_time: 1386,
         active_calories: 245,
-        training_load: 82,
+        training_load: 81.55,
         sets: 33,
         records: 1373,
     },
@@ -139,7 +139,7 @@ const WALKS: [(Expected, (f64, f64), f64, usize); 3] = [
             total_elapsed_time: 4005,
             active_time: 0,
             active_calories: 159,
-            training_load: 6,
+            training_load: 6.36,
             sets: 0,
             records: 693,
         },
@@ -155,7 +155,7 @@ const WALKS: [(Expected, (f64, f64), f64, usize); 3] = [
             total_elapsed_time: 836,
             active_time: 0,
             active_calories: 70,
-            training_load: 18,
+            training_load: 17.87,
             sets: 0,
             records: 184,
         },
@@ -171,7 +171,7 @@ const WALKS: [(Expected, (f64, f64), f64, usize); 3] = [
             total_elapsed_time: 7242,
             active_time: 0,
             active_calories: 169,
-            training_load: 5,
+            training_load: 5.17,
             sets: 0,
             records: 1249,
         },
@@ -191,7 +191,12 @@ fn assert_activity(activity: &Activity, expected: &Expected, sport: (u8, u8)) {
     );
     assert_eq!(activity.active_time, expected.active_time, "{ctx}");
     assert_eq!(activity.active_calories, expected.active_calories, "{ctx}");
-    assert_eq!(activity.training_load, expected.training_load, "{ctx}");
+    // Garmin scales the load by 65536: compared to two decimals
+    assert!(
+        (activity.training_load - expected.training_load).abs() < 0.005,
+        "{ctx}: training load {}",
+        activity.training_load
+    );
     assert_eq!((activity.sport, activity.sub_sport), sport, "{ctx}");
     assert_eq!(activity.steps.len(), expected.sets, "{ctx}");
 
@@ -343,7 +348,7 @@ fn parses_indoor_biking_activity() {
         total_elapsed_time: 4180,
         active_time: 0,
         active_calories: 313,
-        training_load: 51,
+        training_load: 51.09,
         sets: 0,
         records: 3773,
     };

@@ -218,6 +218,6 @@ pub async fn import_from_files<R: Runtime>(
 
 pub async fn get_heatmap_data<R: Runtime>(
     app: &AppHandle<R>,
-) -> Result<Vec<Vec<(u32, u16)>>, String> {
+) -> Result<Vec<Vec<(f32, u16)>>, String> {
     heatmap_data(&pool(app)).await
 }
