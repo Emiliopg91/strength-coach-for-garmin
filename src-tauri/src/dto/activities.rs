@@ -194,6 +194,14 @@ pub struct ActivityStepsUpdate {
     pub notes: Option<String>,
 }
 
+/// Exercise sets that worked a muscle over a period, by the role the muscle had in each exercise.
+#[derive(Serialize, Debug, PartialEq)]
+pub struct MuscleSets {
+    pub muscle: String,
+    pub primary: u32,
+    pub secondary: u32,
+}
+
 #[derive(Serialize, Clone)]
 pub struct ActivityLocation {
     pub activity: u32,

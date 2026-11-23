@@ -2,7 +2,7 @@
 
 import { invoke, InvokeArgs } from "@tauri-apps/api/core";
 
-import { ActivityDetails, ActivityListItem, ActivityStepsUpdate, AppEnvironment, BodyMetricListItem, CloudProvider, DeviceListItem, ExerciseDetails, ExerciseListItem, PercentLoadBase, ProgressionSuggestion, ReportData, Settings, Workout, WorkoutDetails, WorkoutListItem, WorkoutPlanListItem } from "./models";
+import { ActivityDetails, ActivityListItem, ActivityStepsUpdate, AppEnvironment, BodyMetricListItem, CloudProvider, DeviceListItem, ExerciseDetails, ExerciseListItem, MuscleSets, PercentLoadBase, ProgressionSuggestion, ReportData, Settings, Workout, WorkoutDetails, WorkoutListItem, WorkoutPlanListItem } from "./models";
 
 export class BackendClient {
 
@@ -125,6 +125,12 @@ export class BackendClient {
 	// From src-tauri/src/logic/activities/commands.rs:83
 	public static getHeatmapData(): Promise<[number, number][][]> {
 	  return BackendClient.inner_invoke("get_heatmap_data"); 
+	}
+	
+
+	// From src-tauri/src/logic/activities/commands.rs:92
+	public static getMuscleSets(since: number): Promise<MuscleSets[]> {
+	  return BackendClient.inner_invoke("get_muscle_sets", { since }); 
 	}
 	
 

@@ -24,7 +24,9 @@ use crate::{
         workout_step::WorkoutStep,
     },
     dto::{
-        activities::{ActivityDetails, ActivityListItem, ActivityLocation, ActivityStepsUpdate},
+        activities::{
+            ActivityDetails, ActivityListItem, ActivityLocation, ActivityStepsUpdate, MuscleSets,
+        },
         notifications::{NotificationDefinition, NotificationKind},
     },
     fit::{FitFile, parser::FitParser, writer::FitWriter},
@@ -866,6 +868,57 @@ pub(crate) async fn heatmap_data(database: &DatabasePool) -> Result<Vec<Vec<(f32
                 cell.1 += pr_counts.get(&activity.date).copied().unwrap_or(0);
             }
 
+            Ok(res)
+        })
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Exercise sets performed from `since` on, added up by the muscles they worked. A muscle both
+/// primary and secondary in an exercise counts as primary. Sorted by muscle name.
+pub(crate) async fn muscle_sets(
+    database: &DatabasePool,
+    since: u32,
+) -> Result<Vec<MuscleSets>, String> {
+    database
+        .run_in_connection(async move |conn| {
+            let counts = ActivityStep::get_exercise_set_counts_since(conn, since).await?;
+            let mut exercises = Exercise::get_by_keys(conn, counts.keys()).await?;
+            Exercise::fill_muscles(conn, &mut exercises).await?;
+
+            // muscle -> (primary, secondary)
+            let mut by_muscle: HashMap<String, (u32, u32)> = HashMap::new();
+            for exercise in &exercises {
+                let sets = counts[&(exercise.category, exercise.id)];
+                let primary: HashSet<&str> = exercise
+                    .muscles
+                    .iter()
+                    .filter(|m| m.is_primary)
+                    .map(|m| m.muscle.as_str())
+                    .collect();
+                for muscle in &exercise.muscles {
+                    let is_primary = primary.contains(muscle.muscle.as_str());
+                    if !muscle.is_primary && is_primary {
+                        continue;
+                    }
+                    let entry = by_muscle.entry(muscle.muscle.clone()).or_default();
+                    if is_primary {
+                        entry.0 += sets;
+                    } else {
+                        entry.1 += sets;
+                    }
+                }
+            }
+
+            let mut res: Vec<MuscleSets> = by_muscle
+                .into_iter()
+                .map(|(muscle, (primary, secondary))| MuscleSets {
+                    muscle,
+                    primary,
+                    secondary,
+                })
+                .collect();
+            res.sort_by(|a, b| a.muscle.cmp(&b.muscle));
             Ok(res)
         })
         .await

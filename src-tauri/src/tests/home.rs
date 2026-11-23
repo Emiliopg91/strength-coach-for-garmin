@@ -1,7 +1,10 @@
 use chrono::{Datelike, Days, Local, TimeZone};
 
 use crate::{
-    dao::activity_step::ActivityStep, logic::activities::helpers::heatmap_data, tests::common,
+    dao::{activity_step::ActivityStep, workout_step::StepType},
+    dto::activities::MuscleSets,
+    logic::activities::helpers::{heatmap_data, muscle_sets},
+    tests::common,
 };
 
 /// Builds a timestamp for `days_ago` days before today, anchored at local noon so the
@@ -137,4 +140,44 @@ async fn activity_set_flags_report_sets_and_records_per_activity() {
         .unwrap();
     assert_eq!(upto.len(), 1);
     assert_eq!(upto.get(&2_000), Some(&false));
+}
+
+#[tokio::test]
+async fn muscle_sets_count_primary_and_secondary_sets_since_the_given_date() {
+    let db = common::test_db().await;
+
+    db.run_in_transaction(async move |tx| {
+        // Before `since`: left out
+        let mut old = common::activity(1_000);
+        old.steps = vec![common::set(1_000, 0, (0, 1), 5, 50.0)];
+        common::insert_activity(tx, old).await;
+
+        // Bench press (chest primary; shoulders and triceps secondary) twice, close-grip bench
+        // press (triceps primary; chest and shoulders secondary) once and a warm-up
+        let mut recent = common::activity(3_000);
+        let mut warmup = common::set(3_000, 3, (0, 1), 10, 20.0);
+        warmup.kind = StepType::Warmup;
+        recent.steps = vec![
+            common::set(3_000, 0, (0, 1), 5, 60.0),
+            common::set(3_000, 1, (0, 1), 5, 60.0),
+            common::set(3_000, 2, (0, 4), 8, 40.0),
+            warmup,
+        ];
+        common::insert_activity(tx, recent).await;
+        Ok(())
+    })
+    .await
+    .unwrap();
+
+    let sets = muscle_sets(&db, 2_000).await.unwrap();
+    let expected = [("chest", 2, 1), ("shoulders", 0, 3), ("triceps", 1, 2)].map(
+        |(muscle, primary, secondary)| MuscleSets {
+            muscle: muscle.to_string(),
+            primary,
+            secondary,
+        },
+    );
+    assert_eq!(sets, expected);
+
+    assert!(muscle_sets(&db, 4_000).await.unwrap().is_empty());
 }

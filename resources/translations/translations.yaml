@@ -385,9 +385,6 @@ import_activity_to_begin:
 home:
   en: Home
   es: Inicio
-last_30_days:
-  en: Last 30 days
-  es: Últimos 30 dias
 last_activity:
   en: Last activity
   es: Última actividad
@@ -724,3 +721,6 @@ next_planned_workout:
 in_n_days:
   en: In {} days
   es: En {} días
+sets_per_week:
+  en: "{} sets/week"
+  es: "{} series/sem"

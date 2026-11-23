@@ -270,6 +270,33 @@ impl ActivityStep {
         Ok(pr_counts)
     }
 
+    /// Number of exercise sets of every exercise performed in activities from `since` on.
+    pub async fn get_exercise_set_counts_since(
+        conn: &Connection,
+        since: u32,
+    ) -> rusqlite_orm::errors::Result<HashMap<(u16, u16), u32>> {
+        let mut counts: HashMap<(u16, u16), u32> = HashMap::new();
+        for set in ActivityStepRepository::select()
+            .columns(&[entity::columns::EX_CAT, entity::columns::EX_ID])
+            .where_(Where::And(vec![
+                Where::Eq(entity::columns::KIND, StepType::Exercise.into()),
+                Where::Gte(entity::columns::ACTIVITY, since.into()),
+                Where::NotNull(entity::columns::EX_CAT),
+                Where::NotNull(entity::columns::EX_ID),
+            ]))
+            .fetch_in(conn)
+            .await?
+        {
+            *counts
+                .entry((
+                    set.get_u16(entity::columns::EX_CAT.as_ref()),
+                    set.get_u16(entity::columns::EX_ID.as_ref()),
+                ))
+                .or_default() += 1;
+        }
+        Ok(counts)
+    }
+
     /// Exercise sets of the latest activity of each exercise in `keys`, as
     /// `(exercise, activity, weight, reps)`, a missing weight or reps counting as 0.
     pub async fn get_latest_exercise_sets(

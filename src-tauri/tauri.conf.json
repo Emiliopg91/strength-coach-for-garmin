@@ -15,9 +15,9 @@
       {
         "title": "Strength Coach for Garmin",
         "width": 830,
-        "height": 780,
+        "height": 820,
         "minWidth": 830,
-        "minHeight": 780,
+        "minHeight": 820,
         "visible": false,
         "resizable": true,
         "dragDropEnabled": true

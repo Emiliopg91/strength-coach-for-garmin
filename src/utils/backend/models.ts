@@ -44,7 +44,7 @@ export interface ActivityListItem {
   training_load: number;
 }
 
-// From src-tauri/src/dto/activities.rs:198
+// From src-tauri/src/dto/activities.rs:206
 export interface ActivityLocation {
   activity: number;
   location: string;
@@ -181,6 +181,13 @@ export interface MuscleExercise {
   is_primary: boolean;
   muscle: string;
   muscle_obj: Muscle | null;
+}
+
+// From src-tauri/src/dto/activities.rs:199
+export interface MuscleSets {
+  muscle: string;
+  primary: number;
+  secondary: number;
 }
 
 // From src-tauri/src/dto/workouts.rs:55

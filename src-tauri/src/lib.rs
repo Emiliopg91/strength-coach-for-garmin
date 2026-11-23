@@ -42,7 +42,7 @@ use crate::{
         activities::{
             commands::{
                 download_activity, get_activities, get_activity_details, get_heatmap_data,
-                import_from_files, save_activity_changes,
+                get_muscle_sets, import_from_files, save_activity_changes,
             },
             helpers::import_file_paths,
         },
@@ -326,6 +326,7 @@ pub fn run(log_level: LevelFilter) {
             save_activity_changes,
             import_from_files,
             get_heatmap_data,
+            get_muscle_sets,
             //Exercises
             get_exercises,
             get_exercise_details,

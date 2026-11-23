@@ -9,14 +9,15 @@ use crate::{
     SettingsLock,
     dao::activity::Activity,
     dto::{
-        activities::{ActivityDetails, ActivityListItem, ActivityStepsUpdate},
+        activities::{ActivityDetails, ActivityListItem, ActivityStepsUpdate, MuscleSets},
         notifications::{NotificationDefinition, NotificationKind},
     },
     logic::{
         activities::helpers::{
             activity_file_name, apply_activity_changes, fetch_activities, fetch_activity_details,
-            heatmap_data, import_file_paths, notify_new_prs, notify_progression_available,
-            retrieve_activity_connect_id, spawn_percent_load_sync, write_activity_fit,
+            heatmap_data, import_file_paths, muscle_sets, notify_new_prs,
+            notify_progression_available, retrieve_activity_connect_id, spawn_percent_load_sync,
+            write_activity_fit,
         },
         ask_open_paths, ask_save_path,
         connect::helpers::sync_activity_sets_connect,
@@ -220,4 +221,11 @@ pub async fn get_heatmap_data<R: Runtime>(
     app: &AppHandle<R>,
 ) -> Result<Vec<Vec<(f32, u16)>>, String> {
     heatmap_data(&pool(app)).await
+}
+
+pub async fn get_muscle_sets<R: Runtime>(
+    app: &AppHandle<R>,
+    since: u32,
+) -> Result<Vec<MuscleSets>, String> {
+    muscle_sets(&pool(app), since).await
 }

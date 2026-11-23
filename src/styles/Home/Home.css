@@ -59,7 +59,7 @@
   table-layout: fixed;
   > colgroup {
     > col {
-      width: 20%;
+      width: 25%;
     }
   }
   > thead {
@@ -74,6 +74,52 @@
       text-align: center;
     }
   }
+}
+
+/* Workload chart and heatmap side by side, half the width each */
+.training-status-charts {
+  display: flex;
+
+  > * {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}
+
+/* Period stats table with the muscle map on its right, which takes the width of its models */
+.training-status-summary {
+  display: flex;
+  align-items: center;
+
+  > #last-days {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  > .muscle-map {
+    flex: 0 0 auto;
+    width: auto;
+    margin-left: 10px;
+  }
+}
+
+.muscle-map {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  /* The library sets a pointer cursor inline on its regions, which aren't clickable here */
+  path {
+    cursor: default !important;
+  }
+}
+
+.muscle-map-tooltip {
+  position: absolute;
+  z-index: 1;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 /* Status title on top of the load chart, which takes the remaining height */

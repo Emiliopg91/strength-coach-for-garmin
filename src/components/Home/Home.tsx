@@ -15,6 +15,7 @@ import "@/styles/Home/Home.css";
 import "@/styles/Activities/ActivityModal.css";
 import {
     ActivityListItem,
+    MuscleSets,
     WorkoutDetails,
     WorkoutListItem,
 } from "@/utils/backend/models";
@@ -22,6 +23,7 @@ import { BackendListener } from "@/utils/backend/listener";
 import { ActivityModal } from "../Activities/modals/ActivityModal";
 import { WorkoutModal } from "../Workouts/modals/WorkoutModal";
 import { Heatmap } from "./charts/Heatmap";
+import { MuscleMap } from "./charts/MuscleMap";
 import { WorkloadChart } from "./charts/WorkloadChart";
 import { WorkoutStepsModal } from "../Workouts/modals/WorkoutStepsModal";
 import { WorkoutActionsMenu } from "../Workouts/menus/WorkoutActionsMenu";
@@ -43,9 +45,12 @@ interface NextWorkout {
     details: WorkoutListItem;
 }
 
-const PERIODS = ["today", "thisWeek", "previousWeek", "month"] as const;
+const PERIODS = ["today", "thisWeek", "previousWeek"] as const;
 type Period = (typeof PERIODS)[number];
 type HomeStats = Record<Period, PeriodStats>;
+
+// Days the muscle map covers
+const MONTH_DAYS = 30;
 
 const emptyPeriod = (): PeriodStats => ({
     activities: 0,
@@ -58,7 +63,6 @@ const emptyStats = (): HomeStats => ({
     today: emptyPeriod(),
     thisWeek: emptyPeriod(),
     previousWeek: emptyPeriod(),
-    month: emptyPeriod(),
 });
 
 const addActivity = (stats: PeriodStats, activity: ActivityListItem) => {
@@ -79,19 +83,17 @@ const calculateStats = (
     const startOfWeek = adapter.startOfWeek(adapter.startOfDay(new Date()));
     const thisWeekLimit = startOfWeek.getTime() / 1000;
     const prevWeekLimit = adapter.addWeeks(startOfWeek, -1).getTime() / 1000;
-    const monthLimit = today - 29 * 24 * 60 * 60;
 
     for (const activity of activities) {
-        if (activity.timestamp < monthLimit) {
+        if (activity.timestamp < prevWeekLimit) {
             break;
         }
-        addActivity(stats.month, activity);
         if (activity.timestamp >= thisWeekLimit) {
             addActivity(stats.thisWeek, activity);
             if (activity.timestamp >= today) {
                 addActivity(stats.today, activity);
             }
-        } else if (activity.timestamp >= prevWeekLimit) {
+        } else {
             addActivity(stats.previousWeek, activity);
         }
     }
@@ -119,6 +121,7 @@ export function Home() {
     const [heatMapData, setHeatMapData] = useState<
         [number, number][][] | undefined
     >(undefined);
+    const [muscleSets, setMuscleSets] = useState<MuscleSets[]>([]);
 
     const [workout, setWorkout] = useState<NextWorkout | undefined>(undefined);
     const [rest, setRest] = useState(false);
@@ -155,6 +158,11 @@ export function Home() {
                 withLoading(BackendClient.getHeatmapData()).then(
                     setHeatMapData,
                 );
+                withLoading(
+                    BackendClient.getMuscleSets(
+                        today - (MONTH_DAYS - 1) * 24 * 60 * 60,
+                    ),
+                ).then(setMuscleSets);
 
                 Promise.all([
                     withLoading(BackendClient.getNextPlannedWorkout()),
@@ -279,88 +287,104 @@ export function Home() {
                     <div className="dashboard-box">
                         <fieldset>
                             <legend>{translate("training_status")}</legend>
-                            <div style={{ display: "flex" }}>
-                                {workload.length > 0 && (
-                                    <WorkloadChart
-                                        workload={workload}
-                                        minDate={workload[0].date}
-                                    />
-                                )}
+                            <div className="training-status-charts">
+                                <div>
+                                    {workload.length > 0 && (
+                                        <WorkloadChart
+                                            workload={workload}
+                                            minDate={workload[0].date}
+                                        />
+                                    )}
+                                </div>
                                 <Heatmap data={heatMapData} />
                             </div>
-                            <table id="last-days">
-                                <colgroup>
-                                    <col />
-                                    <col />
-                                    <col />
-                                    <col />
-                                </colgroup>
-                                <thead>
-                                    <tr>
-                                        <th></th>
-                                        <th>{translate("today")}</th>
-                                        <th>{translate("this_week")}</th>
-                                        <th>{translate("previous_week")}</th>
-                                        <th>{translate("last_30_days")}</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td>{translate("activities")}</td>
-                                        {PERIODS.map((p) => (
-                                            <td key={p}>
-                                                {formatNumber(
-                                                    stats[p].activities,
-                                                    0,
-                                                )}
-                                            </td>
-                                        ))}
-                                    </tr>
-                                </tbody>
-                                <tbody>
-                                    <tr>
-                                        <td>{translate("workout_load")}</td>
-                                        {PERIODS.map((p) => (
-                                            <td key={p}>
-                                                {formatNumber(
-                                                    stats[p].activities > 0
-                                                        ? stats[p].load /
-                                                              stats[p]
-                                                                  .activities
-                                                        : 0,
-                                                    0,
-                                                ) +
-                                                    " / " +
-                                                    formatNumber(
-                                                        stats[p].load,
+                            <div className="training-status-summary">
+                                <table id="last-days">
+                                    <colgroup>
+                                        <col />
+                                        <col />
+                                        <col />
+                                        <col />
+                                    </colgroup>
+                                    <thead>
+                                        <tr>
+                                            <th></th>
+                                            <th>{translate("today")}</th>
+                                            <th>{translate("this_week")}</th>
+                                            <th>
+                                                {translate("previous_week")}
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>{translate("activities")}</td>
+                                            {PERIODS.map((p) => (
+                                                <td key={p}>
+                                                    {formatNumber(
+                                                        stats[p].activities,
                                                         0,
                                                     )}
+                                                </td>
+                                            ))}
+                                        </tr>
+                                    </tbody>
+                                    <tbody>
+                                        <tr>
+                                            <td>{translate("workout_load")}</td>
+                                            {PERIODS.map((p) => (
+                                                <td key={p}>
+                                                    {formatNumber(
+                                                        stats[p].activities > 0
+                                                            ? stats[p].load /
+                                                                  stats[p]
+                                                                      .activities
+                                                            : 0,
+                                                        0,
+                                                    ) +
+                                                        " / " +
+                                                        formatNumber(
+                                                            stats[p].load,
+                                                            0,
+                                                        )}
+                                                </td>
+                                            ))}
+                                        </tr>
+                                    </tbody>
+                                    <tbody>
+                                        <tr>
+                                            <td>{translate("active_time")}</td>
+                                            {PERIODS.map((p) => (
+                                                <td key={p}>
+                                                    {formatDuration(
+                                                        stats[p].time,
+                                                    )}
+                                                </td>
+                                            ))}
+                                        </tr>
+                                    </tbody>
+                                    <tbody>
+                                        <tr>
+                                            <td>
+                                                {translate("active_calories")}
                                             </td>
-                                        ))}
-                                    </tr>
-                                </tbody>
-                                <tbody>
-                                    <tr>
-                                        <td>{translate("active_time")}</td>
-                                        {PERIODS.map((p) => (
-                                            <td key={p}>
-                                                {formatDuration(stats[p].time)}
-                                            </td>
-                                        ))}
-                                    </tr>
-                                </tbody>
-                                <tbody>
-                                    <tr>
-                                        <td>{translate("active_calories")}</td>
-                                        {PERIODS.map((p) => (
-                                            <td key={p}>
-                                                {formatNumber(stats[p].kcal, 0)}{" "}
-                                                Kcal
-                                            </td>
-                                        ))}
-                                    </tr>
-                                </tbody>
-                            </table>
+                                            {PERIODS.map((p) => (
+                                                <td key={p}>
+                                                    {formatNumber(
+                                                        stats[p].kcal,
+                                                        0,
+                                                    )}{" "}
+                                                    Kcal
+                                                </td>
+                                            ))}
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                <MuscleMap
+                                    data={muscleSets}
+                                    days={MONTH_DAYS}
+                                />
+                            </div>
                         </fieldset>
                     </div>
                     <div className="dashboard-box">

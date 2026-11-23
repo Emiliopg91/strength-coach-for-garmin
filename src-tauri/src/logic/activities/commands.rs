@@ -3,7 +3,7 @@ use tauri::{AppHandle, State};
 
 use crate::{
     SettingsLock,
-    dto::activities::{ActivityDetails, ActivityListItem, ActivityStepsUpdate},
+    dto::activities::{ActivityDetails, ActivityListItem, ActivityStepsUpdate, MuscleSets},
     logic::activities,
 };
 
@@ -82,4 +82,13 @@ pub async fn import_from_files(
 #[tauri::command]
 pub async fn get_heatmap_data(app: AppHandle) -> Result<Vec<Vec<(f32, u16)>>, String> {
     activities::get_heatmap_data(&app).await
+}
+
+/// Exercise sets performed in activities from `since` (Unix seconds) on, added up by muscle: how
+/// many had it as a primary muscle and how many only as a secondary one. Muscles not worked are
+/// left out.
+#[traced_command]
+#[tauri::command]
+pub async fn get_muscle_sets(app: AppHandle, since: u32) -> Result<Vec<MuscleSets>, String> {
+    activities::get_muscle_sets(&app, since).await
 }
