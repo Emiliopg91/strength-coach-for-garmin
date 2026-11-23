@@ -185,17 +185,15 @@ export function ExercisesList() {
             {filter}
             <table>
                 <colgroup>
-                    <col className="col-430" />
+                    <col className="col-500" />
                     <col className="col-100" />
                     <col className="col-100" />
-                    <col className="col-60" />
-                    <col className="col-60" />
+                    <col className="col-100" />
                 </colgroup>
                 <thead>
                     <tr>
                         <th className="text-center">{translate("exercise")}</th>
                         <th className="text-center">{translate("pr")}</th>
-                        <th className="text-center">{translate("date")}</th>
                         <th className="text-center">{translate("rm")}</th>
                         <th className="text-center">
                             {translate("relative_rm")}

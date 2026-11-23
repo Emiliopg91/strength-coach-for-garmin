@@ -12,7 +12,7 @@ type Props = {
 };
 
 export function ExerciseRow({ exercise, onSelect }: Props) {
-    const { translate, fromKg, getWeightUnit, formatDate, formatNumber } =
+    const { translate, fromKg, getWeightUnit, formatNumber } =
         useContext(I18nSettingsContext);
     const { exerciseName } = useContext(AppContext);
 
@@ -43,7 +43,6 @@ export function ExerciseRow({ exercise, onSelect }: Props) {
                         " " +
                         getWeightUnit()}
             </td>
-            <td>{exercise.used && formatDate(exercise.date)}</td>
             <td>
                 {exercise.used && exercise.weight && exercise.reps
                     ? formatNumber(fromKg(e1rm), 0) + " " + getWeightUnit()
