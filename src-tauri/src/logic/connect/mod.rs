@@ -53,6 +53,9 @@ pub async fn import_from_connect<R: Runtime>(
             .download_activities(&pending)
             .await
             .map_err(|e| e.to_string())?;
+        // Released before the import, which parses and stores the files: other Connect calls,
+        // like the login status, would otherwise wait for all of it
+        drop(connect);
 
         // The mark only follows what Connect has listed, so activities uploaded late are not
         // missed. Their places are looked up once finished, with the rest of activities pending it.
