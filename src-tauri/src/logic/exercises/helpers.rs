@@ -2,6 +2,7 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 
 use rusqlite_orm::rusqlite::Connection;
 
+use crate::utils::weight::to_kg;
 use crate::{
     dao::{
         activity::Activity,
@@ -108,7 +109,7 @@ fn build_exercise_details(
         return res;
     };
     res.reps = pr.reps.unwrap_or_default();
-    res.weight = pr.weight.unwrap_or_default();
+    res.weight = to_kg(pr.weight.unwrap_or_default());
     res.pr_date = pr.activity;
 
     let mut last_activity = None;
@@ -127,7 +128,7 @@ fn build_exercise_details(
         let entry = res.activities.entry(ex_str.clone()).or_default();
         entry.weight = body_metrics
             .iter()
-            .find_map(|b| (b.date < serie.activity).then_some(b.weight));
+            .find_map(|b| (b.date < serie.activity).then_some(to_kg(b.weight)));
         entry.series.push(ActivityStepDto::from(&serie));
     }
     res
@@ -225,7 +226,8 @@ pub(super) async fn any_progression_suggestion(
 }
 
 /// A performed set, as weight (0 if unloaded) and reps.
-type Set = (f32, u16);
+/// `(weight in tenths of a kg, reps)`
+type Set = (u16, u16);
 
 /// Pending suggestions for the already loaded `exercises`, by key. Exercises with progression
 /// disabled or nothing to suggest are left out. Takes two queries whatever the number of exercises.
@@ -305,7 +307,7 @@ fn suggestion_from_sets(exercise: &Exercise, sets: &[Set]) -> Option<Progression
         .min()?;
 
     let (weight, reps) = match bracket {
-        i if i == range.len() - 1 => (weight + exercise.weight, range[0]),
+        i if i == range.len() - 1 => (weight.saturating_add(exercise.weight), range[0]),
         i => (weight, range[i + 1]),
     };
     Some(ProgressionSuggestion {
@@ -362,7 +364,7 @@ pub(super) async fn exercise_list(
                 category: key.0,
                 id: key.1,
                 reps: pr.reps.unwrap_or_default(),
-                weight: pr.weight.unwrap_or_default(),
+                weight: to_kg(pr.weight.unwrap_or_default()),
                 date: pr.activity,
                 unilateral: exercise.is_some_and(|e| e.unilateral),
                 progression: suggested_progressions.contains_key(&key),

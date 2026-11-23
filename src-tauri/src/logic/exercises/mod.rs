@@ -7,6 +7,7 @@ use rusqlite_orm::errors::DatabaseError;
 use tauri::{AppHandle, Runtime};
 use tauri_plugin_log::log::info;
 
+use crate::utils::weight::from_kg;
 use crate::{
     ConnectLock, SettingsLock,
     dao::{exercise::Exercise, workout::Workout, workout_step::WorkoutStep},
@@ -142,7 +143,7 @@ pub async fn set_exercise_progression_parameters<R: Runtime>(
     let reps = reps.to_string();
     pool(app)
         .run_in_transaction(async move |tx| {
-            Exercise::set_progression_parameters(tx, category, id, reps, weight).await?;
+            Exercise::set_progression_parameters(tx, category, id, reps, from_kg(weight)).await?;
             // Percentage loads are rounded to the weight increment
             let keys: HashSet<(u16, u16)> = [(category, id)].into();
             Ok(WorkoutStep::refresh_percent_loads(tx, Some(&keys), now()).await?)

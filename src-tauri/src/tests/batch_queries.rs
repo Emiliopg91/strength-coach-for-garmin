@@ -167,9 +167,9 @@ async fn batched_exercise_details_match_single_ones() {
         BodyMetricRepository::insert()
             .item(&mut BodyMetric {
                 date: 5,
-                weight: 80.0,
+                weight: 800,
                 fat_ratio: 0.0,
-                muscle_mass: 0.0,
+                muscle_mass: 0,
                 water_ratio: 0.0,
             })
             .execute_in(tx)

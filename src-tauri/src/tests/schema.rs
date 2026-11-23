@@ -120,8 +120,8 @@ async fn body_metrics_migrate_from_lean_mass_to_muscle_mass() {
     let metrics = BodyMetricRepository::select().fetch(&db).await.unwrap();
     assert_eq!(metrics.len(), 1);
     assert_eq!(metrics[0].date, midnight);
-    assert_eq!(metrics[0].weight, 80.0);
-    assert_eq!(metrics[0].muscle_mass, 61.0);
+    assert_eq!(metrics[0].weight, 800);
+    assert_eq!(metrics[0].muscle_mass, 610);
 }
 
 #[tokio::test]
@@ -181,7 +181,7 @@ async fn activity_roundtrip_with_relationships() {
 
     assert_eq!(stored.name, activity.name);
     assert_eq!(stored.steps.len(), 1);
-    assert_eq!(stored.steps[0].weight, Some(100.0));
+    assert_eq!(stored.steps[0].weight, Some(1000));
     assert_eq!(stored.laps.len(), 1);
     assert_eq!(stored.laps[0].start_latitude, Some(1));
     let data = stored.data.unwrap();
@@ -284,9 +284,9 @@ async fn migration_27_nulls_reps_and_weight_only_on_rest_steps() {
     assert_eq!(
         values,
         [
-            (Some(10), Some(50.0), true, Some(60), StepType::Exercise),
+            (Some(10), Some(500), true, Some(60), StepType::Exercise),
             (None, None, false, Some(90), StepType::Rest),
-            (Some(0), Some(0.0), false, Some(30), StepType::Warmup),
+            (Some(0), Some(0), false, Some(30), StepType::Warmup),
         ]
     );
 
@@ -607,6 +607,96 @@ async fn migration_34_indexes_records_by_load() {
             .any(|p| p.contains("ACTIVITY_STEP_EXERCISE_PR")),
         "{records:?}"
     );
+}
+
+#[tokio::test]
+async fn migration_40_turns_weights_into_tenths_of_kg() {
+    let db = DatabaseConnectionBuilder::default()
+        .enable_foreign_keys()
+        .build("test")
+        .unwrap();
+    let before: Vec<_> = schema_ddls()
+        .into_iter()
+        .filter(|d| d.version < 40)
+        .collect();
+    db.create_schema(&before).await.unwrap();
+
+    db.run_in_transaction(async move |tx| {
+        tx.execute_batch(&format!(
+            "UPDATE EXERCISE SET weight = 2.5 WHERE category = 0 AND id = 1;
+             INSERT INTO ACTIVITY (date, name, total_elapsed_time, sport, sub_sport)
+             VALUES (1, 'Push', 0, {sport}, {sub_sport});
+             INSERT INTO ACTIVITY_STEP (activity, idx, kind, exercise_category, exercise_id, reps, weight, weight_ref, pr)
+             VALUES (1, 0, 'Exercise', 0, 1, 10, 12.1875, 12.199999809265137, 1),
+                    (1, 1, 'Rest', NULL, NULL, NULL, NULL, NULL, 0);
+             INSERT INTO WORKOUT (id, name) VALUES (1, 'Push');
+             INSERT INTO WORKOUT_STEP (workout, idx, kind, exercise_category, exercise_id, reps, weight)
+             VALUES (1, 0, 'Exercise', 0, 1, 10, 12.5),
+                    (1, 1, 'Rest', NULL, NULL, NULL, NULL);
+             INSERT INTO BODY_METRIC (date, weight, fat_ratio, muscle_mass, water_ratio)
+             VALUES (1, 80.46, 18.0, 32.55, 55.0);",
+            sport = common::STRENGTH_SPORT,
+            sub_sport = common::STRENGTH_SUB_SPORT,
+        ))?;
+        Ok(())
+    })
+    .await
+    .unwrap();
+
+    db.create_schema(&schema_ddls()).await.unwrap();
+
+    let query = async |sql: &'static str| -> Vec<String> {
+        db.run_in_connection(async move |conn| {
+            let mut stmt = conn.prepare(sql)?;
+            let rows = stmt
+                .query_map([], |r| r.get::<_, String>(0))?
+                .collect::<Result<_, _>>()?;
+            Ok(rows)
+        })
+        .await
+        .unwrap()
+    };
+
+    assert_eq!(
+        query("SELECT typeof(weight) || ':' || weight FROM EXERCISE WHERE category = 0 AND id = 1")
+            .await,
+        ["integer:25"]
+    );
+    assert_eq!(
+        query(
+            "SELECT typeof(weight) || ':' || ifnull(weight, '') || ':' || ifnull(weight_ref, '')
+             FROM ACTIVITY_STEP ORDER BY idx"
+        )
+        .await,
+        ["integer:122:122", "null::"]
+    );
+    assert_eq!(
+        query("SELECT typeof(weight) || ':' || ifnull(weight, '') FROM WORKOUT_STEP ORDER BY idx")
+            .await,
+        ["integer:125", "null:"]
+    );
+    assert_eq!(
+        query("SELECT weight || ':' || muscle_mass FROM BODY_METRIC").await,
+        ["805:326"]
+    );
+    // New exercises keep the 2 kg default increment
+    assert_eq!(
+        query("SELECT dflt_value FROM pragma_table_info('EXERCISE') WHERE name = 'weight'").await,
+        ["20"]
+    );
+    assert_eq!(
+        query(
+            "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'ACTIVITY_STEP_EXERCISE_RECORD'"
+        )
+        .await,
+        ["ACTIVITY_STEP_EXERCISE_RECORD"]
+    );
+
+    // The entities read them back
+    let steps = ActivityStepRepository::select().fetch(&db).await.unwrap();
+    assert!(steps.iter().any(|s| s.weight == Some(122)));
+    let metrics = BodyMetricRepository::select().fetch(&db).await.unwrap();
+    assert_eq!((metrics[0].weight, metrics[0].muscle_mass), (805, 326));
 }
 
 /// Inserts an activity with raw SQL, using only the columns that exist before migration 28:

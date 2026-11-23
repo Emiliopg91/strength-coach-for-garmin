@@ -19,7 +19,10 @@ use crate::{
         workout::{WorkoutRepository, entity::columns as workout_cols},
         workout_device::{WorkoutDeviceRepository, entity::columns as workout_device_cols},
     },
-    utils::strength::{estimate_1rm, percent_load},
+    utils::{
+        strength::{estimate_1rm, percent_load},
+        weight::to_kg,
+    },
 };
 
 /// Weeks of sets the current estimated 1RM of an exercise is taken from.
@@ -43,9 +46,14 @@ pub struct WorkoutStep {
     pub ex_id: Option<u16>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub reps: Option<Option<u16>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    /// In kg. With `one_rm_pct`, the load that percentage resolves to, `None` without a 1RM
-    pub weight: Option<f32>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "crate::utils::weight::kg_opt"
+    )]
+    /// In tenths of a kg; crosses the IPC in kg. With `one_rm_pct`, the load that percentage
+    /// resolves to, `None` without a 1RM
+    pub weight: Option<u16>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     /// Percentage of the current estimated 1RM of the exercise the step is loaded with
     pub one_rm_pct: Option<u8>,
@@ -135,7 +143,7 @@ impl WorkoutStep {
     pub async fn get_programmed_loads(
         conn: &Connection,
         keys: &HashSet<(u16, u16)>,
-    ) -> rusqlite_orm::errors::Result<Vec<((u16, u16), f32, u16)>> {
+    ) -> rusqlite_orm::errors::Result<Vec<((u16, u16), u16, u16)>> {
         Ok(WorkoutStepRepository::select()
             .columns(&[
                 entity::columns::EX_CAT,
@@ -163,7 +171,7 @@ impl WorkoutStep {
                         row.get_u16(entity::columns::EX_CAT.as_ref()),
                         row.get_u16(entity::columns::EX_ID.as_ref()),
                     ),
-                    row.get_f32_nullable(entity::columns::WEIGHT.as_ref())
+                    row.get_u16_nullable(entity::columns::WEIGHT.as_ref())
                         .unwrap_or_default(),
                     row.get_u16(entity::columns::REPS.as_ref()),
                 )
@@ -178,7 +186,7 @@ impl WorkoutStep {
         category: u16,
         id: u16,
         workouts_with_prog: &[u16],
-    ) -> rusqlite_orm::errors::Result<Option<(f32, u16)>> {
+    ) -> rusqlite_orm::errors::Result<Option<(u16, u16)>> {
         Ok(WorkoutStepRepository::select()
             .columns(&[entity::columns::REPS, entity::columns::WEIGHT])
             .where_(Where::And(vec![
@@ -197,7 +205,7 @@ impl WorkoutStep {
             .await?
             .map(|r| {
                 (
-                    r.get_f32_nullable(entity::columns::WEIGHT.as_ref())
+                    r.get_u16_nullable(entity::columns::WEIGHT.as_ref())
                         .unwrap_or_default(),
                     r.get_u16_nullable(entity::columns::REPS.as_ref())
                         .unwrap_or_default(),
@@ -212,7 +220,7 @@ impl WorkoutStep {
         tx: &Transaction<'_>,
         category: u16,
         id: u16,
-        weight: f32,
+        weight: u16,
         reps: u16,
     ) -> rusqlite_orm::errors::Result<(bool, Vec<u16>)> {
         let of_exercise = || {
@@ -299,7 +307,7 @@ impl WorkoutStep {
             workout: u16,
             idx: u16,
             exercise: (u16, u16),
-            weight: Option<f32>,
+            weight: Option<u16>,
             pct: u8,
         }
 
@@ -323,7 +331,7 @@ impl WorkoutStep {
                     row.get_u16(entity::columns::EX_CAT.as_ref()),
                     row.get_u16(entity::columns::EX_ID.as_ref()),
                 ),
-                weight: row.get_f32_nullable(entity::columns::WEIGHT.as_ref()),
+                weight: row.get_u16_nullable(entity::columns::WEIGHT.as_ref()),
                 pct: row.get_u8(entity::columns::ONE_RM_PCT.as_ref()),
             })
             .collect();
@@ -348,11 +356,11 @@ impl WorkoutStep {
             pct,
         } in steps
         {
-            let increment = exercises.get(&exercise).map_or(0.0, |e| e.weight);
+            let increment = exercises.get(&exercise).map_or(0, |e| e.weight);
             let load = one_rms
                 .get(&exercise)
                 .map(|&one_rm| percent_load(one_rm, pct, increment))
-                .filter(|&load| load > 0.0);
+                .filter(|&load| load > 0);
             if load == weight {
                 continue;
             }
@@ -396,7 +404,7 @@ pub async fn current_one_rms(
     let mut one_rms: HashMap<(u16, u16), f32> = HashMap::new();
     for (key, weight, reps) in ActivityStep::get_sets_since(conn, keys, since).await? {
         let unilateral = exercises.get(&key).is_some_and(|e| e.unilateral);
-        let estimate = estimate_1rm(weight, reps, unilateral);
+        let estimate = estimate_1rm(to_kg(weight), reps, unilateral);
         if estimate > 0.0 {
             let best = one_rms.entry(key).or_default();
             *best = best.max(estimate);
@@ -421,7 +429,7 @@ fn in_progression_workouts(only_enabled: bool) -> Where<WorkoutStep> {
 }
 
 /// Steps programmed below `weight` x `reps`; steps already at or above it are never lowered.
-fn below_load(weight: f32, reps: u16) -> Where<WorkoutStep> {
+fn below_load(weight: u16, reps: u16) -> Where<WorkoutStep> {
     Where::Or(vec![
         weight_below(weight),
         Where::And(vec![
@@ -432,9 +440,9 @@ fn below_load(weight: f32, reps: u16) -> Where<WorkoutStep> {
 }
 
 /// Steps loaded below `weight`, a missing load counting as 0.
-fn weight_below(weight: f32) -> Where<WorkoutStep> {
+fn weight_below(weight: u16) -> Where<WorkoutStep> {
     let lt = Where::Lt(entity::columns::WEIGHT, weight.into());
-    if weight > 0.0 {
+    if weight > 0 {
         Where::Or(vec![Where::Null(entity::columns::WEIGHT), lt])
     } else {
         lt
@@ -442,9 +450,9 @@ fn weight_below(weight: f32) -> Where<WorkoutStep> {
 }
 
 /// Steps loaded with exactly `weight`, a missing load counting as 0.
-fn weight_equals(weight: f32) -> Where<WorkoutStep> {
+fn weight_equals(weight: u16) -> Where<WorkoutStep> {
     let eq = Where::Eq(entity::columns::WEIGHT, weight.into());
-    if weight == 0.0 {
+    if weight == 0 {
         Where::Or(vec![Where::Null(entity::columns::WEIGHT), eq])
     } else {
         eq
@@ -556,7 +564,7 @@ impl WorkoutStep {
         idx: u16,
         kind: Intensity,
         exercise: Option<(u16, u16)>,
-        weight: f32,
+        weight: u16,
         reps: Option<u16>,
         time: Option<u32>,
         notes: Option<String>,

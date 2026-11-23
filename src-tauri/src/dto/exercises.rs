@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{dao::exercise::Exercise, dto::activities::ActivityStepDto};
+use crate::{dao::exercise::Exercise, dto::activities::ActivityStepDto, utils::weight::to_kg};
 
 #[derive(Serialize)]
 pub struct ExerciseListItem {
@@ -71,7 +71,7 @@ impl From<&Exercise> for ExerciseDetails {
             unilateral: value.unilateral,
             progression: value.progression,
             reps_range: value.reps.clone(),
-            prog_weight: value.weight,
+            prog_weight: to_kg(value.weight),
             primary_muscles: value
                 .muscles
                 .iter()
@@ -101,6 +101,8 @@ impl From<&Exercise> for ExerciseDetails {
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct ProgressionSuggestion {
-    pub weight: f32,
+    /// In tenths of a kg; crosses the IPC in kg
+    #[serde(with = "crate::utils::weight::kg")]
+    pub weight: u16,
     pub reps: u16,
 }

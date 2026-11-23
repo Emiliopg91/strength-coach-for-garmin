@@ -15,6 +15,7 @@ use crate::{
     utils::{
         constants,
         strength::{estimate_1rm, percent_load},
+        weight::{from_kg, to_kg},
     },
 };
 
@@ -35,16 +36,19 @@ fn estimate_1rm_matches_the_frontend_formula() {
 
 #[test]
 fn percent_load_rounds_to_the_increment() {
-    assert_eq!(percent_load(120.0, 70, 2.5), 85.0);
-    assert_eq!(percent_load(120.0, 70, 1.25), 83.8);
+    // In tenths of a kg: 84 kg to the nearest 2.5 kg
+    assert_eq!(percent_load(120.0, 70, 25), 850);
+    // 84 kg to the nearest 1.3 kg: 65 x 1.3
+    assert_eq!(percent_load(120.0, 70, 13), 845);
     // Without an increment, to 0.5 kg
-    assert_eq!(percent_load(101.0, 50, 0.0), 50.5);
+    assert_eq!(percent_load(101.0, 50, 0), 505);
+    assert_eq!(percent_load(101.0, 51, 0), 515);
 }
 
 async fn set_increment(db: &DatabasePool, exercise: (u16, u16), increment: f32) {
     db.run_in_transaction(async move |tx| {
         ExerciseRepository::update()
-            .set(exercise::entity::columns::WEIGHT, increment.into())
+            .set(exercise::entity::columns::WEIGHT, from_kg(increment).into())
             .where_(Where::And(vec![
                 Where::Eq(exercise::entity::columns::CATEGORY, exercise.0.into()),
                 Where::Eq(exercise::entity::columns::ID, exercise.1.into()),
@@ -98,7 +102,7 @@ async fn program(db: &DatabasePool, pct: u8, fixed: f32) -> u16 {
                 idx,
                 Intensity::ACTIVE,
                 Some(BENCH),
-                weight,
+                from_kg(weight),
                 Some(5),
                 None,
                 None,
@@ -134,7 +138,8 @@ async fn step_weight(db: &DatabasePool, workout: u16, idx: u16) -> Option<f32> {
             ]))
             .fetch_one_in(conn)
             .await?
-            .and_then(|s| s.weight))
+            .and_then(|s| s.weight)
+            .map(to_kg))
     })
     .await
     .unwrap()
@@ -230,7 +235,10 @@ async fn percent_steps_stay_out_of_the_progression() {
     .unwrap();
 
     assert_eq!(step_weight(&db, workout, 0).await, resolved);
-    assert_eq!(step_weight(&db, workout, 1).await, Some(suggestion.weight));
+    assert_eq!(
+        step_weight(&db, workout, 1).await,
+        Some(to_kg(suggestion.weight))
+    );
 }
 
 #[tokio::test]

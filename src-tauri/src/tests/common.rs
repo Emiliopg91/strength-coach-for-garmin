@@ -14,6 +14,7 @@ use crate::{
         workout_step::StepType,
     },
     schema_ddls,
+    utils::weight::from_kg,
 };
 
 /// Strength training sport/sub-sport pair, present in the base schema seed data.
@@ -65,7 +66,7 @@ pub fn set(activity: u32, idx: u8, exercise: (u16, u16), reps: u16, weight: f32)
         ex_id: Some(exercise.1),
         reps: Some(reps),
         reps_ref: None,
-        weight: Some(weight),
+        weight: Some(from_kg(weight)),
         weight_ref: None,
         pr: false,
         exercise: None,

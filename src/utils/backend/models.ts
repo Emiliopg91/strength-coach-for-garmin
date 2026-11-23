@@ -1,6 +1,6 @@
 //Auto generated file, do not edit manually
 
-// From src-tauri/src/dto/activities.rs:104
+// From src-tauri/src/dto/activities.rs:107
 export interface ActivityDetails {
   active_calories: number;
   active_time: number;
@@ -24,14 +24,14 @@ export interface ActivityDetails {
   training_load: number;
 }
 
-// From src-tauri/src/dto/activities.rs:87
+// From src-tauri/src/dto/activities.rs:90
 export interface ActivityLapDto {
   idx: number;
   start_latitude: number | null;
   start_longitude: number | null;
 }
 
-// From src-tauri/src/dto/activities.rs:14
+// From src-tauri/src/dto/activities.rs:15
 export interface ActivityListItem {
   active_calories: number;
   has_record: boolean;
@@ -44,13 +44,13 @@ export interface ActivityListItem {
   training_load: number;
 }
 
-// From src-tauri/src/dto/activities.rs:206
+// From src-tauri/src/dto/activities.rs:209
 export interface ActivityLocation {
   activity: number;
   location: string;
 }
 
-// From src-tauri/src/dto/activities.rs:54
+// From src-tauri/src/dto/activities.rs:55
 export interface ActivityStepDto {
   duration: number | null;
   duration_ref: number | null;
@@ -65,7 +65,7 @@ export interface ActivityStepDto {
   weight_ref: number | null;
 }
 
-// From src-tauri/src/dto/activities.rs:191
+// From src-tauri/src/dto/activities.rs:194
 export interface ActivityStepsUpdate {
   notes: string | null;
   sets: ActivityStepDto[];
@@ -78,7 +78,7 @@ export enum AppEnvironment {
 	Release = "Release",
 }
 
-// From src-tauri/src/dto/body_metrics.rs:6
+// From src-tauri/src/dto/body_metrics.rs:12
 export interface BodyMetricListItem {
   date: number;
   fat_ratio: number;
@@ -183,7 +183,7 @@ export interface MuscleExercise {
   muscle_obj: Muscle | null;
 }
 
-// From src-tauri/src/dto/activities.rs:199
+// From src-tauri/src/dto/activities.rs:202
 export interface MuscleSets {
   muscle: string;
   primary: number;
@@ -235,7 +235,7 @@ export interface Settings {
   weight_unit: WeightUnit;
 }
 
-// From src-tauri/src/dao/workout_step.rs:455
+// From src-tauri/src/dao/workout_step.rs:463
 export enum StepType {
 	Exercise = "Exercise",
 	Warmup = "Warmup",
@@ -307,7 +307,7 @@ export interface WorkoutPlanListItem {
   workout: number;
 }
 
-// From src-tauri/src/dao/workout_step.rs:33
+// From src-tauri/src/dao/workout_step.rs:36
 export interface WorkoutStep {
   begin_idx: number | null;
   ex_cat: number | null;

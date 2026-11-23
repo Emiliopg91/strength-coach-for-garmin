@@ -33,7 +33,9 @@ pub struct Exercise {
     pub unilateral: bool,
     pub progression: bool,
     pub reps: String,
-    pub weight: f32,
+    /// Progression increment, in tenths of a kg; crosses the IPC in kg
+    #[serde(with = "crate::utils::weight::kg")]
+    pub weight: u16,
     pub notes: Option<String>,
     pub name: String,
 
@@ -256,7 +258,7 @@ impl Exercise {
         category: u16,
         id: u16,
         reps: String,
-        weight: f32,
+        weight: u16,
     ) -> rusqlite_orm::errors::Result<()> {
         ExerciseRepository::update()
             .set(entity::columns::REPS, reps.into())

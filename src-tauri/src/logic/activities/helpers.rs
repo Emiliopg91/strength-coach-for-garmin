@@ -16,6 +16,7 @@ use tauri::{AppHandle, Emitter, Manager, Runtime};
 use tauri_plugin_log::log::{error, info, warn};
 use tokio::sync::Mutex;
 
+use crate::utils::weight::from_kg;
 use crate::{
     ConnectLock, SettingsLock,
     dao::{
@@ -815,7 +816,7 @@ pub(super) async fn apply_activity_changes(
             serie.idx,
             (serie.ex_cat, serie.ex_id),
             serie.reps,
-            serie.weight,
+            serie.weight.map(from_kg),
         )
         .await?;
     }

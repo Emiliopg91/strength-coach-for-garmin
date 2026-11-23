@@ -2,6 +2,7 @@ use std::hash::Hash;
 
 use serde::{Deserialize, Serialize};
 
+use crate::utils::weight::to_kg;
 use crate::{
     dao::{
         activity::Activity, activity_lap::ActivityLap, activity_step::ActivityStep,
@@ -57,7 +58,9 @@ pub struct ActivityStepDto {
     pub idx: u8,
     pub reps: Option<u16>,
     pub reps_ref: Option<u16>,
+    /// In kg
     pub weight: Option<f32>,
+    /// In kg
     pub weight_ref: Option<f32>,
     pub pr: bool,
     pub kind: StepType,
@@ -73,8 +76,8 @@ impl From<&ActivityStep> for ActivityStepDto {
             idx: value.idx,
             reps: value.reps,
             reps_ref: value.reps_ref,
-            weight: value.weight,
-            weight_ref: value.weight_ref,
+            weight: value.weight.map(to_kg),
+            weight_ref: value.weight_ref.map(to_kg),
             pr: value.pr,
             kind: value.kind.clone(),
             duration: value.duration,

@@ -13,6 +13,7 @@ use rustyfit::{
     proto::Message,
 };
 
+use crate::utils::weight::to_kg;
 use crate::{
     dao::{
         activity::Activity,
@@ -140,7 +141,7 @@ fn set_message(idx: u16, step: &ActivityStep, start: u32, weight_unit: WeightUni
         set.category = vec![ExerciseCategory(cat)].into();
         set.category_subtype = vec![id].into();
         set.repetitions = step.reps.unwrap_or(0);
-        set.set_weight_scaled(step.weight.unwrap_or(0.0) as f64);
+        set.set_weight_scaled(f64::from(to_kg(step.weight.unwrap_or(0))));
         set.weight_display_unit = match weight_unit {
             WeightUnit::Kilograms => FitBaseUnit::KILOGRAM,
             WeightUnit::Pounds => FitBaseUnit::POUND,

@@ -32,9 +32,9 @@ fn activity_set_from_set() {
 fn body_metric_roundtrip() {
     let metric = BodyMetric {
         date: 1_700_000_000,
-        weight: 80.5,
+        weight: 805,
         fat_ratio: 18.2,
-        muscle_mass: 62.1,
+        muscle_mass: 621,
         water_ratio: 55.0,
     };
 

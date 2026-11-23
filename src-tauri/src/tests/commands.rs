@@ -35,7 +35,7 @@ use crate::{
     },
     mtp::MtpClient,
     tests::common,
-    utils::{constants, translations::Languages},
+    utils::{constants, translations::Languages, weight::from_kg},
 };
 
 const BENCH: (u16, u16) = (0, 1);
@@ -55,7 +55,16 @@ async fn test_app() -> App<MockRuntime> {
 }
 
 fn step(idx: u16, kind: Intensity, weight: f32, reps: u16) -> WorkoutStep {
-    WorkoutStep::active(0, idx, kind, Some(BENCH), weight, Some(reps), None, None)
+    WorkoutStep::active(
+        0,
+        idx,
+        kind,
+        Some(BENCH),
+        from_kg(weight),
+        Some(reps),
+        None,
+        None,
+    )
 }
 
 fn workout(name: &str, steps: Vec<WorkoutStep>) -> Workout {
@@ -393,7 +402,7 @@ async fn applying_a_progression_leaves_warmups_untouched() {
         BENCH.0,
         BENCH.1,
         ProgressionSuggestion {
-            weight: 102.0,
+            weight: 1020,
             reps: 8,
         },
     )
@@ -402,9 +411,9 @@ async fn applying_a_progression_leaves_warmups_untouched() {
 
     let steps = workout_steps(&app, "Push").await;
     assert_eq!(steps[0].kind, StepType::Warmup);
-    assert_eq!(steps[0].weight, Some(40.0));
+    assert_eq!(steps[0].weight, Some(400));
     assert_eq!(steps[0].reps.flatten(), Some(15));
-    assert_eq!(steps[1].weight, Some(102.0));
+    assert_eq!(steps[1].weight, Some(1020));
 }
 
 #[tokio::test]
@@ -427,15 +436,15 @@ async fn applied_progression_skips_workouts_without_progression() {
         BENCH.0,
         BENCH.1,
         ProgressionSuggestion {
-            weight: 102.0,
+            weight: 1020,
             reps: 8,
         },
     )
     .await
     .unwrap();
 
-    assert_eq!(workout_steps(&app, "Push").await[0].weight, Some(102.0));
-    assert_eq!(workout_steps(&app, "Fixed").await[0].weight, Some(100.0));
+    assert_eq!(workout_steps(&app, "Push").await[0].weight, Some(1020));
+    assert_eq!(workout_steps(&app, "Fixed").await[0].weight, Some(1000));
 }
 
 #[tokio::test]
@@ -457,7 +466,7 @@ async fn progression_status_ignores_workouts_without_progression() {
     assert_eq!(
         status,
         Some(ProgressionSuggestion {
-            weight: 100.0,
+            weight: 1000,
             reps: 8,
         })
     );
@@ -520,7 +529,7 @@ async fn progression_status_ignores_warmups() {
     assert_eq!(
         status,
         Some(ProgressionSuggestion {
-            weight: 100.0,
+            weight: 1000,
             reps: 8,
         })
     );
@@ -686,7 +695,7 @@ async fn stored_activity_is_written_as_fit() {
     assert_eq!(written.date, date);
     assert_eq!(written.steps.len(), 1);
     assert_eq!(written.steps[0].reps, Some(10));
-    assert_eq!(written.steps[0].weight, Some(60.0));
+    assert_eq!(written.steps[0].weight, Some(600));
     assert_eq!(written.steps[0].ex_cat, Some(BENCH.0));
     assert_eq!(written.steps[0].ex_id, Some(BENCH.1));
 }

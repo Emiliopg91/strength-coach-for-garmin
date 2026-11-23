@@ -6,6 +6,7 @@ use rustyfit::{
     },
 };
 
+use crate::utils::weight::from_kg;
 use crate::{
     dao::{workout::Workout, workout_step::WorkoutStep},
     fit::parser::{
@@ -102,7 +103,7 @@ impl WorkoutAccumulator {
                     // An invalid name is the generic exercise of the category, kept as is
                     let exercise = (msg.exercise_category.0 != u16::MAX)
                         .then_some((msg.exercise_category.0, msg.exercise_name));
-                    let weight = msg.exercise_weight_scaled().unwrap_or(0_f64) as f32;
+                    let weight = from_kg(msg.exercise_weight_scaled().unwrap_or(0_f64) as f32);
                     let reps = match msg.duration_type {
                         WktStepDuration::REPS => Some(msg.duration_value as u16),
                         _ => None,

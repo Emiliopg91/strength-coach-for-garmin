@@ -6,6 +6,7 @@ use rustyfit::{
     },
 };
 
+use crate::utils::weight::from_kg;
 use crate::{
     dao::{
         activity::Activity,
@@ -120,7 +121,7 @@ impl TryFrom<FitParser> for Activity {
                         reps_ref: wkt_step.and_then(|s| s.reps.flatten()),
                         weight: Some(weight),
                         // Workout steps without a target weight store it as 0
-                        weight_ref: wkt_step.and_then(|s| s.weight).filter(|w| *w > 0_f32),
+                        weight_ref: wkt_step.and_then(|s| s.weight).filter(|w| *w > 0),
                         pr: false,
                         exercise: Some(exercise.clone()),
                         duration,
@@ -136,7 +137,7 @@ impl TryFrom<FitParser> for Activity {
                         // Other kinds without exercise, like warm-ups, are still done sets
                         reps: (kind != StepType::Rest).then_some(0),
                         reps_ref: None,
-                        weight: (kind != StepType::Rest).then_some(0_f32),
+                        weight: (kind != StepType::Rest).then_some(0),
                         weight_ref: None,
                         pr: false,
                         exercise: None,
@@ -239,7 +240,7 @@ fn handle_lap_message(msg: mesgdef::Lap, laps: &mut Vec<ActivityLap>) {
     });
 }
 
-fn handle_set_message(msg: mesgdef::Set, sets_data: &mut Vec<(usize, u16, f32, Option<u32>)>) {
+fn handle_set_message(msg: mesgdef::Set, sets_data: &mut Vec<(usize, u16, u16, Option<u32>)>) {
     let ex_idx = msg.wkt_step_index.0 as usize;
     if msg.repetitions != u16::MAX
         && msg.wkt_step_index.0 != u16::MAX
@@ -248,11 +249,11 @@ fn handle_set_message(msg: mesgdef::Set, sets_data: &mut Vec<(usize, u16, f32, O
         sets_data.push((
             ex_idx,
             msg.repetitions,
-            weight as f32,
+            from_kg(weight as f32),
             msg.duration_scaled().map(|d| d as u32),
         ));
     } else {
-        sets_data.push((ex_idx, 0, 0_f32, msg.duration_scaled().map(|d| d as u32)));
+        sets_data.push((ex_idx, 0, 0, msg.duration_scaled().map(|d| d as u32)));
     }
 }
 
@@ -265,7 +266,7 @@ fn handle_step_message(msg: &mesgdef::WorkoutStep, exercises: &mut Vec<Option<Ex
         exercise_category: None,
         progression: false,
         reps: String::new(),
-        weight: 0_f32,
+        weight: 0,
         muscles: vec![],
         notes: None,
         name: String::new(),

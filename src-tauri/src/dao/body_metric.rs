@@ -17,9 +17,13 @@ use crate::{connect::client::WeightEntry, utils::time::local_midnight};
 #[primary_key(date)]
 pub struct BodyMetric {
     pub date: u32,
-    pub weight: f32,
+    /// In tenths of a kg; serialized (export) in kg
+    #[serde(with = "crate::utils::weight::kg")]
+    pub weight: u16,
     pub fat_ratio: f32,
-    pub muscle_mass: f32,
+    /// In tenths of a kg; serialized (export) in kg
+    #[serde(with = "crate::utils::weight::kg")]
+    pub muscle_mass: u16,
     pub water_ratio: f32,
 }
 
@@ -31,13 +35,19 @@ impl TryFrom<&WeightEntry> for BodyMetric {
                 .timestamp_gmt
                 .and_then(|ms| local_midnight(ms.div_euclid(1000)))
                 .ok_or(())?,
-            weight: (value.weight.ok_or(())? as f32) / 1000_f32,
+            // Connect reports grams
+            weight: grams_to_tenths(value.weight.ok_or(())?),
             // Weight-only entries (plain scales, manual input) lack body composition
             fat_ratio: value.body_fat.unwrap_or(0.0) as f32,
-            muscle_mass: (value.muscle_mass.unwrap_or(0.0) as f32) / 1000_f32,
+            muscle_mass: grams_to_tenths(value.muscle_mass.unwrap_or(0.0)),
             water_ratio: value.body_water.unwrap_or(0.0) as f32,
         })
     }
+}
+
+/// Grams to tenths of a kg, saturating to the `u16` range.
+fn grams_to_tenths(grams: f64) -> u16 {
+    (grams / 100.0).round() as u16
 }
 
 impl BodyMetric {

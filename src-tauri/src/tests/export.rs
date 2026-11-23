@@ -70,9 +70,9 @@ async fn export_contains_all_data() {
         BodyMetricRepository::insert()
             .item(&mut BodyMetric {
                 date: 1,
-                weight: 80.0,
+                weight: 800,
                 fat_ratio: 18.0,
-                muscle_mass: 62.0,
+                muscle_mass: 620,
                 water_ratio: 55.0,
             })
             .execute_in(tx)

@@ -4,3 +4,4 @@ pub mod single_instance;
 pub mod strength;
 pub mod time;
 pub mod translations;
+pub mod weight;

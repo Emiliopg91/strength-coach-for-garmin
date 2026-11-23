@@ -181,7 +181,7 @@ impl WorkoutStep {
                 | workout_step::StepType::Recovery
                 | workout_step::StepType::Other
                 | workout_step::StepType::Warmup => {
-                    // Weights are stored in kg, while Connect reads `weightValue` in `weightUnit`
+                    // Weights are stored in tenths of a kg, while Connect reads `weightValue` in `weightUnit`
                     let unit = match weight_unit {
                         settings::WeightUnit::Kilograms => WeightUnit::kilogram(),
                         settings::WeightUnit::Pounds => WeightUnit::pound(),
@@ -228,8 +228,9 @@ impl WorkoutStep {
                             .map(|e| e.name.clone())
                             .filter(|name| !name.is_empty()),
                         // Rounded to 0.1, as the frontend displays it
+                        // Stored in tenths of a kg, so tenths times 100 are grams
                         weight_value: step.weight.map(|weight| {
-                            (weight as f64 * 1000.0 / unit.factor * 10.0).round() / 10.0
+                            (f64::from(weight) * 100.0 / unit.factor * 10.0).round() / 10.0
                         }),
                         weight_unit: step.weight.map(|_| unit),
                     }))

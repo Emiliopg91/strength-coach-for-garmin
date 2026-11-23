@@ -50,7 +50,7 @@ async fn program(db: &DatabasePool, name: &str, steps: &[((u16, u16), Option<&st
                     idx as u16,
                     Intensity::ACTIVE,
                     Some(*exercise),
-                    60.0,
+                    600,
                     Some(10),
                     None,
                     notes.clone(),

@@ -3,6 +3,7 @@ use std::collections::BTreeSet;
 use chrono::{Local, NaiveDate, TimeZone};
 use serde_json::{Value, json};
 
+use crate::utils::weight::from_kg;
 use crate::{
     connect::{
         activity_search_range, calendar_months, calendar_page_items,
@@ -53,7 +54,7 @@ fn exercise_step(idx: u16) -> WorkoutStep {
             unilateral: false,
             progression: true,
             reps: "8-10-12".to_string(),
-            weight: 2.5,
+            weight: 25,
             notes: None,
             name: "BARBELL_BENCH_PRESS".to_string(),
             exercise_category: Some(ExerciseCategory {
@@ -69,7 +70,7 @@ fn exercise_step(idx: u16) -> WorkoutStep {
 fn reps(idx: u16, reps: u16, weight: Option<f32>) -> WorkoutStep {
     WorkoutStep {
         reps: Some(Some(reps)),
-        weight,
+        weight: weight.map(from_kg),
         ..exercise_step(idx)
     }
 }

@@ -6,6 +6,7 @@ use std::collections::{HashMap, HashSet};
 use tauri::{AppHandle, Emitter, Runtime, WebviewWindow};
 use tauri_plugin_log::log::info;
 
+use crate::utils::weight::to_kg;
 use crate::{
     ConnectLock, SettingsLock,
     dao::{
@@ -224,7 +225,9 @@ pub async fn get_percent_load_bases<R: Runtime>(
                     ex_cat,
                     ex_id,
                     one_rm,
-                    increment: exercises.get(&(ex_cat, ex_id)).map_or(0.0, |e| e.weight),
+                    increment: exercises
+                        .get(&(ex_cat, ex_id))
+                        .map_or(0.0, |e| to_kg(e.weight)),
                 })
                 .collect())
         })

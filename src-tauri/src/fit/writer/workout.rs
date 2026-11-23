@@ -11,6 +11,7 @@ use rustyfit::{
     proto::Message,
 };
 
+use crate::utils::weight::to_kg;
 use crate::{
     dao::{
         settings::WeightUnit,
@@ -93,7 +94,7 @@ fn step_message(step: &WorkoutStep, weight_unit: WeightUnit) -> Message {
             msg.notes = truncate_utf8(step.notes.as_deref().unwrap_or_default(), 200).into();
 
             if let Some(weight) = step.weight {
-                msg.set_exercise_weight_scaled(weight as f64);
+                msg.set_exercise_weight_scaled(f64::from(to_kg(weight)));
             }
         }
     }

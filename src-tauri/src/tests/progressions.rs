@@ -1,6 +1,7 @@
 use rusqlite_orm::{dao::Repository, database::DatabasePool, types::where_clause::Where};
 use rustyfit::profile::typedef::Intensity;
 
+use crate::utils::weight::from_kg;
 use crate::{
     dao::{
         activity_step::ActivityStepRepository,
@@ -94,7 +95,7 @@ async fn program(db: &DatabasePool, exercise: (u16, u16), weight: f32, reps: u16
                     idx,
                     Intensity::ACTIVE,
                     Some(exercise),
-                    weight,
+                    from_kg(weight),
                     Some(reps),
                     None,
                     None,
@@ -121,7 +122,10 @@ async fn suggestion(db: &DatabasePool, exercise: (u16, u16)) -> Option<Progressi
 }
 
 fn suggested(weight: f32, reps: u16) -> Option<ProgressionSuggestion> {
-    Some(ProgressionSuggestion { weight, reps })
+    Some(ProgressionSuggestion {
+        weight: from_kg(weight),
+        reps,
+    })
 }
 
 // Bilateral, weighted
@@ -433,7 +437,7 @@ async fn programmed_warmup_alone_does_not_trigger_the_suggestion() {
                 3,
                 Intensity::WARMUP,
                 Some(BENCH),
-                40.0,
+                400,
                 Some(15),
                 None,
                 None,

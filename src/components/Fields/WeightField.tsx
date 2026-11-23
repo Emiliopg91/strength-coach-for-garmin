@@ -1,5 +1,6 @@
 import { I18nSettingsContext } from "@/context/I18nSettingsContext";
 import { InputAdornment, SxProps, TextField, Theme } from "@mui/material";
+import { WeightUtils } from "@/utils/WeightUtils";
 import React, { JSX, useContext, useState } from "react";
 import {
     centeredLabelSx,
@@ -29,7 +30,9 @@ export function WeightField({
     style,
     onChange,
 }: Props): JSX.Element {
-    const { translate, getWeightUnit } = useContext(I18nSettingsContext);
+    const { translate, getWeightUnit, settings } =
+        useContext(I18nSettingsContext);
+    const unit = settings.weight_unit;
     // Raw text while editing, so a rounded parent value does not overwrite what is typed
     const [input, setInput] = useState<string | null>(null);
 
@@ -53,8 +56,21 @@ export function WeightField({
         onChange(weight);
     };
 
+    // Typed values snap to the step on leaving the field, as the arrow keys move by it
+    const onBlur = () => {
+        if (input != null && input != "") {
+            const weight = parseFloat(input);
+            const snapped = WeightUtils.snap(weight, unit);
+            if (snapped != weight) {
+                onChange(snapped);
+            }
+        }
+        setInput(null);
+    };
+
     const hasReference = reference != null;
-    const displayed = input ?? value ?? "";
+    const displayed =
+        input ?? (value == null ? "" : WeightUtils.display(value, unit));
 
     return (
         <TextField
@@ -71,7 +87,7 @@ export function WeightField({
                     inputMode: "decimal",
                     min: 0,
                     max: 999,
-                    step: 0.1,
+                    step: WeightUtils.step(unit),
                     style: hasReference
                         ? referenceInputStyle(String(displayed))
                         : { textAlign: "center" },
@@ -80,7 +96,7 @@ export function WeightField({
                     sx: hasReference ? referenceOutlineSx : centeredOutlineSx,
                     endAdornment: hasReference ? (
                         <InputAdornment position="end" sx={{ ml: 0 }}>
-                            {`/${reference}`}
+                            {`/${WeightUtils.display(reference, unit)}`}
                         </InputAdornment>
                     ) : undefined,
                 },
@@ -91,7 +107,7 @@ export function WeightField({
                 },
             }}
             onChange={onInputChange}
-            onBlur={() => setInput(null)}
+            onBlur={onBlur}
         />
     );
 }

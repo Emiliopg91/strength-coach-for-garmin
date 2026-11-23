@@ -16,6 +16,7 @@ use crate::dao::{
     exercise::{self, Exercise},
     workout_step::StepType,
 };
+use crate::utils::weight::to_kg;
 
 #[derive(Entity, Clone, Serialize, Deserialize)]
 #[entity("activity_step")]
@@ -34,8 +35,12 @@ pub struct ActivityStep {
     pub ex_id: Option<u16>,
     pub reps: Option<u16>,
     pub reps_ref: Option<u16>,
-    pub weight: Option<f32>,
-    pub weight_ref: Option<f32>,
+    /// In tenths of a kg
+    #[serde(with = "crate::utils::weight::kg_opt")]
+    pub weight: Option<u16>,
+    /// In tenths of a kg
+    #[serde(with = "crate::utils::weight::kg_opt")]
+    pub weight_ref: Option<u16>,
     pub pr: bool,
     pub duration: Option<u32>,
     pub duration_ref: Option<u32>,
@@ -49,7 +54,7 @@ pub struct ActivityStep {
 /// Values of `(category, id)` keys, for a `Where::InMultiple` over the exercise columns.
 /// A set competing for an exercise's personal record.
 struct PrCandidate {
-    weight: Option<f32>,
+    weight: Option<u16>,
     reps: Option<u16>,
     activity: u32,
     idx: u8,
@@ -202,7 +207,7 @@ impl ActivityStep {
         idx: u8,
         exercise: (Option<u16>, Option<u16>),
         reps: Option<u16>,
-        weight: Option<f32>,
+        weight: Option<u16>,
     ) -> rusqlite_orm::errors::Result<usize> {
         ActivityStepRepository::update()
             .set(entity::columns::REPS, reps.into())
@@ -302,7 +307,7 @@ impl ActivityStep {
     pub async fn get_latest_exercise_sets(
         conn: &Connection,
         keys: &HashSet<(u16, u16)>,
-    ) -> rusqlite_orm::errors::Result<Vec<((u16, u16), u32, f32, u16)>> {
+    ) -> rusqlite_orm::errors::Result<Vec<((u16, u16), u32, u16, u16)>> {
         if keys.is_empty() {
             return Ok(Vec::new());
         }
@@ -353,7 +358,7 @@ impl ActivityStep {
                         row.get_u16(entity::columns::EX_ID.as_ref()),
                     ),
                     row.get_u32(entity::columns::ACTIVITY.as_ref()),
-                    row.get_f32_nullable(entity::columns::WEIGHT.as_ref())
+                    row.get_u16_nullable(entity::columns::WEIGHT.as_ref())
                         .unwrap_or_default(),
                     row.get_u16_nullable(entity::columns::REPS.as_ref())
                         .unwrap_or_default(),
@@ -369,7 +374,7 @@ impl ActivityStep {
         conn: &Connection,
         keys: Option<&HashSet<(u16, u16)>>,
         since: u32,
-    ) -> rusqlite_orm::errors::Result<Vec<((u16, u16), f32, u16)>> {
+    ) -> rusqlite_orm::errors::Result<Vec<((u16, u16), u16, u16)>> {
         let mut conditions = vec![
             Where::Eq(entity::columns::KIND, StepType::Exercise.into()),
             Where::Gte(entity::columns::ACTIVITY, since.into()),
@@ -403,7 +408,7 @@ impl ActivityStep {
                         row.get_u16(entity::columns::EX_CAT.as_ref()),
                         row.get_u16(entity::columns::EX_ID.as_ref()),
                     ),
-                    row.get_f32_nullable(entity::columns::WEIGHT.as_ref())
+                    row.get_u16_nullable(entity::columns::WEIGHT.as_ref())
                         .unwrap_or_default(),
                     row.get_u16_nullable(entity::columns::REPS.as_ref())
                         .unwrap_or_default(),
@@ -444,9 +449,11 @@ impl ActivityStep {
                 .or_insert(0.0) += serie
                 .get_u16_nullable(entity::columns::REPS.as_ref())
                 .unwrap_or_default() as f32
-                * serie
-                    .get_f32_nullable(entity::columns::WEIGHT.as_ref())
-                    .unwrap_or_default();
+                * to_kg(
+                    serie
+                        .get_u16_nullable(entity::columns::WEIGHT.as_ref())
+                        .unwrap_or_default(),
+                );
         }
         Ok(volume_by_activity)
     }
@@ -486,7 +493,7 @@ impl ActivityStep {
                 row.get_u16(entity::columns::EX_ID.as_ref()),
             );
             let set = PrCandidate {
-                weight: row.get_f32_nullable(entity::columns::WEIGHT.as_ref()),
+                weight: row.get_u16_nullable(entity::columns::WEIGHT.as_ref()),
                 reps: row.get_u16_nullable(entity::columns::REPS.as_ref()),
                 activity: row.get_u32(entity::columns::ACTIVITY.as_ref()),
                 idx: row.get_u8(entity::columns::IDX.as_ref()),
