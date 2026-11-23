@@ -22,4 +22,5 @@ mod schedule;
 mod schema;
 mod settings;
 mod translations;
+mod weight;
 mod workout_push;
