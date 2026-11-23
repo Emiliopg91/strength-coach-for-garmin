@@ -13,7 +13,8 @@ SRC_TAURI_SRC_DIR = PROJ_DIR / "src-tauri/src"
 CARGO_TOML_FILE = SRC_TAURI_DIR / "Cargo.toml"
 CARGO_LOCK_FILE = SRC_TAURI_DIR / "Cargo.lock"
 TAURI_CONF_FILE = SRC_TAURI_DIR / "tauri.conf.json"
-BIN_FILE = SRC_TAURI_DIR / "target" / "release" / "strength-coach-for-garmin"
+# Built by `make publish` with the publish-check profile, only to read its shared libraries
+BIN_FILE = SRC_TAURI_DIR / "target" / "publish-check" / "strength-coach-for-garmin"
 
 # --- Node / pnpm ---
 PACKAGE_JSON_PATH = PROJ_DIR / "package.json"

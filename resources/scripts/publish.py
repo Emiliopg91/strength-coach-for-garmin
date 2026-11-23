@@ -35,16 +35,30 @@ if __name__ == "__main__":
             print("")
         sys.exit(1)
 
-    subprocess.check_call(["make", "test"])
-    subprocess.check_call(["make", "build"])
-
-    subprocess.check_call(["pnpm", "tsc"])
-    subprocess.check_call(["cargo", "clippy", "--release", "--manifest-path", CARGO_TOML_FILE, "--", "-D", "warnings"])
+    # Cheapest checks first, so a failure shows up before the long compilations.
+    # eslint --fix and tsc, before formatting so its fixes go in the same commit
+    subprocess.check_call(["pnpm", "lint"])
     subprocess.check_call(["pnpm", "prettier", "--write", SRC_DIR])
     subprocess.check_call(["cargo", "fmt"], cwd=SRC_TAURI_SRC_DIR)
 
     if len(subprocess.check_output(["git", "status", "--porcelain"], text=True).strip().splitlines()) > 0:
         subprocess.check_call(["git", "commit", "-am", "[chore] Check and format before release"])
+
+    # Same command as `make lint`, so it reuses its cache
+    subprocess.check_call(
+        ["cargo", "clippy", "--all-targets", "--", "-D", "warnings"],
+        cwd=CARGO_TOML_FILE.parent,
+    )
+
+    subprocess.check_call(["make", "test"])
+
+    # The AUR package is built from source: this binary only feeds `ldd` for the PKGBUILD
+    # dependencies, so it skips LTO and bundling. It still builds the release code paths
+    subprocess.check_call(["pnpm", "build"])
+    subprocess.check_call(
+        ["mold", "--run", "cargo", "build", "--profile", "publish-check", "--features", "tauri/custom-protocol"],
+        cwd=CARGO_TOML_FILE.parent,
+    )
 
     dependencies = do_extract()
     with open(PKGBUILD_PATH, "r", encoding="utf-8") as f:

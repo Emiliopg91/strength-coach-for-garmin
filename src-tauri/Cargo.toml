@@ -82,6 +82,15 @@ strip = "symbols"
 panic = "abort"
 opt-level = 3
 
+# Release code paths without the LTO cost: `make publish` only needs its binary for `ldd`, as the
+# AUR package is built from source with the release profile
+[profile.publish-check]
+inherits = "release"
+lto = false
+codegen-units = 256
+incremental = true
+strip = false
+
 [profile.dev]
 opt-level = 0
 debug = true

@@ -11,7 +11,7 @@ lint:
 	@echo "Linting macros project"
 	@cd src-tauri-macros && cargo clippy
 	@echo "Linting backend"
-	@cd src-tauri && cargo clippy
+	@cd src-tauri && RUSTC_WRAPPER=sccache cargo clippy --all-targets
 
 clean:
 	@rm -Rf node_modules dist && cd src-tauri && cargo clean
@@ -30,7 +30,7 @@ publish:
 
 test:
 	@pnpm test
-	@cd src-tauri && cargo test --lib --bins --tests -- --test-threads=1
+	@cd src-tauri && RUSTC_WRAPPER=sccache mold --run cargo test --lib --bins --tests -- --test-threads=1
 
 dump:
 	@./src-tauri/target/debug/strength-coach-for-garmin --dump
