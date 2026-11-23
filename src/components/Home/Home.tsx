@@ -121,7 +121,9 @@ export function Home() {
     const [heatMapData, setHeatMapData] = useState<
         [number, number][][] | undefined
     >(undefined);
-    const [muscleSets, setMuscleSets] = useState<MuscleSets[]>([]);
+    const [muscleSets, setMuscleSets] = useState<Record<string, MuscleSets>>(
+        {},
+    );
 
     const [workout, setWorkout] = useState<NextWorkout | undefined>(undefined);
     const [rest, setRest] = useState(false);

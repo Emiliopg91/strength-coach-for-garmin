@@ -1,6 +1,8 @@
 pub mod commands;
 pub mod helpers;
 
+use std::collections::BTreeMap;
+
 use chrono::{Local, TimeZone};
 use tauri::{AppHandle, Emitter, Runtime};
 use tauri_plugin_log::log::info;
@@ -226,6 +228,6 @@ pub async fn get_heatmap_data<R: Runtime>(
 pub async fn get_muscle_sets<R: Runtime>(
     app: &AppHandle<R>,
     since: u32,
-) -> Result<Vec<MuscleSets>, String> {
+) -> Result<BTreeMap<String, MuscleSets>, String> {
     muscle_sets(&pool(app), since).await
 }

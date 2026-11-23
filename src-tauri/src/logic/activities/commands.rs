@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use strength_coach_for_garmin_macros::traced_command;
 use tauri::{AppHandle, State};
 
@@ -84,11 +86,14 @@ pub async fn get_heatmap_data(app: AppHandle) -> Result<Vec<Vec<(f32, u16)>>, St
     activities::get_heatmap_data(&app).await
 }
 
-/// Exercise sets performed in activities from `since` (Unix seconds) on, added up by muscle: how
-/// many had it as a primary muscle and how many only as a secondary one. Muscles not worked are
-/// left out.
+/// Exercise sets performed in activities from `since` (Unix seconds) on, added up by muscle name:
+/// how many had it as a primary muscle and how many only as a secondary one. Muscles not worked
+/// are left out.
 #[traced_command]
 #[tauri::command]
-pub async fn get_muscle_sets(app: AppHandle, since: u32) -> Result<Vec<MuscleSets>, String> {
+pub async fn get_muscle_sets(
+    app: AppHandle,
+    since: u32,
+) -> Result<BTreeMap<String, MuscleSets>, String> {
     activities::get_muscle_sets(&app, since).await
 }

@@ -19,7 +19,8 @@ interface HoverState {
 }
 
 interface MuscleMapProps {
-    data: MuscleSets[];
+    /// Sets by muscle name, only of the muscles worked
+    data: Record<string, MuscleSets>;
     /// Days `data` covers, to turn its counts into sets per week
     days: number;
 }
@@ -31,11 +32,13 @@ export function MuscleMap({ data, days }: MuscleMapProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const [hover, setHover] = useState<HoverState | undefined>(undefined);
 
-    const byMuscle = new Map(data.map((m) => [m.muscle, m]));
-    const primary = data.filter((m) => m.primary > 0).map((m) => m.muscle);
-    const secondary = data
-        .filter((m) => m.primary == 0 && m.secondary > 0)
-        .map((m) => m.muscle);
+    const worked = Object.entries(data);
+    const primary = worked
+        .filter(([, sets]) => sets.primary > 0)
+        .map(([muscle]) => muscle);
+    const secondary = worked
+        .filter(([, sets]) => sets.primary == 0 && sets.secondary > 0)
+        .map(([muscle]) => muscle);
 
     const onHover = (
         regionMuscles: string[] | undefined,
@@ -43,7 +46,7 @@ export function MuscleMap({ data, days }: MuscleMapProps) {
     ) => {
         const rect = containerRef.current?.getBoundingClientRect();
         // Only the muscles worked: a region with none of them shows no tooltip
-        const muscles = regionMuscles?.filter((m) => byMuscle.has(m));
+        const muscles = regionMuscles?.filter((m) => Object.hasOwn(data, m));
         if (!muscles?.length || !rect) {
             setHover(undefined);
             return;
@@ -67,7 +70,7 @@ export function MuscleMap({ data, days }: MuscleMapProps) {
 
     // Weighted sets per week: worked muscles always have some
     const describe = (muscle: string) => {
-        const sets = byMuscle.get(muscle)!;
+        const sets = data[muscle];
         const weighted =
             sets.primary * PRIMARY_WEIGHT + sets.secondary * SECONDARY_WEIGHT;
         return `${translate("muscle_" + muscle)}: ${translate("sets_per_week", [

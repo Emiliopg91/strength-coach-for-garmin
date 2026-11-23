@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeSet, HashMap, HashSet},
+    collections::{BTreeMap, BTreeSet, HashMap, HashSet},
     path::{Path, PathBuf},
     time::Duration,
 };
@@ -880,15 +880,14 @@ pub(crate) async fn heatmap_data(database: &DatabasePool) -> Result<Vec<Vec<(f32
 pub(crate) async fn muscle_sets(
     database: &DatabasePool,
     since: u32,
-) -> Result<Vec<MuscleSets>, String> {
+) -> Result<BTreeMap<String, MuscleSets>, String> {
     database
         .run_in_connection(async move |conn| {
             let counts = ActivityStep::get_exercise_set_counts_since(conn, since).await?;
             let mut exercises = Exercise::get_by_keys(conn, counts.keys()).await?;
             Exercise::fill_muscles(conn, &mut exercises).await?;
 
-            // muscle -> (primary, secondary)
-            let mut by_muscle: HashMap<String, (u32, u32)> = HashMap::new();
+            let mut by_muscle: BTreeMap<String, MuscleSets> = BTreeMap::new();
             for exercise in &exercises {
                 let sets = counts[&(exercise.category, exercise.id)];
                 let primary: HashSet<&str> = exercise
@@ -904,23 +903,14 @@ pub(crate) async fn muscle_sets(
                     }
                     let entry = by_muscle.entry(muscle.muscle.clone()).or_default();
                     if is_primary {
-                        entry.0 += sets;
+                        entry.primary += sets;
                     } else {
-                        entry.1 += sets;
+                        entry.secondary += sets;
                     }
                 }
             }
 
-            let mut res: Vec<MuscleSets> = by_muscle
-                .into_iter()
-                .map(|(muscle, (primary, secondary))| MuscleSets {
-                    muscle,
-                    primary,
-                    secondary,
-                })
-                .collect();
-            res.sort_by(|a, b| a.muscle.cmp(&b.muscle));
-            Ok(res)
+            Ok(by_muscle)
         })
         .await
         .map_err(|e| e.to_string())

@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use chrono::{Datelike, Days, Local, TimeZone};
 
 use crate::{
@@ -170,13 +172,13 @@ async fn muscle_sets_count_primary_and_secondary_sets_since_the_given_date() {
     .unwrap();
 
     let sets = muscle_sets(&db, 2_000).await.unwrap();
-    let expected = [("chest", 2, 1), ("shoulders", 0, 3), ("triceps", 1, 2)].map(
-        |(muscle, primary, secondary)| MuscleSets {
-            muscle: muscle.to_string(),
-            primary,
-            secondary,
-        },
-    );
+    let expected: BTreeMap<String, MuscleSets> =
+        [("chest", 2, 1), ("shoulders", 0, 3), ("triceps", 1, 2)]
+            .into_iter()
+            .map(|(muscle, primary, secondary)| {
+                (muscle.to_string(), MuscleSets { primary, secondary })
+            })
+            .collect();
     assert_eq!(sets, expected);
 
     assert!(muscle_sets(&db, 4_000).await.unwrap().is_empty());

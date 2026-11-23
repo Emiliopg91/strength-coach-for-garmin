@@ -68,7 +68,7 @@ export class BackendClient {
 	}
 	
 
-	// From src-tauri/src/logic/activities/commands.rs:43
+	// From src-tauri/src/logic/activities/commands.rs:45
 	public static downloadActivity(timestamp: number): Promise<void> {
 	  return BackendClient.inner_invoke("download_activity", { timestamp }); 
 	}
@@ -80,13 +80,13 @@ export class BackendClient {
 	}
 	
 
-	// From src-tauri/src/logic/activities/commands.rs:16
+	// From src-tauri/src/logic/activities/commands.rs:18
 	public static getActivities(limit: number | null): Promise<ActivityListItem[]> {
 	  return BackendClient.inner_invoke("get_activities", { limit }); 
 	}
 	
 
-	// From src-tauri/src/logic/activities/commands.rs:29
+	// From src-tauri/src/logic/activities/commands.rs:31
 	public static getActivityDetails(timestamp: number): Promise<ActivityDetails> {
 	  return BackendClient.inner_invoke("get_activity_details", { timestamp }); 
 	}
@@ -122,14 +122,14 @@ export class BackendClient {
 	}
 	
 
-	// From src-tauri/src/logic/activities/commands.rs:83
+	// From src-tauri/src/logic/activities/commands.rs:85
 	public static getHeatmapData(): Promise<[number, number][][]> {
 	  return BackendClient.inner_invoke("get_heatmap_data"); 
 	}
 	
 
-	// From src-tauri/src/logic/activities/commands.rs:92
-	public static getMuscleSets(since: number): Promise<MuscleSets[]> {
+	// From src-tauri/src/logic/activities/commands.rs:94
+	public static getMuscleSets(since: number): Promise<Record<string, MuscleSets>> {
 	  return BackendClient.inner_invoke("get_muscle_sets", { since }); 
 	}
 	
@@ -212,7 +212,7 @@ export class BackendClient {
 	}
 	
 
-	// From src-tauri/src/logic/activities/commands.rs:72
+	// From src-tauri/src/logic/activities/commands.rs:74
 	public static importFromFiles(): Promise<number> {
 	  return BackendClient.inner_invoke("import_from_files"); 
 	}
@@ -254,7 +254,7 @@ export class BackendClient {
 	}
 	
 
-	// From src-tauri/src/logic/activities/commands.rs:57
+	// From src-tauri/src/logic/activities/commands.rs:59
 	public static saveActivityChanges(details: ActivityStepsUpdate): Promise<void> {
 	  return BackendClient.inner_invoke("save_activity_changes", { details }); 
 	}
