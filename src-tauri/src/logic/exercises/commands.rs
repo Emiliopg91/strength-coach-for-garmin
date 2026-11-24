@@ -136,6 +136,20 @@ pub async fn apply_progression_suggestion(
         .await
 }
 
+/// Dismisses the progression suggestion of the exercise `category`/`id`: it stays hidden until a
+/// newer activity of the exercise suggests a progression again. On failure, shows a persistent
+/// error notification and rejects with the message.
+#[traced_command]
+#[tauri::command]
+pub async fn dismiss_progression_suggestion(
+    app: AppHandle,
+    settings: State<'_, SettingsLock>,
+    category: u16,
+    id: u16,
+) -> Result<(), String> {
+    exercises::dismiss_progression_suggestion(&app, &settings, category, id).await
+}
+
 /// Stores the notes of the exercise `category`/`id` (blank clears them) and re-sends, to Connect
 /// and the connected USB devices, the workouts whose steps inherit them.
 #[traced_command]

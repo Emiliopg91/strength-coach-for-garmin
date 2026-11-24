@@ -270,6 +270,7 @@ fn handle_step_message(msg: &mesgdef::WorkoutStep, exercises: &mut Vec<Option<Ex
         muscles: vec![],
         notes: None,
         name: String::new(),
+        dismissed_progression: None,
     });
     exercises.push(exercise);
 }

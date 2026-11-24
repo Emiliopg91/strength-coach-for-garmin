@@ -5,12 +5,14 @@ use crate::utils::weight::from_kg;
 use crate::{
     dao::{
         activity_step::ActivityStepRepository,
-        exercise::{self, ExerciseRepository},
+        exercise::{self, Exercise, ExerciseRepository},
         workout::{self, Workout, WorkoutRepository},
         workout_step::{StepType, WorkoutStep, WorkoutStepRepository},
     },
     dto::exercises::ProgressionSuggestion,
-    logic::exercises::helpers::{fetch_progression_suggestion, progression_suggestions},
+    logic::exercises::helpers::{
+        dismiss_progression, fetch_progression_suggestion, progression_suggestions,
+    },
     tests::common,
 };
 
@@ -119,6 +121,14 @@ async fn suggestion(db: &DatabasePool, exercise: (u16, u16)) -> Option<Progressi
     })
     .await
     .unwrap()
+}
+
+async fn dismiss(db: &DatabasePool, exercise: (u16, u16)) {
+    db.run_in_connection(async move |conn| {
+        Ok(dismiss_progression(conn, exercise.0, exercise.1).await?)
+    })
+    .await
+    .unwrap();
 }
 
 fn suggested(weight: f32, reps: u16) -> Option<ProgressionSuggestion> {
@@ -469,4 +479,71 @@ async fn progression_suggestions_lists_only_exercises_with_a_suggestion() {
 
     assert_eq!(suggested, std::collections::HashSet::from([BENCH]));
     assert!(suggestion(&db, CABLE_ROW).await.is_none());
+}
+
+// Dismissed suggestions
+
+#[tokio::test]
+async fn dismissed_suggestion_is_hidden() {
+    let db = common::test_db().await;
+    configure(&db, BENCH, false, "8-10-12").await;
+    log_activity(&db, 1, BENCH, &[(12, 100.0), (12, 100.0)]).await;
+    program(&db, BENCH, 100.0, 12).await;
+
+    dismiss(&db, BENCH).await;
+
+    assert_eq!(suggestion(&db, BENCH).await, None);
+    let suggested = db
+        .run_in_connection(async move |conn| Ok(progression_suggestions(conn).await?))
+        .await
+        .unwrap();
+    assert!(suggested.is_empty());
+}
+
+#[tokio::test]
+async fn new_qualifying_activity_shows_dismissed_suggestion_again() {
+    let db = common::test_db().await;
+    configure(&db, BENCH, false, "8-10-12").await;
+    log_activity(&db, 1, BENCH, &[(12, 100.0), (12, 100.0)]).await;
+    program(&db, BENCH, 100.0, 12).await;
+    dismiss(&db, BENCH).await;
+
+    log_activity(&db, 2, BENCH, &[(12, 100.0), (12, 100.0)]).await;
+
+    assert_eq!(suggestion(&db, BENCH).await, suggested(102.0, 8));
+}
+
+#[tokio::test]
+async fn non_qualifying_activity_after_dismissal_suggests_nothing_until_one_qualifies() {
+    let db = common::test_db().await;
+    configure(&db, BENCH, false, "8-10-12").await;
+    log_activity(&db, 1, BENCH, &[(12, 100.0), (12, 100.0)]).await;
+    program(&db, BENCH, 100.0, 12).await;
+    dismiss(&db, BENCH).await;
+
+    log_activity(&db, 2, BENCH, &[(12, 100.0), (7, 100.0)]).await;
+    assert_eq!(suggestion(&db, BENCH).await, None);
+
+    log_activity(&db, 3, BENCH, &[(12, 100.0), (12, 100.0)]).await;
+    assert_eq!(suggestion(&db, BENCH).await, suggested(102.0, 8));
+}
+
+#[tokio::test]
+async fn changing_progression_parameters_clears_dismissal() {
+    let db = common::test_db().await;
+    configure(&db, BENCH, false, "8-10-12").await;
+    log_activity(&db, 1, BENCH, &[(12, 100.0), (12, 100.0)]).await;
+    program(&db, BENCH, 100.0, 12).await;
+    dismiss(&db, BENCH).await;
+
+    db.run_in_connection(async move |conn| {
+        Ok(
+            Exercise::set_progression_parameters(conn, BENCH.0, BENCH.1, "8-10-12".into(), 25)
+                .await?,
+        )
+    })
+    .await
+    .unwrap();
+
+    assert_eq!(suggestion(&db, BENCH).await, suggested(102.5, 8));
 }

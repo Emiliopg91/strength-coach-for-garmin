@@ -165,6 +165,18 @@ export function ExerciseModal({
             .then(setProgressionStatus);
     };
 
+    const dismissSuggestion = () => {
+        loadingTask(
+            BackendClient.dismissProgressionSuggestion(
+                exercise.category,
+                exercise.id,
+            ),
+        ).then(() => {
+            setSuggestion(null);
+            onProgressionApplied();
+        });
+    };
+
     const toggleProgression = () => {
         loadingTask(
             BackendClient.setExerciseProgression(
@@ -473,6 +485,14 @@ export function ExerciseModal({
                                             onClick={applySuggestion}
                                         >
                                             {translate("apply_suggestion")}
+                                        </Button>
+                                        <Button
+                                            variant="contained"
+                                            color="error"
+                                            onClick={dismissSuggestion}
+                                            sx={{ ml: 1 }}
+                                        >
+                                            {translate("dismiss_suggestion")}
                                         </Button>
                                     </td>
                                 </tr>

@@ -109,6 +109,7 @@ export enum DistanceUnit {
 // From src-tauri/src/dao/exercise.rs:30
 export interface Exercise {
   category: number;
+  dismissed_progression: number | null;
   exercise_category: ExerciseCategory | null;
   id: number;
   muscles: MuscleExercise[];

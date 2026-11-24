@@ -17,8 +17,8 @@ use crate::{
         connect::helpers::sync_workouts_connect,
         devices::helpers::push_pending_to_usb,
         exercises::helpers::{
-            any_progression_suggestion, exercise_list, exercises_catalog, fetch_exercise_details,
-            fetch_progression_suggestion,
+            any_progression_suggestion, dismiss_progression, exercise_list, exercises_catalog,
+            fetch_exercise_details, fetch_progression_suggestion,
         },
         pool, report_error,
     },
@@ -228,6 +228,26 @@ pub async fn apply_progression_suggestion<R: Runtime>(
             "Error applying progression",
         )),
     }
+}
+
+pub async fn dismiss_progression_suggestion<R: Runtime>(
+    app: &AppHandle<R>,
+    settings: &SettingsLock,
+    category: u16,
+    id: u16,
+) -> Result<(), String> {
+    pool(app)
+        .run_in_connection(async move |conn| Ok(dismiss_progression(conn, category, id).await?))
+        .await
+        .inspect(|_| info!("Dismissed progression suggestion"))
+        .map_err(|e| {
+            report_error(
+                e,
+                settings,
+                "error_dismissing_progression",
+                "Error dismissing progression suggestion",
+            )
+        })
 }
 
 pub async fn save_exercise_notes<R: Runtime>(

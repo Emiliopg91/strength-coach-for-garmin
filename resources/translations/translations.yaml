@@ -619,9 +619,15 @@ progression_suggestion:
 error_applying_progression:
   en: Error applying progression suggestion
   es: Error aplicando sugerencia de progresión
+error_dismissing_progression:
+  en: Error dismissing progression suggestion
+  es: Error rechazando sugerencia de progresión
+dismiss_suggestion:
+  en: Dismiss
+  es: Rechazar
 apply_suggestion:
-  en: Apply suggestion
-  es: Aplicar sugerencia
+  en: Accept
+  es: Aceptar
 apply_progression_suggestions:
   en: Apply progression suggestions
   es: Aplicar sugerencias de progresión

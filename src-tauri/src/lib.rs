@@ -58,9 +58,10 @@ use crate::{
         devices::commands::{get_registered_devices, import_from_device, send_to_device},
         exercises::commands::{
             apply_progression_suggestion, available_any_progression_suggestions,
-            get_exercise_details, get_exercises, get_exercises_catalog, get_progression_status,
-            get_progression_suggestion, save_exercise_notes, set_exercise_progression,
-            set_exercise_progression_parameters, set_exercise_unilateral,
+            dismiss_progression_suggestion, get_exercise_details, get_exercises,
+            get_exercises_catalog, get_progression_status, get_progression_suggestion,
+            save_exercise_notes, set_exercise_progression, set_exercise_progression_parameters,
+            set_exercise_unilateral,
         },
         export::commands::{export_database, is_cloud_upload_available, upload_to_cloud},
         prompts::{
@@ -335,6 +336,7 @@ pub fn run(log_level: LevelFilter) {
             set_exercise_progression,
             get_progression_suggestion,
             apply_progression_suggestion,
+            dismiss_progression_suggestion,
             save_exercise_notes,
             set_exercise_progression_parameters,
             get_progression_status,

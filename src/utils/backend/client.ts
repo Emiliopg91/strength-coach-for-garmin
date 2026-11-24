@@ -68,6 +68,12 @@ export class BackendClient {
 	}
 	
 
+	// From src-tauri/src/logic/exercises/commands.rs:144
+	public static dismissProgressionSuggestion(category: number, id: number): Promise<void> {
+	  return BackendClient.inner_invoke("dismiss_progression_suggestion", { category, id }); 
+	}
+	
+
 	// From src-tauri/src/logic/activities/commands.rs:45
 	public static downloadActivity(timestamp: number): Promise<void> {
 	  return BackendClient.inner_invoke("download_activity", { timestamp }); 

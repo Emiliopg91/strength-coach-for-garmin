@@ -57,6 +57,7 @@ fn exercise_step(idx: u16) -> WorkoutStep {
             weight: 25,
             notes: None,
             name: "BARBELL_BENCH_PRESS".to_string(),
+            dismissed_progression: None,
             exercise_category: Some(ExerciseCategory {
                 id: 0,
                 name: "BENCH_PRESS".to_string(),

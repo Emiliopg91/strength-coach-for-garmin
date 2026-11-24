@@ -38,6 +38,8 @@ pub struct Exercise {
     pub weight: u16,
     pub notes: Option<String>,
     pub name: String,
+    /// Latest activity of the exercise when its progression suggestion was dismissed
+    pub dismissed_progression: Option<u32>,
 
     #[relationship((category, exercise_category::entity::columns::ID))]
     pub exercise_category: Option<ExerciseCategory>,
@@ -252,7 +254,24 @@ impl Exercise {
         Ok(())
     }
 
+    /// Hides the progression suggestion of the exercise until it has an activity newer than
+    /// `activity`, or shows it again with `None`.
+    pub async fn set_dismissed_progression(
+        conn: &Connection,
+        category: u16,
+        id: u16,
+        activity: Option<u32>,
+    ) -> rusqlite_orm::errors::Result<()> {
+        ExerciseRepository::update()
+            .set(entity::columns::DISMISSED_PROGRESSION, activity.into())
+            .where_(by_key(category, id))
+            .execute_in(conn)
+            .await?;
+        Ok(())
+    }
+
     /// Stores the rep range (e.g. `8-10-12`) and weight increment used to suggest progressions.
+    /// The suggestion they change is no longer dismissed.
     pub async fn set_progression_parameters(
         conn: &Connection,
         category: u16,
@@ -263,6 +282,7 @@ impl Exercise {
         ExerciseRepository::update()
             .set(entity::columns::REPS, reps.into())
             .set(entity::columns::WEIGHT, weight.into())
+            .set(entity::columns::DISMISSED_PROGRESSION, None::<u32>.into())
             .where_(by_key(category, id))
             .execute_in(conn)
             .await?;

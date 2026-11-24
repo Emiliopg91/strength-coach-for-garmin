@@ -216,6 +216,21 @@ pub(crate) async fn progression_suggestions_among(
         .collect())
 }
 
+/// Dismisses the progression suggestion of the exercise, keeping it hidden until an activity newer
+/// than its latest one.
+pub(crate) async fn dismiss_progression(
+    conn: &Connection,
+    category: u16,
+    id: u16,
+) -> rusqlite_orm::errors::Result<()> {
+    let keys: HashSet<(u16, u16)> = [(category, id)].into();
+    let latest = ActivityStep::get_latest_exercise_sets(conn, &keys)
+        .await?
+        .first()
+        .map(|&(_, activity, _, _)| activity);
+    Exercise::set_dismissed_progression(conn, category, id, latest).await
+}
+
 /// Whether any exercise with progression enabled currently has a suggestion pending.
 pub(super) async fn any_progression_suggestion(
     conn: &Connection,
@@ -230,7 +245,8 @@ pub(super) async fn any_progression_suggestion(
 type Set = (u16, u16);
 
 /// Pending suggestions for the already loaded `exercises`, by key. Exercises with progression
-/// disabled or nothing to suggest are left out. Takes two queries whatever the number of exercises.
+/// disabled, nothing to suggest or the suggestion dismissed are left out. Takes two queries
+/// whatever the number of exercises.
 async fn progression_suggestions_for<'a>(
     conn: &Connection,
     exercises: impl IntoIterator<Item = &'a Exercise>,
@@ -244,16 +260,28 @@ async fn progression_suggestions_for<'a>(
         return Ok(HashMap::new());
     }
 
-    // Sets of the latest activity of each exercise
+    // Latest activity of each exercise and its sets
     let keys: HashSet<(u16, u16)> = exercises.keys().copied().collect();
-    let mut latest: HashMap<(u16, u16), Vec<Set>> = HashMap::new();
-    for (key, _, weight, reps) in ActivityStep::get_latest_exercise_sets(conn, &keys).await? {
-        latest.entry(key).or_default().push((weight, reps));
+    let mut latest: HashMap<(u16, u16), (u32, Vec<Set>)> = HashMap::new();
+    for (key, activity, weight, reps) in ActivityStep::get_latest_exercise_sets(conn, &keys).await?
+    {
+        latest
+            .entry(key)
+            .or_insert_with(|| (activity, Vec::new()))
+            .1
+            .push((weight, reps));
     }
 
+    // A suggestion dismissed on the latest activity stays hidden until a newer one
     let candidates: HashMap<(u16, u16), ProgressionSuggestion> = latest
         .iter()
-        .filter_map(|(key, sets)| Some((*key, suggestion_from_sets(exercises.get(key)?, sets)?)))
+        .filter_map(|(key, (activity, sets))| {
+            let exercise = exercises.get(key)?;
+            if exercise.dismissed_progression == Some(*activity) {
+                return None;
+            }
+            Some((*key, suggestion_from_sets(exercise, sets)?))
+        })
         .collect();
     if candidates.is_empty() {
         return Ok(HashMap::new());
