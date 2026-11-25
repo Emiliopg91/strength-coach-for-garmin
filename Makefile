@@ -30,7 +30,7 @@ publish:
 
 test:
 	@pnpm test
-	@cd src-tauri && RUSTC_WRAPPER=sccache mold --run cargo test --lib --bins --tests -- --test-threads=1
+	@cd src-tauri && RUSTC_WRAPPER=sccache mold --run cargo test --lib --bins --tests
 
 dump:
 	@./src-tauri/target/debug/strength-coach-for-garmin --dump

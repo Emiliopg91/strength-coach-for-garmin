@@ -1,8 +1,11 @@
+use std::sync::Arc;
+
 use rusqlite_orm::{
     dao::Repository,
     database::{DatabasePool, builder::DatabaseConnectionBuilder},
     rusqlite::Transaction,
 };
+use tokio::sync::OnceCell;
 
 use crate::{
     dao::{
@@ -21,19 +24,35 @@ use crate::{
 pub const STRENGTH_SPORT: u8 = 10;
 pub const STRENGTH_SUB_SPORT: u8 = 20;
 
+/// The database with the full schema applied, serialized: built once per run, as applying every
+/// migration takes far longer than copying it.
+static TEMPLATE: OnceCell<Arc<[u8]>> = OnceCell::const_new();
+
 /// Builds an in-memory database with the full schema applied, mirroring `initialize()` in `lib.rs`.
 pub async fn test_db() -> DatabasePool {
-    let database = DatabaseConnectionBuilder::default()
+    let template = TEMPLATE
+        .get_or_init(async || {
+            let database = DatabaseConnectionBuilder::default()
+                .enable_foreign_keys()
+                .build("template")
+                .expect("in-memory database");
+            database
+                .create_schema(&schema_ddls())
+                .await
+                .expect("schema creation");
+            database
+                .serialize()
+                .await
+                .expect("schema serialization")
+                .into()
+        })
+        .await;
+
+    DatabaseConnectionBuilder::default()
         .enable_foreign_keys()
+        .contents(template.clone())
         .build("test")
-        .expect("in-memory database");
-
-    database
-        .create_schema(&schema_ddls())
-        .await
-        .expect("schema creation");
-
-    database
+        .expect("in-memory database")
 }
 
 pub fn activity(date: u32) -> Activity {

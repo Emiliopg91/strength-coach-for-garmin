@@ -70,7 +70,9 @@ Extra entry points: `workout.html`/`src/workout.tsx` (printable workout) and
   test, refactor, release…). `chore` is only for internal changes the user doesn't see. No
   trailers. Commits go straight to `main`.
 - **Tests**: backend tests in `src-tauri/src/tests/` use an in-memory DB from
-  `tests::common::test_db()` with the real schema. Frontend tests (vitest) cover `src/utils/` and
+  `tests::common::test_db()` with the real schema, copied from a template built once per run, and
+  run in parallel: keep them independent of each other (unique temp file names, no shared
+  state). Frontend tests (vitest) cover `src/utils/` and
   the backend client/listener only — no React component tests.
 - **Notifications** go through `notify-send` (`logic/notifications.rs`) on purpose;
   tauri-plugin-notification doesn't offer the needed control.
@@ -86,11 +88,11 @@ Extra entry points: `workout.html`/`src/workout.tsx` (printable workout) and
 
 ```bash
 make lint   # eslint --fix + tsc, clippy on macros and backend
-make test   # vitest + cargo test (single-threaded)
+make test   # vitest + cargo test
 ```
 
 For a quicker loop: `npx tsc --noEmit -p .`, `npx prettier --check <file>`,
-`cd src-tauri && cargo check` / `cargo test --lib <name> -- --test-threads=1`.
+`cd src-tauri && cargo check` / `cargo test --lib <name>`.
 
 ## Running and using the app
 

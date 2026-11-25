@@ -47,8 +47,8 @@ reqwest = { version = "^0.13", default-features = false, features = [
     "json",
     "query",
 ] }
-#rusqlite_orm = { path = "../rusqlite_orm/orm",  features = ["derive" ,"bundled"] }
-rusqlite_orm = { version = "^3.3", features = ["derive", "bundled"] }
+#rusqlite_orm = { path = "../rusqlite_orm/orm",  features = ["derive" ,"bundled", "serialize"] }
+rusqlite_orm = { version = "^3.4", features = ["derive", "bundled", "serialize"] }
 rustyfit = { version = "^0", features = ["serde"] }
 semver = "^1"
 serde = { version = "^1", features = ["derive"] }
@@ -90,6 +90,10 @@ lto = false
 codegen-units = 256
 incremental = true
 strip = false
+
+# The bundled SQLite is C code: unoptimized, every query in dev runs and tests is several times slower
+[profile.dev.package.libsqlite3-sys]
+opt-level = 3
 
 [profile.dev]
 opt-level = 0
