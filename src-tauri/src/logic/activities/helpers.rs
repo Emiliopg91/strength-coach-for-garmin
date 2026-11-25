@@ -32,12 +32,11 @@ use crate::{
     },
     fit::{FitFile, parser::FitParser, writer::FitWriter},
     logic::{
-        connect::helpers::sync_workouts_connect,
-        devices::helpers::push_pending_to_usb,
         exercises::helpers::{progression_suggestions, progression_suggestions_among},
         language,
         notifications::show_notification,
         pool, report_error, store_pending_files,
+        workouts::helpers::spawn_workout_sync,
     },
     utils::{
         constants, http,
@@ -45,23 +44,6 @@ use crate::{
         translations::{Languages, translate, translate_and_replace},
     },
 };
-
-/// Sends again, in the background, the `workouts` whose percentage loads changed with the
-/// estimated 1RM: to Connect and to the connected USB devices. In the background because the
-/// callers may hold the Connect or device lock.
-pub(crate) fn spawn_percent_load_sync<R: Runtime>(app: &AppHandle<R>, workouts: Vec<u16>) {
-    if workouts.is_empty() {
-        return;
-    }
-    let app = app.clone();
-    tauri::async_runtime::spawn(async move {
-        info!("Percentage loads changed in {} workouts", workouts.len());
-        let connect = app.state::<ConnectLock>();
-        let settings = app.state::<SettingsLock>();
-        sync_workouts_connect(&app, &connect, &settings, &workouts).await;
-        push_pending_to_usb(&app).await;
-    });
-}
 
 pub(super) async fn retrieve_activity_connect_id<R: Runtime>(app: &AppHandle<R>, timestamp: u32) {
     let connect = app.state::<ConnectLock>();
@@ -148,7 +130,7 @@ pub(crate) async fn import_file_paths<R: Runtime>(
         app,
         res.map(|imported| {
             notify_import(app, &imported, lang);
-            spawn_percent_load_sync(app, imported.refreshed_workouts);
+            spawn_workout_sync(app, imported.refreshed_workouts, true);
             imported.activities
         }),
     )
@@ -185,7 +167,7 @@ pub(crate) async fn import_pending_activities<R: Runtime>(
         Ok((imported, updated_device)) => {
             *device = updated_device;
             notify_import(app, &imported, lang);
-            spawn_percent_load_sync(app, imported.refreshed_workouts);
+            spawn_workout_sync(app, imported.refreshed_workouts, true);
             store_pending_files(
                 pending_dir,
                 &device.serial,

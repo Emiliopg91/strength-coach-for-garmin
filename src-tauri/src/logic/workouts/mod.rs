@@ -8,10 +8,11 @@ use tauri_plugin_log::log::info;
 
 use crate::utils::weight::to_kg;
 use crate::{
-    ConnectLock, SettingsLock,
+    SettingsLock,
     dao::{
         exercise::Exercise,
         workout::Workout,
+        workout_device::WorkoutDevice,
         workout_planning::WorkoutPlanning,
         workout_step::{WorkoutStep, current_one_rms},
     },
@@ -20,7 +21,7 @@ use crate::{
         workouts::{PercentLoadBase, WorkoutDetails, WorkoutListItem, WorkoutPlanListItem},
     },
     logic::{
-        connect::helpers::{delete_plan_from_connect, push_plan_to_connect, sync_workouts_connect},
+        connect::helpers::{delete_plan_from_connect, push_plan_to_connect},
         devices::helpers::{
             delete_pending_from_connected, push_pending_to_usb,
             send_enabled_workout_to_connect_devices, send_schedule_to_connected,
@@ -28,7 +29,7 @@ use crate::{
         exercises::helpers::progression_suggestions,
         notifications::show_notification,
         open_window, pool, print_to_pdf, report_error, settings_language,
-        workouts::helpers::{workout_details, workout_list},
+        workouts::helpers::{spawn_workout_sync, workout_details, workout_list},
     },
     utils::{
         time::{now, today_local_midnight},
@@ -101,13 +102,14 @@ pub async fn set_workout_status<R: Runtime>(
 pub async fn set_workout_progression<R: Runtime>(
     app: &AppHandle<R>,
     settings: &SettingsLock,
-    connect: &ConnectLock,
     workout: u16,
     value: bool,
 ) -> Result<(), String> {
     let res = pool(app)
         .run_in_transaction(async move |tx| {
             Workout::set_progression(tx, workout, value).await?;
+            // Committed with the change, so the upload is retried if the background one never runs
+            WorkoutDevice::set_connect_pending(tx, &[workout], true).await?;
             Ok(!progression_suggestions(tx).await?.is_empty())
         })
         .await;
@@ -119,8 +121,7 @@ pub async fn set_workout_progression<R: Runtime>(
             let payload: bool = any_progression;
             let _ = app.emit("progressions_available", payload);
             // The inherited exercise notes change with the flag
-            sync_workouts_connect(app, connect, settings, &[workout]).await;
-            push_pending_to_usb(app).await;
+            spawn_workout_sync(app, vec![workout], true);
             Ok(())
         }
         Err(e) => Err(report_error(
@@ -135,7 +136,6 @@ pub async fn set_workout_progression<R: Runtime>(
 pub async fn save_workout<R: Runtime>(
     app: &AppHandle<R>,
     settings: &SettingsLock,
-    connect: &ConnectLock,
     edit: bool,
     workout: Workout,
 ) -> Result<(), String> {
@@ -174,27 +174,27 @@ pub async fn save_workout<R: Runtime>(
                 .filter(|s| s.one_rm_pct.is_some())
                 .filter_map(|s| s.ex_cat.zip(s.ex_id))
                 .collect();
-            let refreshed = WorkoutStep::refresh_percent_loads(tx, Some(&exercises), now()).await?;
-            Ok((id, refreshed))
+            let mut workouts =
+                WorkoutStep::refresh_percent_loads(tx, Some(&exercises), now()).await?;
+            if !workouts.contains(&id) {
+                workouts.push(id);
+            }
+            // Committed with the change, so the upload is retried if the background one never runs
+            WorkoutDevice::set_connect_pending(tx, &workouts, true).await?;
+            Ok(workouts)
         })
         .await;
 
     match res {
-        Ok((id, refreshed)) => {
+        Ok(workouts) => {
             info!("Workout '{}' saved succesfully", name);
             show_notification(NotificationDefinition {
                 title: name,
                 body: translate("ok_workout_save", lang),
                 kind: NotificationKind::Temporal,
             });
-            let mut workouts = refreshed;
-            if !workouts.contains(&id) {
-                workouts.push(id);
-            }
-            sync_workouts_connect(app, connect, settings, &workouts).await;
-            if edit || workouts.len() > 1 {
-                push_pending_to_usb(app).await;
-            }
+            let push_usb = edit || workouts.len() > 1;
+            spawn_workout_sync(app, workouts, push_usb);
             Ok(())
         }
         Err(e) => Err(report_error(

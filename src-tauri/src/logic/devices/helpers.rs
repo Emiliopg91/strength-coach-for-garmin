@@ -346,8 +346,10 @@ pub(super) async fn push_pending_workouts<R: Runtime>(app: &AppHandle<R>, serial
     }
 
     let (lang, weight_unit) = fit_settings(app);
-    for (id, workout) in pending {
-        if let Err(e) = send_workout_to_device(app, lang, weight_unit, id, &serial).await {
+    let ids: Vec<u16> = pending.iter().map(|(id, _)| *id).collect();
+    let outcomes = send_workouts_to_device(app, lang, weight_unit, &ids, &serial).await;
+    for ((id, workout), outcome) in pending.into_iter().zip(outcomes) {
+        if let Err(e) = outcome {
             error!("Error pushing pending workout '{workout}' to {serial}: {e}");
             continue;
         }
@@ -520,6 +522,70 @@ pub(super) async fn send_workout_to_device<R: Runtime>(
     id: u16,
     serial: &str,
 ) -> Result<(), String> {
+    send_workouts_to_device(app, lang, weight_unit, &[id], serial)
+        .await
+        .pop()
+        .expect("one outcome per workout")
+}
+
+/// Uploads the workouts `ids` to the device `serial`, opening it once for all of them. Returns the
+/// outcome of each workout, in the order of `ids`.
+pub(super) async fn send_workouts_to_device<R: Runtime>(
+    app: &AppHandle<R>,
+    lang: Languages,
+    weight_unit: WeightUnit,
+    ids: &[u16],
+    serial: &str,
+) -> Vec<Result<(), String>> {
+    let mut outcomes: Vec<Result<(), String>> = Vec::with_capacity(ids.len());
+    // Index in `outcomes` of each file to upload
+    let mut slots = Vec::new();
+    let mut files = Vec::new();
+    for &id in ids {
+        match workout_file(app, lang, weight_unit, id, serial).await {
+            Ok(file) => {
+                slots.push(outcomes.len());
+                files.push(file);
+                outcomes.push(Ok(()));
+            }
+            Err(e) => outcomes.push(Err(e)),
+        }
+    }
+    if files.is_empty() {
+        return outcomes;
+    }
+
+    let uploaded = app
+        .state::<MtpLock>()
+        .lock()
+        .await
+        .upload_files(serial, constants::MTP_GARMIN_NEW_FILES_FOLDER, files)
+        .await;
+    match uploaded {
+        Ok(uploads) => {
+            for (slot, upload) in slots.into_iter().zip(uploads) {
+                outcomes[slot] = upload.map_err(|e| e.to_string());
+            }
+        }
+        Err(e) => {
+            let e = e.to_string();
+            for slot in slots {
+                outcomes[slot] = Err(e.clone());
+            }
+        }
+    }
+    outcomes
+}
+
+/// File name and contents of the workout `id` for the device `serial`, deleting first from the
+/// device the file of its previous name, if it was renamed.
+async fn workout_file<R: Runtime>(
+    app: &AppHandle<R>,
+    lang: Languages,
+    weight_unit: WeightUnit,
+    id: u16,
+    serial: &str,
+) -> Result<(String, Vec<u8>), String> {
     let workout = pool(app)
         .run_in_connection(async move |conn| Ok(Workout::get_for_device(conn, id).await?))
         .await
@@ -531,10 +597,17 @@ pub(super) async fn send_workout_to_device<R: Runtime>(
 
     // File name is kept as-is since it becomes the workout file name on the device
     let file_name = workout.get_workout_file_name();
-    upload_fit(app, serial, &file_name, move || {
-        FitWriter::from(&workout).into_bytes(lang, weight_unit)
-    })
-    .await
+    let data = encode_fit(move || FitWriter::from(&workout).into_bytes(lang, weight_unit)).await?;
+    Ok((file_name, data))
+}
+
+/// Encodes a FIT file in memory with `encode`, off the async runtime as it is CPU-bound work.
+async fn encode_fit<E: ToString>(
+    encode: impl FnOnce() -> Result<Vec<u8>, E> + Send + 'static,
+) -> Result<Vec<u8>, String> {
+    tokio::task::spawn_blocking(move || encode().map_err(|e| e.to_string()))
+        .await
+        .expect("FIT encoding task panicked")
 }
 
 /// Encodes a FIT file in memory with `encode` and uploads it as `file_name` to `GARMIN/NewFiles` on
@@ -545,10 +618,7 @@ async fn upload_fit<R: Runtime, E: ToString>(
     file_name: &str,
     encode: impl FnOnce() -> Result<Vec<u8>, E> + Send + 'static,
 ) -> Result<(), String> {
-    // Encoding is CPU-bound work
-    let data = tokio::task::spawn_blocking(move || encode().map_err(|e| e.to_string()))
-        .await
-        .expect("FIT encoding task panicked")?;
+    let data = encode_fit(encode).await?;
 
     app.state::<MtpLock>()
         .lock()
@@ -697,9 +767,13 @@ async fn upload_missing_workouts<R: Runtime>(
     }
 
     let (lang, weight_unit) = fit_settings(app);
-    for (id, workout) in missing {
+    for (_, workout) in &missing {
         info!("Planned workout '{workout}' missing on {serial}, uploading it");
-        if let Err(e) = send_workout_to_device(app, lang, weight_unit, id, serial).await {
+    }
+    let ids: Vec<u16> = missing.iter().map(|(id, _)| *id).collect();
+    let outcomes = send_workouts_to_device(app, lang, weight_unit, &ids, serial).await;
+    for ((id, workout), outcome) in missing.into_iter().zip(outcomes) {
+        if let Err(e) = outcome {
             error!("Error uploading planned workout '{workout}' to {serial}: {e}");
             continue;
         }

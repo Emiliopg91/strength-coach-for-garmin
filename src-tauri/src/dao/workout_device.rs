@@ -45,6 +45,9 @@ impl WorkoutDevice {
         workouts: &[u16],
         pending: bool,
     ) -> rusqlite_orm::errors::Result<()> {
+        if workouts.is_empty() {
+            return Ok(());
+        }
         let mut insert = WorkoutDeviceRepository::insert().or_replace();
         let mut entries: Vec<WorkoutDevice> = workouts
             .iter()

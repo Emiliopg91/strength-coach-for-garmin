@@ -9,18 +9,19 @@ use tauri_plugin_log::log::info;
 
 use crate::utils::weight::from_kg;
 use crate::{
-    ConnectLock, SettingsLock,
-    dao::{exercise::Exercise, workout::Workout, workout_step::WorkoutStep},
+    SettingsLock,
+    dao::{
+        exercise::Exercise, workout::Workout, workout_device::WorkoutDevice,
+        workout_step::WorkoutStep,
+    },
     dto::exercises::{ExerciseDetails, ExerciseListItem, ProgressionSuggestion},
     logic::{
-        activities::helpers::spawn_percent_load_sync,
-        connect::helpers::sync_workouts_connect,
-        devices::helpers::push_pending_to_usb,
         exercises::helpers::{
             any_progression_suggestion, dismiss_progression, exercise_list, exercises_catalog,
             fetch_exercise_details, fetch_progression_suggestion,
         },
         pool, report_error,
+        workouts::helpers::spawn_workout_sync,
     },
     utils::time::now,
 };
@@ -97,7 +98,7 @@ pub async fn set_exercise_unilateral<R: Runtime>(
             Ok(WorkoutStep::refresh_percent_loads(tx, Some(&keys), now()).await?)
         })
         .await
-        .map(|refreshed| spawn_percent_load_sync(app, refreshed))
+        .map(|refreshed| spawn_workout_sync(app, refreshed, true))
         .inspect(|_| info!("Updated unilateral flag for exercise"))
         .map_err(|e| {
             report_error(
@@ -149,7 +150,7 @@ pub async fn set_exercise_progression_parameters<R: Runtime>(
             Ok(WorkoutStep::refresh_percent_loads(tx, Some(&keys), now()).await?)
         })
         .await
-        .map(|refreshed| spawn_percent_load_sync(app, refreshed))
+        .map(|refreshed| spawn_workout_sync(app, refreshed, true))
         .inspect(|_| info!("Updated rep ranges for exercise"))
         .map_err(|e| {
             report_error(
@@ -192,33 +193,31 @@ pub async fn get_progression_suggestion<R: Runtime>(
 pub async fn apply_progression_suggestion<R: Runtime>(
     app: &AppHandle<R>,
     settings: &SettingsLock,
-    connect: &ConnectLock,
     category: u16,
     id: u16,
     suggestion: ProgressionSuggestion,
 ) -> Result<(), String> {
-    let res =
-        pool(app)
-            .run_in_transaction(async move |tx| {
-                Ok(WorkoutStep::apply_progression(
-                    tx,
-                    category,
-                    id,
-                    suggestion.weight,
-                    suggestion.reps,
-                )
-                .await?)
-            })
-            .await
-            .map_err(|e| e.to_string());
+    let res = pool(app)
+        .run_in_transaction(async move |tx| {
+            let (modified, workouts) = WorkoutStep::apply_progression(
+                tx,
+                category,
+                id,
+                suggestion.weight,
+                suggestion.reps,
+            )
+            .await?;
+            // Committed with the change, so the upload is retried if the background one never runs
+            WorkoutDevice::set_connect_pending(tx, &workouts, true).await?;
+            Ok((modified, workouts))
+        })
+        .await
+        .map_err(|e| e.to_string());
 
     match res {
         Ok((modified, workouts)) => {
             info!("Applied suggested progression");
-            sync_workouts_connect(app, connect, settings, &workouts).await;
-            if modified {
-                push_pending_to_usb(app).await;
-            }
+            spawn_workout_sync(app, workouts, modified);
             Ok(())
         }
         Err(e) => Err(report_error(
@@ -252,8 +251,6 @@ pub async fn dismiss_progression_suggestion<R: Runtime>(
 
 pub async fn save_exercise_notes<R: Runtime>(
     app: &AppHandle<R>,
-    settings: &SettingsLock,
-    connect: &ConnectLock,
     category: u16,
     id: u16,
     notes: &str,
@@ -266,15 +263,15 @@ pub async fn save_exercise_notes<R: Runtime>(
 
     let workouts = pool(app)
         .run_in_transaction(async move |tx| {
-            Ok(Exercise::update_notes(tx, category, id, notes.clone()).await?)
+            let workouts = Exercise::update_notes(tx, category, id, notes.clone()).await?;
+            // Committed with the change, so the upload is retried if the background one never runs
+            WorkoutDevice::set_connect_pending(tx, &workouts, true).await?;
+            Ok(workouts)
         })
         .await
         .map_err(|e| e.to_string())?;
 
-    if !workouts.is_empty() {
-        sync_workouts_connect(app, connect, settings, &workouts).await;
-        push_pending_to_usb(app).await;
-    }
+    spawn_workout_sync(app, workouts, true);
 
     Ok(())
 }

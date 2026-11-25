@@ -81,15 +81,9 @@ fn workout(name: &str, steps: Vec<WorkoutStep>) -> Workout {
 }
 
 async fn save_workout(app: &App<MockRuntime>, edit: bool, workout: Workout) {
-    workouts::save_workout(
-        app.handle(),
-        &app.state::<SettingsLock>(),
-        &app.state::<ConnectLock>(),
-        edit,
-        workout,
-    )
-    .await
-    .unwrap();
+    workouts::save_workout(app.handle(), &app.state::<SettingsLock>(), edit, workout)
+        .await
+        .unwrap();
 }
 
 async fn workout_id(app: &App<MockRuntime>, name: &str) -> u16 {
@@ -286,6 +280,29 @@ async fn renamed_workout_keeps_its_id_and_records_the_old_name_on_usb_devices() 
 }
 
 #[tokio::test]
+async fn saved_workout_is_pending_for_connect_once_the_command_returns() {
+    let app = test_app().await;
+    save_workout(
+        &app,
+        false,
+        workout("Push", vec![step(0, Intensity::ACTIVE, 60.0, 10)]),
+    )
+    .await;
+    let id = workout_id(&app, "Push").await;
+
+    // Marked in the command's own transaction, not by the background upload
+    let pending: Vec<bool> = WorkoutDeviceRepository::select()
+        .fetch(&app.state::<DatabasePool>())
+        .await
+        .unwrap()
+        .into_iter()
+        .filter(|e| e.workout == id && e.device == constants::CONNECT_DEVICE_SERIAL)
+        .map(|e| e.pending)
+        .collect();
+    assert_eq!(pending, [true]);
+}
+
+#[tokio::test]
 async fn workout_name_of_another_workout_is_rejected() {
     let app = test_app().await;
     save_workout(
@@ -304,18 +321,11 @@ async fn workout_name_of_another_workout_is_rejected() {
 
     let mut renamed = workout("Push", vec![step(0, Intensity::ACTIVE, 60.0, 10)]);
     renamed.id = pull;
-    let edit = workouts::save_workout(
-        app.handle(),
-        &app.state::<SettingsLock>(),
-        &app.state::<ConnectLock>(),
-        true,
-        renamed,
-    )
-    .await;
+    let edit =
+        workouts::save_workout(app.handle(), &app.state::<SettingsLock>(), true, renamed).await;
     let create = workouts::save_workout(
         app.handle(),
         &app.state::<SettingsLock>(),
-        &app.state::<ConnectLock>(),
         false,
         workout("Push", vec![step(0, Intensity::ACTIVE, 60.0, 10)]),
     )
@@ -398,7 +408,6 @@ async fn applying_a_progression_leaves_warmups_untouched() {
     exercises::apply_progression_suggestion(
         app.handle(),
         &app.state::<SettingsLock>(),
-        &app.state::<ConnectLock>(),
         BENCH.0,
         BENCH.1,
         ProgressionSuggestion {
@@ -432,7 +441,6 @@ async fn applied_progression_skips_workouts_without_progression() {
     exercises::apply_progression_suggestion(
         app.handle(),
         &app.state::<SettingsLock>(),
-        &app.state::<ConnectLock>(),
         BENCH.0,
         BENCH.1,
         ProgressionSuggestion {
@@ -489,15 +497,9 @@ async fn workout_progression_flag_is_stored_and_kept_on_edit() {
     };
     assert!(details().await.progression);
 
-    workouts::set_workout_progression(
-        app.handle(),
-        &app.state::<SettingsLock>(),
-        &app.state::<ConnectLock>(),
-        id,
-        false,
-    )
-    .await
-    .unwrap();
+    workouts::set_workout_progression(app.handle(), &app.state::<SettingsLock>(), id, false)
+        .await
+        .unwrap();
     assert!(!details().await.progression);
 
     let mut edited = workout("Push", vec![step(0, Intensity::ACTIVE, 105.0, 8)]);
@@ -539,9 +541,8 @@ async fn progression_status_ignores_warmups() {
 async fn exercise_notes_are_trimmed_and_empty_ones_removed() {
     let app = test_app().await;
     let settings = app.state::<SettingsLock>();
-    let client = app.state::<ConnectLock>();
     let save = async |notes: &str| {
-        exercises::save_exercise_notes(app.handle(), &settings, &client, BENCH.0, BENCH.1, notes)
+        exercises::save_exercise_notes(app.handle(), BENCH.0, BENCH.1, notes)
             .await
             .unwrap();
         exercises::get_exercise_details(app.handle(), &settings, BENCH.0, BENCH.1)

@@ -2,7 +2,7 @@ use strength_coach_for_garmin_macros::traced_command;
 use tauri::{AppHandle, State, WebviewWindow};
 
 use crate::{
-    ConnectLock, SettingsLock,
+    SettingsLock,
     dao::workout::Workout,
     dto::workouts::{PercentLoadBase, WorkoutDetails, WorkoutListItem, WorkoutPlanListItem},
     logic::workouts,
@@ -40,36 +40,34 @@ pub async fn set_workout_status(app: AppHandle, workout: u16, status: bool) -> R
 }
 
 /// Enables or disables progression for `workout`: suggestions for its exercises and the exercise
-/// notes inherited by its steps. Emits `progressions_available`, then re-sends the workout to
-/// Connect and the connected USB devices that have it. On failure, shows a persistent error
-/// notification and rejects with the message.
+/// notes inherited by its steps. Emits `progressions_available`, then re-sends the workout in the
+/// background to Connect and the connected USB devices that have it. On failure, shows a
+/// persistent error notification and rejects with the message.
 #[traced_command]
 #[tauri::command]
 pub async fn set_workout_progression(
     app: AppHandle,
     settings: State<'_, SettingsLock>,
-    connect: State<'_, ConnectLock>,
     workout: u16,
     value: bool,
 ) -> Result<(), String> {
-    workouts::set_workout_progression(&app, &settings, &connect, workout, value).await
+    workouts::set_workout_progression(&app, &settings, workout, value).await
 }
 
 /// Creates `workout`, or replaces the name, notes and steps of the existing one with its id when
-/// `edit`, and uploads it to Connect. A renamed workout has its old file deleted from each USB
-/// device before the next push there. When editing, it is also pushed to the connected
-/// USB devices that have it. Notifies on success. On failure, shows a persistent error notification
-/// and rejects with the message.
+/// `edit`, and uploads it to Connect in the background. A renamed workout has its old file deleted
+/// from each USB device before the next push there. When editing, it is also pushed to the
+/// connected USB devices that have it. Notifies on success. On failure, shows a persistent error
+/// notification and rejects with the message.
 #[traced_command]
 #[tauri::command]
 pub async fn save_workout(
     app: AppHandle,
     settings: State<'_, SettingsLock>,
-    connect: State<'_, ConnectLock>,
     edit: bool,
     workout: Workout,
 ) -> Result<(), String> {
-    workouts::save_workout(&app, &settings, &connect, edit, workout).await
+    workouts::save_workout(&app, &settings, edit, workout).await
 }
 
 /// Opens the hidden workout window for `workout`. It prints itself to PDF once it calls

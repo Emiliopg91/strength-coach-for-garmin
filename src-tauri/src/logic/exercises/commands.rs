@@ -4,7 +4,7 @@ use strength_coach_for_garmin_macros::traced_command;
 use tauri::{AppHandle, State};
 
 use crate::{
-    ConnectLock, SettingsLock,
+    SettingsLock,
     dto::exercises::{ExerciseDetails, ExerciseListItem, ProgressionSuggestion},
     logic::exercises,
 };
@@ -119,21 +119,19 @@ pub async fn available_any_progression_suggestions(app: AppHandle) -> Result<boo
 }
 
 /// Raises to `suggestion` the steps programming the exercise `category`/`id` below it, then
-/// re-uploads the affected workouts to Connect and, if any step changed, pushes them to the
-/// connected USB devices. On failure, shows a persistent error notification and rejects with the
-/// message.
+/// re-uploads in the background the affected workouts to Connect and, if any step changed, pushes
+/// them to the connected USB devices. On failure, shows a persistent error notification and
+/// rejects with the message.
 #[traced_command]
 #[tauri::command]
 pub async fn apply_progression_suggestion(
     app: AppHandle,
     settings: State<'_, SettingsLock>,
-    connect: State<'_, ConnectLock>,
     category: u16,
     id: u16,
     suggestion: ProgressionSuggestion,
 ) -> Result<(), String> {
-    exercises::apply_progression_suggestion(&app, &settings, &connect, category, id, suggestion)
-        .await
+    exercises::apply_progression_suggestion(&app, &settings, category, id, suggestion).await
 }
 
 /// Dismisses the progression suggestion of the exercise `category`/`id`: it stays hidden until a
@@ -150,17 +148,15 @@ pub async fn dismiss_progression_suggestion(
     exercises::dismiss_progression_suggestion(&app, &settings, category, id).await
 }
 
-/// Stores the notes of the exercise `category`/`id` (blank clears them) and re-sends, to Connect
-/// and the connected USB devices, the workouts whose steps inherit them.
+/// Stores the notes of the exercise `category`/`id` (blank clears them) and re-sends in the
+/// background, to Connect and the connected USB devices, the workouts whose steps inherit them.
 #[traced_command]
 #[tauri::command]
 pub async fn save_exercise_notes(
     app: AppHandle,
-    settings: State<'_, SettingsLock>,
-    connect: State<'_, ConnectLock>,
     category: u16,
     id: u16,
     notes: &str,
 ) -> Result<(), String> {
-    exercises::save_exercise_notes(&app, &settings, &connect, category, id, notes).await
+    exercises::save_exercise_notes(&app, category, id, notes).await
 }

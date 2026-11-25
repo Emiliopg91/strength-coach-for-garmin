@@ -18,14 +18,14 @@ use crate::{
         activities::helpers::{
             activity_file_name, apply_activity_changes, fetch_activities, fetch_activity_details,
             heatmap_data, import_file_paths, muscle_sets, notify_new_prs,
-            notify_progression_available, retrieve_activity_connect_id, spawn_percent_load_sync,
-            write_activity_fit,
+            notify_progression_available, retrieve_activity_connect_id, write_activity_fit,
         },
         ask_open_paths, ask_save_path,
         connect::helpers::sync_activity_sets_connect,
         fit_settings,
         notifications::show_notification,
         pool, report_error, settings_language,
+        workouts::helpers::spawn_workout_sync,
     },
     utils::{
         constants,
@@ -186,7 +186,7 @@ pub async fn save_activity_changes<R: Runtime>(
             let payload: bool = changes.any_progression;
             let _ = app.emit("progressions_available", payload);
 
-            spawn_percent_load_sync(app, changes.refreshed_workouts);
+            spawn_workout_sync(app, changes.refreshed_workouts, true);
 
             let app_cl = app.clone();
             tauri::async_runtime::spawn(async move {

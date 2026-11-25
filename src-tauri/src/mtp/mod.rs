@@ -183,19 +183,17 @@ async fn delete_file(storage: &Storage, obj: ObjectInfo) -> Result<()> {
 }
 
 /// Uploads `data` as the file `filename` into the folder `parent` on `storage` and returns the new
-/// handle. MTP cannot overwrite, so any file with the same name in `parent` is deleted first.
+/// handle. MTP cannot overwrite, so any file with the same name among `existing`, the objects of
+/// `parent`, is deleted first.
 async fn upload_file(
     storage: &Storage,
     parent: ObjectHandle,
+    existing: &[ObjectInfo],
     filename: &str,
     data: Vec<u8>,
 ) -> Result<ObjectHandle> {
-    let existing = storage
-        .list_objects(Some(parent))
-        .await
-        .map_err(MtpError::ListFiles)?;
     for obj in existing
-        .into_iter()
+        .iter()
         .filter(|o| o.is_file() && o.filename == filename)
     {
         info!("Replacing existing file {}", filename);
@@ -347,10 +345,35 @@ impl MtpClient {
         filename: &str,
         data: Vec<u8>,
     ) -> Result<()> {
+        self.upload_files(serial, folder, vec![(filename.to_string(), data)])
+            .await?
+            .pop()
+            .expect("one outcome per uploaded file")
+    }
+
+    /// Uploads each `(filename, data)` of `files` into the device's `GARMIN/<folder>` folder,
+    /// replacing any file with the same name. The device is opened and the folder listed once for
+    /// all of them. Fails as a whole if the folder can't be reached; otherwise returns the outcome
+    /// of each upload, in order.
+    pub async fn upload_files(
+        &self,
+        serial: &str,
+        folder: &str,
+        files: Vec<(String, Vec<u8>)>,
+    ) -> Result<Vec<Result<()>>> {
         with_storage(serial, async |storage| {
             let target = find_garmin_folder(storage, serial, folder).await?;
-            upload_file(storage, target.handle, filename, data).await?;
-            Ok(())
+            let existing = storage
+                .list_objects(Some(target.handle))
+                .await
+                .map_err(MtpError::ListFiles)?;
+
+            let mut outcomes = Vec::with_capacity(files.len());
+            for (filename, data) in files {
+                let outcome = upload_file(storage, target.handle, &existing, &filename, data).await;
+                outcomes.push(outcome.map(|_| ()));
+            }
+            Ok(outcomes)
         })
         .await
     }
