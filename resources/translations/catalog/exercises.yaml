@@ -72,7 +72,7 @@ exercise_0_23:
   es: Press de pecho con mancuernas sobre pelota suiza
 exercise_0_24:
   en: Triple-stop barbell bench press
-  es: Press de banca con triple parada
+  es: Press de banca con barra con triple parada
 exercise_0_25:
   en: Wide-grip barbell bench press
   es: Press de banca con barra y agarre ancho
@@ -162,7 +162,7 @@ exercise_2_2:
   es: Gateo con abdominales para resistencia cardiovascular
 exercise_2_3:
   en: Weighted cardio core crawl
-  es: Gateo cardiovascular con el tronco
+  es: Gateo con abdominales lastrado para resistencia cardiovascular
 exercise_2_4:
   en: Double under
   es: Dos pasadas por debajo
@@ -372,10 +372,10 @@ exercise_4_18:
   es: Sentadilla de leñador con potencia lastrada
 exercise_4_19:
   en: Standing rotational chop
-  es: Standing rotational chop
+  es: Leñador rotacional de pie
 exercise_4_20:
   en: Standing split rotational chop
-  es: Standing split rotational chop
+  es: Leñador rotacional de pie en tijera
 exercise_4_21:
   en: Standing split rotational reverse chop
   es: Leñador inverso rotacional en posición de sentadilla (de pie)
@@ -426,13 +426,13 @@ exercise_5_12:
   es: Giros rusos con pedaleo
 exercise_5_13:
   en: Weighted cycling Russian twist
-  es: Giro ruso con pedaleo
+  es: Giro ruso con pedaleo lastrado
 exercise_5_14:
   en: Elevated-feet Russian twist
   es: Giro ruso con pies elevados
 exercise_5_15:
   en: Weighted elevated-feet Russian twist
-  es: Giro ruso con pies elevados
+  es: Giro ruso lastrado con pies elevados
 exercise_5_16:
   en: Half-Turkish get-up
   es: Medio levantamiento turco
@@ -465,7 +465,7 @@ exercise_5_25:
   es: Jackknife con pelota suiza
 exercise_5_26:
   en: Weighted Swiss ball jackknife
-  es: Jackknife con balón suizo
+  es: Jackknife lastrado con balón suizo
 exercise_5_27:
   en: Swiss ball pike
   es: Pico con pelota suiza
@@ -900,7 +900,7 @@ exercise_6_78:
   es: Crunch de bicicleta con peso
 exercise_6_79:
   en: Weighted crunch
-  es: Abdominales con peso
+  es: Crunch lastrado
 exercise_6_80:
   en: Weighted Swiss ball crunch
   es: Encogimientos abdominales sobre pelota suiza con pesas
@@ -948,7 +948,7 @@ exercise_7_6:
   es: Giro inverso de muñeca con barra detrás de la espalda
 exercise_7_7:
   en: Behind-the-back one-arm cable curl
-  es: Bucle con polea a un solo brazo por detrás de la espalda
+  es: Curl con polea a un brazo por detrás de la espalda
 exercise_7_8:
   en: Cable biceps curl
   es: Flexión de brazos con polea
@@ -1032,7 +1032,7 @@ exercise_7_34:
   es: Curl inverso con mancuernas, sentado
 exercise_7_35:
   en: Split-stance offset pinky dumbbell curl
-  es: Bucle alterno con mancuernas y una pierna apoyada sobre banca
+  es: Curl con mancuerna en tijera y agarre desplazado al meñique
 exercise_7_36:
   en: Standing alternating dumbbell curls
   es: Curl alterno con mancuernas de pie
@@ -1044,7 +1044,7 @@ exercise_7_38:
   es: Curl de bíceps con barra Z y de pie
 exercise_7_39:
   en: Static curl
-  es: Bucle estático
+  es: Curl estático
 exercise_7_40:
   en: Swiss ball dumbbell overhead triceps extension
   es: Extensión de tríceps por encima de la cabeza con mancuernas y pelota suiza
@@ -1137,7 +1137,7 @@ exercise_8_17:
   es: Peso muerto con barra de trapecios
 exercise_8_18:
   en: Wide-grip barbell deadlift
-  es: Peso muerto de agarre ancho
+  es: Peso muerto con barra y agarre ancho
 exercise_8_20:
   en: Kettlebell deadlift
   es: Peso muerto con pesa rusa
@@ -1827,7 +1827,7 @@ exercise_16_20:
   es: Stepover lateral
 exercise_16_21:
   en: Weighted lateral step-over
-  es: Paso lateral lastrado
+  es: Stepover lateral lastrado
 exercise_16_65535:
   en: Leg raise
   es: Elevación de piernas
@@ -2049,7 +2049,7 @@ exercise_17_71:
   es: Zancadas con saltos siff
 exercise_17_72:
   en: Weighted Siff jump lunge
-  es: Zancada alterna lastrada con salto
+  es: Zancada Siff con salto lastrada
 exercise_17_73:
   en: Single-arm reverse lunge and press
   es: Zancada inversa con un brazo y press
@@ -2163,7 +2163,7 @@ exercise_18_15:
   es: Envión con empuje
 exercise_18_16:
   en: Single-arm dumbbell snatch
-  es: Snatch con mancuerna con un solo brazo
+  es: Arrancada con mancuerna a un brazo
 exercise_18_17:
   en: Single-arm hang snatch
   es: Arrancada con un solo brazo
@@ -2202,10 +2202,10 @@ exercise_18_28:
   es: Arrancada
 exercise_18_30:
   en: Barbell power snatch from blocks
-  es: Arrancada de potencia desde bloques
+  es: Arrancada de potencia con barra desde bloques
 exercise_18_31:
   en: Barbell high pull from blocks
-  es: Remo vertical con bloques
+  es: Tirón alto con barra desde bloques
 exercise_18_32:
   en: Trap bar high pull
   es: Remo vertical con barra hexagonal
@@ -2526,7 +2526,7 @@ exercise_19_103:
   es: Jackknife en pronación sobre pelota suiza
 exercise_19_104:
   en: Weighted Swiss ball prone jackknife
-  es: Jackknife en decúbito prono con balón suizo
+  es: Jackknife en decúbito prono lastrado con balón suizo
 exercise_19_105:
   en: Swiss ball side plank
   es: Plancha lateral con pelota suiza
@@ -3216,7 +3216,7 @@ exercise_23_16:
   es: Remo con barra y agarre invertido
 exercise_23_17:
   en: Rope-handle cable row
-  es: Remo sentado con cuerdas
+  es: Remo en polea con cuerda
 exercise_23_18:
   en: Seated cable row
   es: Remo con polea (sentado)
@@ -3324,7 +3324,7 @@ exercise_23_52:
   es: Remo con mancuernas
 exercise_23_53:
   en: Barbell bench pull
-  es: Remo en banco
+  es: Remo en banco con barra
 exercise_23_54:
   en: Ruck bent-over row
   es: Remo inclinado con mochila
@@ -3654,7 +3654,7 @@ exercise_27_8:
   es: Abdominales con brazos cruzados
 exercise_27_9:
   en: Weighted crossed-arms sit-up
-  es: Abdominal sit-up con los brazos cruzados
+  es: Abdominal sit-up lastrado con los brazos cruzados
 exercise_27_10:
   en: Get-up sit-up
   es: Abdominales con levantamiento
@@ -4005,7 +4005,7 @@ exercise_28_83:
   es: Balón medicinal contra la pared
 exercise_28_84:
   en: Wide-stance barbell squat
-  es: Sentadilla abierta
+  es: Sentadilla abierta con barra
 exercise_28_85:
   en: Wide-stance goblet squat
   es: Sentadilla goblet con piernas abiertas
@@ -4425,7 +4425,7 @@ exercise_31_50:
   es: Estiramiento tumbado con abducción
 exercise_31_51:
   en: Lying IT band stretch
-  es: Estiramiento tumbado con pierna cruzada
+  es: Estiramiento de la cintilla iliotibial tumbado
 exercise_31_52:
   en: Lying knee-to-chest stretch
   es: Estiramiento tumbado de rodillas a pecho
@@ -4473,7 +4473,7 @@ exercise_31_66:
   es: Estiramiento con split lateral
 exercise_31_67:
   en: Standing IT band stretch
-  es: Estiramiento de pie con pierna cruzada
+  es: Estiramiento de la cintilla iliotibial de pie
 exercise_31_68:
   en: Straddle stretch
   es: Estiramiento con piernas abiertas
@@ -5346,10 +5346,10 @@ exercise_37_52:
   es: Apertura de pecho declinada con goma elástica
 exercise_37_53:
   en: Banded pull-down
-  es: Pull down con goma elástica
+  es: Jalón con goma elástica
 exercise_37_54:
   en: Banded straight-arm pull-down
-  es: Pull down con brazo recto con goma elástica
+  es: Jalón con brazos rectos con goma elástica
 exercise_37_55:
   en: Banded bicep curl
   es: Curl de bíceps con goma elástica
