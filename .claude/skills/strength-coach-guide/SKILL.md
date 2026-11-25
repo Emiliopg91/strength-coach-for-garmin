@@ -98,7 +98,9 @@ For a quicker loop: `npx tsc --noEmit -p .`, `npx prettier --check <file>`,
   release bundle.
 - Data: `~/.local/share/strength-coach-for-garmin/database.db` (SQLite) and `logs/` next to it.
   This is the maintainer's real training data — read it freely, but never write to it, delete it
-  or run migrations against it outside the app. Copy it to the scratchpad to experiment.
+  or run migrations against it outside the app. It runs in WAL mode, so the latest commits may
+  only be in `database.db-wal`: to experiment, snapshot it into the scratchpad with
+  `sqlite3 <db> "VACUUM INTO '<scratchpad>/db.db'"` instead of copying the file.
 - Garmin Connect tokens live in the system keyring, not in the DB.
 - Debug-only CLI flags on the debug binary (`src-tauri/target/debug/strength-coach-for-garmin`):
   `--decode <file.fit>...` (dump a FIT file; also `make decode FILE=...`), `--encode`,

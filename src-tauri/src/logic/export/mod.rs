@@ -1,10 +1,10 @@
 pub mod commands;
 
-use std::{fs, io::BufWriter};
+use std::{fs, io::BufWriter, path::PathBuf};
 
 use chrono::Local;
 use tauri::{AppHandle, Runtime};
-use tauri_plugin_log::log::info;
+use tauri_plugin_log::log::{info, warn};
 
 use crate::{
     SettingsLock,
@@ -27,7 +27,8 @@ pub async fn is_cloud_upload_available() -> bool {
     rclone::is_installed()
 }
 
-pub async fn upload_to_cloud(
+pub async fn upload_to_cloud<R: Runtime>(
+    app: &AppHandle<R>,
     settings: &SettingsLock,
     provider: CloudProvider,
 ) -> Result<(), String> {
@@ -44,12 +45,24 @@ pub async fn upload_to_cloud(
             provider.configure().await.map_err(|e| e.to_string())?;
         }
 
-        provider
-            .upload(constants::DB_FILE.to_path_buf())
-            .await
-            .map_err(|e| e.to_string())?;
-
-        Ok(())
+        // The database file alone may lack the commits still in the WAL, and could change while
+        // being uploaded: a snapshot of it is uploaded instead, under the same file name
+        let dir = snapshot_dir();
+        let res = async {
+            fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+            let snapshot = dir.join(constants::DB_FILE.file_name().unwrap());
+            info!("Writing database snapshot to {}", snapshot.display());
+            pool(app)
+                .vacuum_into(&snapshot)
+                .await
+                .map_err(|e| e.to_string())?;
+            provider.upload(snapshot).await.map_err(|e| e.to_string())
+        }
+        .await;
+        if let Err(e) = fs::remove_dir_all(&dir) {
+            warn!("Could not remove database snapshot {}: {e}", dir.display());
+        }
+        res
     }
     .await;
 
@@ -62,6 +75,16 @@ pub async fn upload_to_cloud(
         });
     })
     .map_err(|e| report_error(e, settings, "upload_error", "Error uploading file"))
+}
+
+/// Folder in `/tmp` for the database snapshot of a cloud upload, unique to this process and moment.
+fn snapshot_dir() -> PathBuf {
+    std::env::temp_dir().join(format!(
+        "{}-{}-{}",
+        *constants::APP_NAME,
+        std::process::id(),
+        Local::now().format("%Y%m%d%H%M%S%3f")
+    ))
 }
 
 /// Asks where to save the whole database as a JSON file, writes it there and notifies on success/failure.

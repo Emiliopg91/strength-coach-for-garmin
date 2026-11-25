@@ -18,7 +18,7 @@ use std::{process::exit, sync::RwLock, time::Duration};
 use rusqlite_orm::{
     database::{
         DatabasePool, DdlVersion,
-        builder::{DatabaseConnectionBuilder, JournalMode},
+        builder::{DatabaseConnectionBuilder, JournalMode, Synchronous},
     },
     ddls,
 };
@@ -64,6 +64,7 @@ use crate::{
             set_exercise_unilateral,
         },
         export::commands::{export_database, is_cloud_upload_available, upload_to_cloud},
+        pool,
         prompts::{
             commands::answer_prompt,
             helpers::{AppPrompter, Prompts},
@@ -105,7 +106,9 @@ fn initialize(app: &AppHandle) -> (DatabasePool, Settings, ConnectClient, MtpCli
         .pool_size(5)
         .min_idle(2)
         .enable_foreign_keys()
-        .journal_mode(JournalMode::Delete);
+        // Commits don't wait for the disk; a power loss may lose the latest ones, never corrupt
+        .journal_mode(JournalMode::Wal)
+        .synchronous(Synchronous::Normal);
     match builder.build("gtrs") {
         Ok(database) => {
             // `setup` is synchronous and runs outside the async runtime, so it can wait here
@@ -389,8 +392,11 @@ pub fn run(log_level: LevelFilter) {
             eprintln!("Error while running tauri application {}", e);
             exit(constants::ExitCodes::TauriError.into())
         })
-        .run(|_, event| {
+        .run(|app, event| {
             if let RunEvent::Exit = event {
+                // Tauri ends the process without dropping the managed state: closing the pool lets
+                // SQLite checkpoint the WAL and remove the -wal and -shm files
+                tauri::async_runtime::block_on(pool(app).close());
                 info!(
                     "Stopped {} v{}",
                     *constants::APP_NAME,

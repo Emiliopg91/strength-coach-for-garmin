@@ -10,16 +10,17 @@ pub async fn is_cloud_upload_available() -> bool {
     export::is_cloud_upload_available().await
 }
 
-/// Uploads the database file to `provider` through rclone, configuring the remote first if needed
-/// (which opens the provider's login in the browser). Notifies on success. On failure, shows a
-/// persistent error notification and rejects with the message.
+/// Uploads a snapshot of the database to `provider` through rclone, configuring the remote first if
+/// needed (which opens the provider's login in the browser). Notifies on success. On failure, shows
+/// a persistent error notification and rejects with the message.
 #[traced_command]
 #[tauri::command]
 pub async fn upload_to_cloud(
+    app: AppHandle,
     settings: State<'_, SettingsLock>,
     provider: CloudProvider,
 ) -> Result<(), String> {
-    export::upload_to_cloud(&settings, provider).await
+    export::upload_to_cloud(&app, &settings, provider).await
 }
 
 /// Asks where to save the whole database as JSON (defaulting to a timestamped file in the home dir)
