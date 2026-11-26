@@ -19,7 +19,6 @@ import {
     IconButton,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
-import { UploadToCloudMenu } from "./menus/UploadToCloudMenu";
 
 type Props = {
     onClose: () => void;
@@ -89,10 +88,6 @@ export function Settings({ onClose }: Props) {
             setOnDeviceConnect(value);
             updateSettings({ on_device_connect: value });
         });
-    };
-
-    const exportDatabase = () => {
-        withLoading(BackendClient.exportDatabase());
     };
 
     const connectLogin = () => {
@@ -331,38 +326,6 @@ export function Settings({ onClose }: Props) {
                                                         </tr>
                                                     </>
                                                 )}
-                                            </tbody>
-                                        </table>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td style={{ verticalAlign: "top" }}>
-                                        {translate("database_operations")}
-                                    </td>
-                                    <td>
-                                        <table style={{ width: "100%" }}>
-                                            <tbody>
-                                                <tr>
-                                                    <td>
-                                                        <Button
-                                                            id="add-measure-button"
-                                                            variant="contained"
-                                                            className="full-width-button"
-                                                            onClick={
-                                                                exportDatabase
-                                                            }
-                                                        >
-                                                            {translate(
-                                                                "backup_database",
-                                                            )}
-                                                        </Button>
-                                                    </td>
-                                                </tr>
-                                                <tr>
-                                                    <td>
-                                                        <UploadToCloudMenu />
-                                                    </td>
-                                                </tr>
                                             </tbody>
                                         </table>
                                     </td>

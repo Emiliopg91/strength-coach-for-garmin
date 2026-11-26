@@ -2,7 +2,7 @@
 
 import { invoke, InvokeArgs } from "@tauri-apps/api/core";
 
-import { ActivityDetails, ActivityListItem, ActivityStepsUpdate, AppEnvironment, BodyMetricListItem, CloudProvider, DeviceListItem, ExerciseDetails, ExerciseListItem, MuscleSets, PercentLoadBase, ProgressionSuggestion, ReportData, Settings, Workout, WorkoutDetails, WorkoutListItem, WorkoutPlanListItem } from "./models";
+import { ActivityDetails, ActivityListItem, ActivityStepsUpdate, AppEnvironment, BodyMetricListItem, DeviceListItem, ExerciseDetails, ExerciseListItem, MuscleSets, PercentLoadBase, ProgressionSuggestion, ReportData, Settings, Workout, WorkoutDetails, WorkoutListItem, WorkoutPlanListItem } from "./models";
 
 export class BackendClient {
 
@@ -77,12 +77,6 @@ export class BackendClient {
 	// From src-tauri/src/logic/activities/commands.rs:51
 	public static downloadActivity(timestamp: number): Promise<void> {
 	  return BackendClient.inner_invoke("download_activity", { timestamp }); 
-	}
-	
-
-	// From src-tauri/src/logic/export/commands.rs:37
-	public static exportDatabase(): Promise<void> {
-	  return BackendClient.inner_invoke("export_database"); 
 	}
 	
 
@@ -230,12 +224,6 @@ export class BackendClient {
 	}
 	
 
-	// From src-tauri/src/logic/export/commands.rs:15
-	public static isCloudUploadAvailable(): Promise<boolean> {
-	  return BackendClient.inner_invoke("is_cloud_upload_available"); 
-	}
-	
-
 	// From src-tauri/src/logic/report/commands.rs:20
 	public static loadReport(from: number, to: number): Promise<void> {
 	  return BackendClient.inner_invoke("load_report", { from, to }); 
@@ -323,12 +311,6 @@ export class BackendClient {
 	// From src-tauri/src/logic/app/commands.rs:82
 	public static updateSettingsValue(name: string, value: string): Promise<void> {
 	  return BackendClient.inner_invoke("update_settings_value", { name, value }); 
-	}
-	
-
-	// From src-tauri/src/logic/export/commands.rs:24
-	public static uploadToCloud(provider: CloudProvider): Promise<void> {
-	  return BackendClient.inner_invoke("upload_to_cloud", { provider }); 
 	}
 	
 

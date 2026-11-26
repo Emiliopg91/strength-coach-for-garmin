@@ -292,18 +292,6 @@ start_on_boot_true:
 start_on_boot_false:
   en: Manually
   es: Manualmente
-database_operations:
-  en: Database management
-  es: Gestión de base de datos
-backup_database:
-  en: Backup
-  es: Exportar
-ok_on_export:
-  en: Database exported succesfully
-  es: Base de datos exportada correctamente
-error_on_export:
-  en: Error exporting database
-  es: Error exportando base de datos
 export_file_path:
   en: File exported to {}
   es: Archivo exportado en {}
@@ -364,15 +352,6 @@ do_nothing:
 start_automatically:
   en: Start automatically
   es: Iniciar automaticamente
-upload_to:
-  en: Upload to...
-  es: Cargar en...
-upload_succesful:
-  en: File uploaded succesfully
-  es: Archivo cargado con éxito
-upload_error:
-  en: Error on file upload
-  es: Error en la carga de archivo
 import_from_disk:
   en: Import from disk
   es: Importar desde disco
@@ -457,9 +436,6 @@ records:
 select_files_import:
   en: Select files to import
   es: Seleccione archivos a importar
-select_file_save_json:
-  en: Save as JSON
-  es: Guardar como JSON
 select_file_save_fit:
   en: Save as FIT
   es: Guardar como FIT

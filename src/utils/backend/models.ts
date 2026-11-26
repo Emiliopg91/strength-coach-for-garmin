@@ -87,12 +87,6 @@ export interface BodyMetricListItem {
   weight: number;
 }
 
-// From src-tauri/src/rclone/providers/mod.rs:11
-export enum CloudProvider {
-	OneDrive = "OneDrive",
-	DropBox = "DropBox",
-}
-
 // From src-tauri/src/dto/devices.rs:6
 export interface DeviceListItem {
   model: string;

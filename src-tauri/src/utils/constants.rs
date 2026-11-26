@@ -83,10 +83,6 @@ pub static LOGS_DIR: LazyLock<PathBuf> = LazyLock::new(|| ensure_dir(DATA_LOCAL_
 pub static LOG_FILE_MAX_SIZE: u128 = 1_024 * 1_024;
 pub static LOG_FILE_ROTATION_STRATEGY: RotationStrategy = RotationStrategy::KeepSome(3);
 
-pub static RCLONE_CONFIG_NAME: LazyLock<String> = LazyLock::new(|| APP_NAME.to_string());
-pub static RCLONE_CONFIG_FILE: LazyLock<PathBuf> =
-    LazyLock::new(|| HOME_DIR.join(".config").join("rclone").join("rclone.conf"));
-
 // Pending files block: the downloaded files whose parse or import failed, in one subfolder per
 // source (named after its serial). Uploads are encoded and sent from memory
 pub static PENDING_FOLDER: LazyLock<PathBuf> = LazyLock::new(|| DATA_LOCAL_DIR.join("pending"));

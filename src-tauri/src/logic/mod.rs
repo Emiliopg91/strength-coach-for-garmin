@@ -5,7 +5,6 @@ pub mod connect;
 pub mod devices;
 pub mod events;
 pub mod exercises;
-pub mod export;
 pub mod notifications;
 pub mod prompts;
 pub mod report;

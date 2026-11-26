@@ -66,8 +66,6 @@ No account required, no cloud, no Garmin Express (which doesn't exist on Linux a
 
 - **Local SQLite database** — Versioned migrations, applied automatically.
 - **Credentials stay in your keyring** — Garmin Connect session tokens live in the system keyring (Secret Service), not in the database, and your password is never saved.
-- **JSON export** — Full database export for backup or your own analysis.
-- **Cloud backup, if you want it** — One-click upload to OneDrive or Dropbox via `rclone`.
 
 ## Desktop integration
 
@@ -117,7 +115,6 @@ Strength Coach for Garmin builds on the work of these projects and services:
 - **[keyring-rs](https://github.com/hwchen/keyring-rs)** (MIT or Apache-2.0): Garmin Connect session storage in the system keyring.
 - **[react-body-highlighter](https://www.npmjs.com/package/@mjcdev/react-body-highlighter)** by MichaelMJC (MIT): the front and back muscle body map.
 - **[Tauri](https://tauri.app/)**, **[React](https://react.dev/)**, **[MUI](https://mui.com/)**, **[Recharts](https://recharts.org/)** and **[Leaflet](https://leafletjs.com/)**: the application framework, UI, charts and maps.
-- **[rclone](https://rclone.org/)**: cloud backups to OneDrive and Dropbox.
 - **Map data and services**: street tiles © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors (ODbL), satellite imagery from [Esri World Imagery](https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9) (Esri, Maxar, Earthstar Geographics and the GIS User Community), and reverse geocoding by [Nominatim](https://nominatim.org/), using OpenStreetMap data.
 
 ## License

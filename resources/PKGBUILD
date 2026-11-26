@@ -14,7 +14,6 @@ sha256sums=(
 )
 
 depends=('libnotify' 'sudo' 'webkit2gtk-4.1' 'xdg-utils' 'zlib-ng-compat')
-optdepends=('rclone: export to Dropbox and OneDrive')
 makedepends=('mold' 'npm' 'pnpm' 'python-toml' 'python-yaml' 'rust' 'sccache')
 
 conflicts=('garmin-tracker-rs' 'strength-tracker-rs')

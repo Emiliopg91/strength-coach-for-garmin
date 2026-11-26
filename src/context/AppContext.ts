@@ -24,8 +24,6 @@ interface AppContexType {
     exerciseName: (ex_cat: number | null, ex_id: number | null) => string;
     categoryName: (ex_cat: number) => string;
     connectUser: string | null;
-    // Whether the optional rclone dependency is installed, checked once at startup
-    cloudUploadAvailable: boolean;
     progressionsAvailable: boolean;
     setProgressionsAvailable: () => void;
     unsetProgressionsAvailable: () => void;
@@ -43,7 +41,6 @@ const defaultValue: AppContexType = {
         ex_cat == null || ex_id == null ? "" : `${ex_cat}/${ex_id}`,
     categoryName: (ex_cat) => `${ex_cat}`,
     connectUser: null,
-    cloudUploadAvailable: false,
     progressionsAvailable: false,
     setProgressionsAvailable: () => {
         /** */

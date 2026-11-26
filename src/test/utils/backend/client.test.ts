@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
 import { BackendClient } from "@/utils/backend/client";
-import { CloudProvider } from "@/utils/backend/models";
 
 vi.mock("@tauri-apps/api/core", () => ({
     invoke: vi.fn(),
@@ -28,13 +27,11 @@ describe("BackendClient", () => {
         await BackendClient.getActivities(5);
         await BackendClient.getExerciseDetails(1, 2);
         await BackendClient.setWorkoutStatus(3, false);
-        await BackendClient.uploadToCloud(CloudProvider.DropBox);
 
         expect(invokeMock.mock.calls).toEqual([
             ["get_activities", { limit: 5 }],
             ["get_exercise_details", { category: 1, id: 2 }],
             ["set_workout_status", { workout: 3, status: false }],
-            ["upload_to_cloud", { provider: CloudProvider.DropBox }],
         ]);
     });
 

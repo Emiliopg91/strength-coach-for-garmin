@@ -16,13 +16,12 @@ fit together and the conventions the code follows.
 
 | Path | What lives there |
 |---|---|
-| `src-tauri/src/logic/<domain>/` | Backend features. `commands.rs` holds thin `#[traced_command] #[tauri::command]` wrappers; `mod.rs` holds the logic each command calls; everything else lives in `helpers/`, one file per topic (e.g. `activities/helpers/{import,queries,geolocation,edit}.rs`, `devices/helpers/{watcher,queue,transfer,schedule}.rs`). Helper items the domain's `mod.rs` uses are `pub(in crate::logic::<domain>)`; `pub(super)` keeps one within `helpers/`. Domains: app, body_metrics, connect, devices, exercises, export, prompts, report, activities, workouts |
+| `src-tauri/src/logic/<domain>/` | Backend features. `commands.rs` holds thin `#[traced_command] #[tauri::command]` wrappers; `mod.rs` holds the logic each command calls; everything else lives in `helpers/`, one file per topic (e.g. `activities/helpers/{import,queries,geolocation,edit}.rs`, `devices/helpers/{watcher,queue,transfer,schedule}.rs`). Helper items the domain's `mod.rs` uses are `pub(in crate::logic::<domain>)`; `pub(super)` keeps one within `helpers/`. Domains: app, body_metrics, connect, devices, exercises, prompts, report, activities, workouts |
 | `src-tauri/src/dao/` | One file per table: rusqlite_orm entities + repository queries |
 | `src-tauri/src/dto/` | Types that cross the IPC boundary (serde) |
 | `src-tauri/src/fit/` | FIT parser and writer (activities in, workouts/schedules out) |
 | `src-tauri/src/mtp/`, `udev/` | USB device access and udev rules |
 | `src-tauri/src/connect/` | Garmin Connect client — own code; HTTP through the shared reqwest client in `utils/http.rs` |
-| `src-tauri/src/rclone/` | Cloud backup via the `rclone` binary |
 | `src-tauri/src/tests/` | Backend tests (`#[cfg(test)] mod tests` in `lib.rs`) |
 | `src-tauri-macros/` | `traced_command`, translation macros |
 | `src/components/<Area>/` | React UI per tab: Home, Activities, Exercises, Workouts, BodyMetrics, Settings, Report |

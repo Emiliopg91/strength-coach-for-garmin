@@ -6,7 +6,6 @@ mod dto;
 mod fit;
 mod logic;
 mod mtp;
-mod rclone;
 mod udev;
 mod utils;
 
@@ -65,7 +64,6 @@ use crate::{
             save_exercise_notes, set_exercise_progression, set_exercise_progression_parameters,
             set_exercise_unilateral,
         },
-        export::commands::{export_database, is_cloud_upload_available, upload_to_cloud},
         prompts::{
             commands::answer_prompt,
             helpers::requests::{AppPrompter, Prompts},
@@ -369,10 +367,6 @@ pub fn run(log_level: LevelFilter) {
             get_body_measures,
             add_body_measures,
             delete_body_metric,
-            //Export
-            export_database,
-            is_cloud_upload_available,
-            upload_to_cloud,
             //Report
             report_ready,
             load_report,
