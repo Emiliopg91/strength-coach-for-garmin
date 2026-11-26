@@ -1,12 +1,17 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, path::PathBuf};
 
+use rusqlite_orm::database::DatabasePool;
 use strength_coach_for_garmin_macros::traced_command;
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Manager, State};
 
 use crate::{
-    SettingsLock,
+    ConnectLock, MtpLock, SettingsLock,
     dto::activities::{ActivityDetails, ActivityListItem, ActivityStepsUpdate, MuscleSets},
-    logic::activities,
+    logic::{
+        activities, settings_language,
+        ui::{ask_open_paths, ask_save_path, event_sink},
+    },
+    utils::translations::translate,
 };
 
 // Tauri commands: thin entry points over the logic of each module, which is what tests call
@@ -16,11 +21,11 @@ use crate::{
 #[traced_command]
 #[tauri::command]
 pub async fn get_activities(
-    app: AppHandle,
+    pool: State<'_, DatabasePool>,
     settings: State<'_, SettingsLock>,
     limit: Option<i32>,
 ) -> Result<Vec<ActivityListItem>, String> {
-    activities::get_activities(&app, &settings, limit).await
+    activities::get_activities(&pool, &settings, limit).await
 }
 
 /// Full details of the activity at `timestamp`: sets, laps, heart rate, GPS, speeds and device. If
@@ -29,11 +34,12 @@ pub async fn get_activities(
 #[traced_command]
 #[tauri::command]
 pub async fn get_activity_details(
-    app: AppHandle,
+    pool: State<'_, DatabasePool>,
     settings: State<'_, SettingsLock>,
+    connect: State<'_, ConnectLock>,
     timestamp: u32,
 ) -> Result<ActivityDetails, String> {
-    activities::get_activity_details(&app, &settings, timestamp).await
+    activities::get_activity_details(&pool, &settings, &connect, timestamp).await
 }
 
 /// Asks where to save the activity at `timestamp` as a FIT file (defaulting to `<date> <name>.fit`
@@ -44,10 +50,16 @@ pub async fn get_activity_details(
 #[tauri::command]
 pub async fn download_activity(
     app: AppHandle,
+    pool: State<'_, DatabasePool>,
     settings: State<'_, SettingsLock>,
     timestamp: u32,
 ) -> Result<(), String> {
-    activities::download_activity(&app, &settings, timestamp).await
+    let default_file = activities::default_activity_file(&pool, timestamp).await;
+    let title = translate("select_file_save_fit", settings_language(&settings));
+    let Some(file) = ask_save_path(&app, &default_file, "FIT", "fit", &title).await? else {
+        return Ok(());
+    };
+    activities::download_activity(&pool, &settings, timestamp, &file).await
 }
 
 /// Stores the edited notes and sets (reps, weight, exercise) of an activity and recomputes the
@@ -58,10 +70,14 @@ pub async fn download_activity(
 #[tauri::command]
 pub async fn save_activity_changes(
     app: AppHandle,
+    pool: State<'_, DatabasePool>,
     settings: State<'_, SettingsLock>,
+    connect: State<'_, ConnectLock>,
+    mtp: State<'_, MtpLock>,
     details: ActivityStepsUpdate,
 ) -> Result<(), String> {
-    activities::save_activity_changes(&app, &settings, details).await
+    let events = event_sink(&app);
+    activities::save_activity_changes(&pool, &settings, &connect, &mtp, &events, details).await
 }
 
 /// Asks for `.fit` files and imports them as activities. Notifies the result (files that failed to
@@ -73,17 +89,42 @@ pub async fn save_activity_changes(
 #[tauri::command]
 pub async fn import_from_files(
     app: AppHandle,
+    pool: State<'_, DatabasePool>,
     settings: State<'_, SettingsLock>,
+    connect: State<'_, ConnectLock>,
+    mtp: State<'_, MtpLock>,
 ) -> Result<usize, String> {
-    activities::import_from_files(&app, &settings).await
+    let title = translate("select_files_import", settings_language(&settings));
+    let files = ask_open_paths(&app, "FIT", "fit", &title).await?;
+    let events = event_sink(&app);
+    activities::import_from_files(&pool, &settings, &connect, &mtp, &events, files).await
+}
+
+/// Imports the `.fit` files dropped on the main window. Not a command: the window event handler
+/// calls it.
+pub(crate) async fn import_dropped_files(
+    app: &AppHandle,
+    files: Vec<PathBuf>,
+) -> Result<usize, String> {
+    activities::import_from_files(
+        &app.state::<DatabasePool>(),
+        &app.state::<SettingsLock>(),
+        &app.state::<ConnectLock>(),
+        &app.state::<MtpLock>(),
+        &event_sink(app),
+        files,
+    )
+    .await
 }
 
 /// Activity of the last 12 months as a 12x31 grid indexed by month and day (0-based): each cell
 /// holds the summed training load and number of records of that day.
 #[traced_command]
 #[tauri::command]
-pub async fn get_heatmap_data(app: AppHandle) -> Result<Vec<Vec<(f32, u16)>>, String> {
-    activities::get_heatmap_data(&app).await
+pub async fn get_heatmap_data(
+    pool: State<'_, DatabasePool>,
+) -> Result<Vec<Vec<(f32, u16)>>, String> {
+    activities::get_heatmap_data(&pool).await
 }
 
 /// Exercise sets performed in activities from `since` (Unix seconds) on, added up by muscle name:
@@ -92,8 +133,8 @@ pub async fn get_heatmap_data(app: AppHandle) -> Result<Vec<Vec<(f32, u16)>>, St
 #[traced_command]
 #[tauri::command]
 pub async fn get_muscle_sets(
-    app: AppHandle,
+    pool: State<'_, DatabasePool>,
     since: u32,
 ) -> Result<BTreeMap<String, MuscleSets>, String> {
-    activities::get_muscle_sets(&app, since).await
+    activities::get_muscle_sets(&pool, since).await
 }

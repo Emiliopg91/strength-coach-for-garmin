@@ -3,12 +3,12 @@ pub mod helpers;
 
 use std::collections::{HashMap, HashSet};
 
-use tauri::{AppHandle, Emitter, Runtime, WebviewWindow};
+use rusqlite_orm::database::DatabasePool;
 use tauri_plugin_log::log::info;
 
 use crate::utils::weight::to_kg;
 use crate::{
-    SettingsLock,
+    ConnectLock, MtpLock, SettingsLock,
     dao::{
         exercise::Exercise,
         workout::Workout,
@@ -21,15 +21,22 @@ use crate::{
         workouts::{PercentLoadBase, WorkoutDetails, WorkoutListItem, WorkoutPlanListItem},
     },
     logic::{
-        connect::helpers::{delete_plan_from_connect, push_plan_to_connect},
+        connect::helpers::plans::{delete_plan_from_connect, push_plan_to_connect},
         devices::helpers::{
-            delete_pending_from_connected, push_pending_to_usb,
-            send_enabled_workout_to_connect_devices, send_schedule_to_connected,
+            queue::{
+                delete_pending_from_connected, push_pending_to_usb,
+                send_enabled_workout_to_connect_devices,
+            },
+            schedule::send_schedule_to_connected,
         },
-        exercises::helpers::progression_suggestions,
+        events::{BackendEvent, EventSink},
+        exercises::helpers::progressions::progression_suggestions,
         notifications::show_notification,
-        open_window, pool, print_to_pdf, report_error, settings_language,
-        workouts::helpers::{spawn_workout_sync, workout_details, workout_list},
+        report_error, settings_language,
+        workouts::helpers::{
+            queries::{workout_details, workout_list},
+            sync::spawn_workout_sync,
+        },
     },
     utils::{
         time::{now, today_local_midnight},
@@ -38,13 +45,12 @@ use crate::{
 };
 
 /// Returns activities grouped/aggregated by workout name (count, average time, latest date), sorted by name.
-pub async fn get_workout_list<R: Runtime>(
-    app: &AppHandle<R>,
+pub async fn get_workout_list(
+    pool: &DatabasePool,
     settings: &SettingsLock,
 ) -> Result<Vec<WorkoutListItem>, String> {
     info!("Getting workouts list...");
-    pool(app)
-        .run_in_connection(async move |conn| Ok(workout_list(conn).await?))
+    pool.run_in_connection(async move |conn| Ok(workout_list(conn).await?))
         .await
         .inspect(|l| info!("Retreived {} workouts", l.len()))
         .map_err(|e| {
@@ -58,13 +64,12 @@ pub async fn get_workout_list<R: Runtime>(
 }
 
 /// Returns the workout `id` with every activity following it and its per-activity volume.
-pub async fn get_workout_details<R: Runtime>(
-    app: &AppHandle<R>,
+pub async fn get_workout_details(
+    pool: &DatabasePool,
     settings: &SettingsLock,
     id: u16,
 ) -> Result<WorkoutDetails, String> {
-    pool(app)
-        .run_in_connection(async move |conn| Ok(workout_details(conn, id).await?))
+    pool.run_in_connection(async move |conn| Ok(workout_details(conn, id).await?))
         .await
         .inspect(|l| info!("Found details for workout {}", l.name))
         .map_err(|e| {
@@ -77,35 +82,43 @@ pub async fn get_workout_details<R: Runtime>(
         })
 }
 
-pub async fn set_workout_status<R: Runtime>(
-    app: &AppHandle<R>,
+/// Enables or disables `workout`, then delivers the queued workouts to the plugged in devices
+/// (and an enabled one to the Connect devices waiting for it) or deletes the disabled ones.
+pub async fn set_workout_status(
+    pool: &DatabasePool,
+    settings: &SettingsLock,
+    connect: &ConnectLock,
+    mtp: &MtpLock,
     workout: u16,
     status: bool,
 ) -> Result<(), String> {
-    let res = pool(app)
+    let res = pool
         .run_in_transaction(async move |tx| Ok(Workout::set_enabled(tx, workout, status).await?))
         .await
         .map_err(|e| e.to_string());
 
     if res.is_ok() {
         if status {
-            push_pending_to_usb(app).await;
-            send_enabled_workout_to_connect_devices(app, workout).await;
+            push_pending_to_usb(pool, settings, mtp).await;
+            send_enabled_workout_to_connect_devices(pool, settings, connect, workout).await;
         } else {
-            delete_pending_from_connected(app).await;
+            delete_pending_from_connected(pool, settings, mtp).await;
         }
     }
 
     res
 }
 
-pub async fn set_workout_progression<R: Runtime>(
-    app: &AppHandle<R>,
+pub async fn set_workout_progression(
+    pool: &DatabasePool,
     settings: &SettingsLock,
+    connect: &ConnectLock,
+    mtp: &MtpLock,
+    events: &EventSink,
     workout: u16,
     value: bool,
 ) -> Result<(), String> {
-    let res = pool(app)
+    let res = pool
         .run_in_transaction(async move |tx| {
             Workout::set_progression(tx, workout, value).await?;
             // Committed with the change, so the upload is retried if the background one never runs
@@ -117,11 +130,9 @@ pub async fn set_workout_progression<R: Runtime>(
     match res {
         Ok(any_progression) => {
             info!("Updated progression flag for workout {workout}");
-            // Typed binding: the TypeScript generator reads the payload type from it
-            let payload: bool = any_progression;
-            let _ = app.emit("progressions_available", payload);
+            events.emit(BackendEvent::ProgressionsAvailable(any_progression));
             // The inherited exercise notes change with the flag
-            spawn_workout_sync(app, vec![workout], true);
+            spawn_workout_sync(pool, settings, connect, mtp, vec![workout], true);
             Ok(())
         }
         Err(e) => Err(report_error(
@@ -133,9 +144,11 @@ pub async fn set_workout_progression<R: Runtime>(
     }
 }
 
-pub async fn save_workout<R: Runtime>(
-    app: &AppHandle<R>,
+pub async fn save_workout(
+    pool: &DatabasePool,
     settings: &SettingsLock,
+    connect: &ConnectLock,
+    mtp: &MtpLock,
     edit: bool,
     workout: Workout,
 ) -> Result<(), String> {
@@ -144,7 +157,7 @@ pub async fn save_workout<R: Runtime>(
 
     // Names are unique: a clear message instead of the constraint error
     let lookup = name.clone();
-    let owner = pool(app)
+    let owner = pool
         .run_in_connection(async move |conn| Ok(Workout::get_id(conn, &lookup).await?))
         .await
         .map_err(|e| {
@@ -164,7 +177,7 @@ pub async fn save_workout<R: Runtime>(
         ));
     }
 
-    let res = pool(app)
+    let res = pool
         .run_in_transaction(async move |tx| {
             let id = Workout::store(tx, &workout, edit).await?;
             // Percentage loads are resolved here: whatever weight the step came with is replaced
@@ -194,7 +207,7 @@ pub async fn save_workout<R: Runtime>(
                 kind: NotificationKind::Temporal,
             });
             let push_usb = edit || workouts.len() > 1;
-            spawn_workout_sync(app, workouts, push_usb);
+            spawn_workout_sync(pool, settings, connect, mtp, workouts, push_usb);
             Ok(())
         }
         Err(e) => Err(report_error(
@@ -207,57 +220,42 @@ pub async fn save_workout<R: Runtime>(
 }
 
 /// Current estimated 1RM and weight increment of every exercise with recent loaded sets.
-pub async fn get_percent_load_bases<R: Runtime>(
-    app: &AppHandle<R>,
+pub async fn get_percent_load_bases(
+    pool: &DatabasePool,
     settings: &SettingsLock,
 ) -> Result<Vec<PercentLoadBase>, String> {
-    pool(app)
-        .run_in_connection(async move |conn| {
-            let exercises: HashMap<(u16, u16), Exercise> = Exercise::get_all(conn)
-                .await?
-                .into_iter()
-                .map(|e| ((e.category, e.id), e))
-                .collect();
-            let one_rms = current_one_rms(conn, None, &exercises, now()).await?;
-            Ok(one_rms
-                .into_iter()
-                .map(|((ex_cat, ex_id), one_rm)| PercentLoadBase {
-                    ex_cat,
-                    ex_id,
-                    one_rm,
-                    increment: exercises
-                        .get(&(ex_cat, ex_id))
-                        .map_or(0.0, |e| to_kg(e.weight)),
-                })
-                .collect())
-        })
-        .await
-        .map_err(|e| {
-            report_error(
-                e,
-                settings,
-                "error_workout_details",
-                "Error getting the current 1RM estimates",
-            )
-        })
+    pool.run_in_connection(async move |conn| {
+        let exercises: HashMap<(u16, u16), Exercise> = Exercise::get_all(conn)
+            .await?
+            .into_iter()
+            .map(|e| ((e.category, e.id), e))
+            .collect();
+        let one_rms = current_one_rms(conn, None, &exercises, now()).await?;
+        Ok(one_rms
+            .into_iter()
+            .map(|((ex_cat, ex_id), one_rm)| PercentLoadBase {
+                ex_cat,
+                ex_id,
+                one_rm,
+                increment: exercises
+                    .get(&(ex_cat, ex_id))
+                    .map_or(0.0, |e| to_kg(e.weight)),
+            })
+            .collect())
+    })
+    .await
+    .map_err(|e| {
+        report_error(
+            e,
+            settings,
+            "error_workout_details",
+            "Error getting the current 1RM estimates",
+        )
+    })
 }
 
-pub async fn load_workout_page<R: Runtime>(app: &AppHandle<R>, workout: u16) -> Result<(), String> {
-    open_window(app, "workout", Some(&format!("workout={workout}")))
-        .map(|_| ())
-        .map_err(|e| e.to_string())
-}
-
-/// Called by the workout window once everything is rendered and painted: prints it to PDF.
-pub async fn workout_print_ready(window: WebviewWindow, workout: &str) -> Result<(), String> {
-    info!("Workout ready, printing");
-    print_to_pdf(window, workout).await
-}
-
-pub async fn get_planned_workouts<R: Runtime>(
-    app: &AppHandle<R>,
-) -> Result<Vec<WorkoutPlanListItem>, String> {
-    Ok(pool(app)
+pub async fn get_planned_workouts(pool: &DatabasePool) -> Result<Vec<WorkoutPlanListItem>, String> {
+    Ok(pool
         .run_in_connection(async |conn| Ok(WorkoutPlanning::get_all(conn).await?))
         .await
         .unwrap_or_default()
@@ -266,12 +264,17 @@ pub async fn get_planned_workouts<R: Runtime>(
         .collect())
 }
 
-pub async fn remove_planned_workout<R: Runtime>(
-    app: &AppHandle<R>,
+/// Deletes a future plan not done yet, then in the background sends the new schedule to the
+/// plugged in devices and removes the plan from Connect.
+pub async fn remove_planned_workout(
+    pool: &DatabasePool,
+    settings: &SettingsLock,
+    connect: &ConnectLock,
+    mtp: &MtpLock,
     date: u32,
     workout: u16,
 ) -> Result<(), String> {
-    let res = pool(app)
+    let res = pool
         .run_in_connection(async move |conn| {
             let entry = WorkoutPlanning::get(conn, date, workout).await?.unwrap();
             // Kept as the record of what was planned: the UI offers no delete for these either
@@ -288,23 +291,29 @@ pub async fn remove_planned_workout<R: Runtime>(
 
     let connect_id = res?;
 
-    let app = app.clone();
+    let (pool, settings, connect, mtp) =
+        (pool.clone(), settings.clone(), connect.clone(), mtp.clone());
     tauri::async_runtime::spawn(async move {
-        send_schedule_to_connected(&app).await;
+        send_schedule_to_connected(&pool, &settings, &mtp).await;
         if let Some(id) = connect_id {
-            delete_plan_from_connect(&app, id.parse().unwrap()).await;
+            delete_plan_from_connect(&settings, &connect, id.parse().unwrap()).await;
         }
     });
 
     Ok(())
 }
 
-pub async fn add_planned_workout<R: Runtime>(
-    app: &AppHandle<R>,
+/// Plans `workout` on `date`, then in the background pushes the plan to Connect and sends the new
+/// schedule to the plugged in devices.
+pub async fn add_planned_workout(
+    pool: &DatabasePool,
+    settings: &SettingsLock,
+    connect: &ConnectLock,
+    mtp: &MtpLock,
     date: u32,
     workout: u16,
 ) -> Result<(), String> {
-    let res = pool(app)
+    let res = pool
         .run_in_connection(async move |conn| {
             WorkoutPlanning::insert(conn, date, workout).await?;
             Ok(())
@@ -313,12 +322,13 @@ pub async fn add_planned_workout<R: Runtime>(
         .map_err(|e| e.to_string());
 
     if res.is_ok() {
-        let app = app.clone();
+        let (pool, settings, connect, mtp) =
+            (pool.clone(), settings.clone(), connect.clone(), mtp.clone());
         tauri::async_runtime::spawn(async move {
             // Pushing it first can upload the workout, which gives it the Connect creation time
             // the schedule needs
-            push_plan_to_connect(&app, date, workout).await;
-            send_schedule_to_connected(&app).await;
+            push_plan_to_connect(&pool, &settings, &connect, date, workout).await;
+            send_schedule_to_connected(&pool, &settings, &mtp).await;
         });
     }
 
@@ -326,13 +336,12 @@ pub async fn add_planned_workout<R: Runtime>(
 }
 
 pub async fn get_next_planned_workout(
-    app: &AppHandle,
+    pool: &DatabasePool,
 ) -> Result<Option<WorkoutPlanListItem>, String> {
-    pool(app)
-        .run_in_connection(async |conn| {
-            Ok(WorkoutPlanning::get_next(conn, today_local_midnight()).await?)
-        })
-        .await
-        .map_err(|e| e.to_string())
-        .map(|w| w.map(|w| WorkoutPlanListItem::from(&w)))
+    pool.run_in_connection(async |conn| {
+        Ok(WorkoutPlanning::get_next(conn, today_local_midnight()).await?)
+    })
+    .await
+    .map_err(|e| e.to_string())
+    .map(|w| w.map(|w| WorkoutPlanListItem::from(&w)))
 }

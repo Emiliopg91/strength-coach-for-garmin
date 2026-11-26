@@ -1,11 +1,9 @@
 use std::collections::HashMap;
 
 use rusqlite_orm::rusqlite::Connection;
-use tauri::{AppHandle, Manager, Runtime};
 use tauri_plugin_log::log::info;
 
 use crate::{
-    ConnectLock, SettingsLock,
     dao::{
         activity::Activity, activity_step::ActivityStep, exercise::Exercise, workout::Workout,
         workout_step::WorkoutStep,
@@ -14,32 +12,7 @@ use crate::{
         split_muscles,
         workouts::{WorkoutActivity, WorkoutDetails, WorkoutListItem},
     },
-    logic::{connect::helpers::sync_workouts_connect, devices::helpers::push_pending_to_usb},
 };
-
-/// Uploads the just modified `workouts` to Connect in the background (they stay pending of upload
-/// without a logged user) and, with `push_usb`, then pushes the queues of the USB devices plugged
-/// in. In the background so the caller doesn't wait on the network, and because some callers hold
-/// the Connect or device lock.
-pub(crate) fn spawn_workout_sync<R: Runtime>(
-    app: &AppHandle<R>,
-    workouts: Vec<u16>,
-    push_usb: bool,
-) {
-    if workouts.is_empty() {
-        return;
-    }
-    let app = app.clone();
-    tauri::async_runtime::spawn(async move {
-        info!("Syncing {} modified workouts", workouts.len());
-        let connect = app.state::<ConnectLock>();
-        let settings = app.state::<SettingsLock>();
-        sync_workouts_connect(&app, &connect, &settings, &workouts).await;
-        if push_usb {
-            push_pending_to_usb(&app).await;
-        }
-    });
-}
 
 /// Activity stats of a workout, accumulated over its activities.
 #[derive(Default)]
@@ -51,7 +24,7 @@ struct WorkoutStats {
 }
 
 /// Every workout with its activity stats (count, average time and load, latest date), by name.
-pub(super) async fn workout_list(
+pub(in crate::logic::workouts) async fn workout_list(
     conn: &Connection,
 ) -> rusqlite_orm::errors::Result<Vec<WorkoutListItem>> {
     let workouts = Workout::get_all(conn).await?;
@@ -101,7 +74,7 @@ pub(super) async fn workout_list(
 }
 
 /// The workout with its steps, worked muscles and every activity with its volume.
-pub(super) async fn workout_details(
+pub(in crate::logic::workouts) async fn workout_details(
     conn: &Connection,
     id: u16,
 ) -> rusqlite_orm::errors::Result<WorkoutDetails> {

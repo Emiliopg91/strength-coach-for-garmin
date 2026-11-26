@@ -16,7 +16,7 @@ fit together and the conventions the code follows.
 
 | Path | What lives there |
 |---|---|
-| `src-tauri/src/logic/<domain>/` | Backend features. `commands.rs` holds thin `#[traced_command] #[tauri::command]` wrappers; `mod.rs` holds the real logic; `helpers.rs` the shared pieces. Domains: app, body_metrics, connect, devices, exercises, export, prompts, report, activities, workouts |
+| `src-tauri/src/logic/<domain>/` | Backend features. `commands.rs` holds thin `#[traced_command] #[tauri::command]` wrappers; `mod.rs` holds the logic each command calls; everything else lives in `helpers/`, one file per topic (e.g. `activities/helpers/{import,queries,geolocation,edit}.rs`, `devices/helpers/{watcher,queue,transfer,schedule}.rs`). Helper items the domain's `mod.rs` uses are `pub(in crate::logic::<domain>)`; `pub(super)` keeps one within `helpers/`. Domains: app, body_metrics, connect, devices, exercises, export, prompts, report, activities, workouts |
 | `src-tauri/src/dao/` | One file per table: rusqlite_orm entities + repository queries |
 | `src-tauri/src/dto/` | Types that cross the IPC boundary (serde) |
 | `src-tauri/src/fit/` | FIT parser and writer (activities in, workouts/schedules out) |
@@ -42,15 +42,24 @@ Extra entry points: `workout.html`/`src/workout.tsx` (printable workout) and
 2. **DAO** — extend the entity/repository in `dao/`. Use the rusqlite_orm query builder only, no
    raw SQL strings. If the builder can't express a query, the fix belongs in the ORM (the
    maintainer has a local copy at `rusqlite_orm/`, gitignored; the crate is used from crates.io).
-3. **Logic** — implement in `logic/<domain>/mod.rs`. Run DB work through
-   `pool(app).run_in_connection(...)` / `run_in_transaction(...)`. On errors, use
+3. **Logic** — implement in `logic/<domain>/mod.rs`. The logic never sees Tauri: no `AppHandle`,
+   `State`, windows or dialogs. It takes the state it uses as plain parameters (`&DatabasePool`,
+   `&SettingsLock`, `&ConnectLock`, `&MtpLock`, `&Prompts`) and clones them (cheap `Arc`s) into the
+   background tasks it spawns. Run DB work through `pool.run_in_connection(...)` /
+   `run_in_transaction(...)`. On errors, use
    `report_error(e, settings, "<translation_key>", "<log message>")`: it shows a localized
    notification and returns the message the frontend promise rejects with.
 4. **Command** — add the thin wrapper in `commands.rs` with a doc comment (it ends up in the
-   generated TS), then register it in `tauri::generate_handler![...]` in `lib.rs`.
-5. **Events** (backend → frontend) — `app.emit("event_name", payload)`. The payload must first be
-   bound to a typed local (`let payload: T = ...; app.emit("x", payload)`), because the TS
-   generator reads the type from that binding and panics otherwise.
+   generated TS), then register it in `tauri::generate_handler![...]` in `lib.rs`. The command
+   extracts the `State`s and passes them down; anything needing the `AppHandle` (file dialogs,
+   opening/printing windows, autostart, `app.exit`) is done here, using the helpers in
+   `logic/ui.rs`, and the logic gets the result (a path) or a callback.
+5. **Events** (backend → frontend) — the logic gets an `&EventSink` (`logic/events.rs`) and calls
+   `events.emit(BackendEvent::X(payload))`; the command builds it with `ui::event_sink(&app)`. A
+   new event is a new `BackendEvent` variant plus its arm in `event_sink`, the only place calling
+   `app.emit`: there the payload is bound to a typed local
+   (`let payload: T = ...; app.emit("x", payload)`), because the TS generator reads the type from
+   that binding and panics otherwise. Tests build an `EventSink` that records the events.
 6. **Regenerate TS bindings** — they're written when the debug binary starts (`make run`, or
    any debug run of `strength-coach-for-garmin` without `IN_DEBUG` set). Commit the regenerated
    `src/utils/backend/*.ts` with the change. Diffs that only move `// From file:line` comments are

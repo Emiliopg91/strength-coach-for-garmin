@@ -1,11 +1,16 @@
+use rusqlite_orm::database::DatabasePool;
 use strength_coach_for_garmin_macros::traced_command;
 use tauri::{AppHandle, State, WebviewWindow};
+use tauri_plugin_log::log::info;
 
 use crate::{
-    SettingsLock,
+    ConnectLock, MtpLock, SettingsLock,
     dao::workout::Workout,
     dto::workouts::{PercentLoadBase, WorkoutDetails, WorkoutListItem, WorkoutPlanListItem},
-    logic::workouts,
+    logic::{
+        ui::{event_sink, open_window, print_to_pdf},
+        workouts,
+    },
 };
 
 /// Every workout with its activity stats (count, average time and load, latest date), by name. On
@@ -13,10 +18,10 @@ use crate::{
 #[traced_command]
 #[tauri::command]
 pub async fn get_workout_list(
-    app: AppHandle,
+    pool: State<'_, DatabasePool>,
     settings: State<'_, SettingsLock>,
 ) -> Result<Vec<WorkoutListItem>, String> {
-    workouts::get_workout_list(&app, &settings).await
+    workouts::get_workout_list(&pool, &settings).await
 }
 
 /// The workout `id` with its steps, worked muscles and every activity with its volume. On failure,
@@ -24,19 +29,26 @@ pub async fn get_workout_list(
 #[traced_command]
 #[tauri::command]
 pub async fn get_workout_details(
-    app: AppHandle,
+    pool: State<'_, DatabasePool>,
     settings: State<'_, SettingsLock>,
     id: u16,
 ) -> Result<WorkoutDetails, String> {
-    workouts::get_workout_details(&app, &settings, id).await
+    workouts::get_workout_details(&pool, &settings, id).await
 }
 
 /// Enables or disables `workout`. Enabling pushes it to the connected USB devices and the Connect
 /// devices that have it; disabling removes it from the connected USB devices.
 #[traced_command]
 #[tauri::command]
-pub async fn set_workout_status(app: AppHandle, workout: u16, status: bool) -> Result<(), String> {
-    workouts::set_workout_status(&app, workout, status).await
+pub async fn set_workout_status(
+    pool: State<'_, DatabasePool>,
+    settings: State<'_, SettingsLock>,
+    connect: State<'_, ConnectLock>,
+    mtp: State<'_, MtpLock>,
+    workout: u16,
+    status: bool,
+) -> Result<(), String> {
+    workouts::set_workout_status(&pool, &settings, &connect, &mtp, workout, status).await
 }
 
 /// Enables or disables progression for `workout`: suggestions for its exercises and the exercise
@@ -47,11 +59,16 @@ pub async fn set_workout_status(app: AppHandle, workout: u16, status: bool) -> R
 #[tauri::command]
 pub async fn set_workout_progression(
     app: AppHandle,
+    pool: State<'_, DatabasePool>,
     settings: State<'_, SettingsLock>,
+    connect: State<'_, ConnectLock>,
+    mtp: State<'_, MtpLock>,
     workout: u16,
     value: bool,
 ) -> Result<(), String> {
-    workouts::set_workout_progression(&app, &settings, workout, value).await
+    let events = event_sink(&app);
+    workouts::set_workout_progression(&pool, &settings, &connect, &mtp, &events, workout, value)
+        .await
 }
 
 /// Creates `workout`, or replaces the name, notes and steps of the existing one with its id when
@@ -62,12 +79,14 @@ pub async fn set_workout_progression(
 #[traced_command]
 #[tauri::command]
 pub async fn save_workout(
-    app: AppHandle,
+    pool: State<'_, DatabasePool>,
     settings: State<'_, SettingsLock>,
+    connect: State<'_, ConnectLock>,
+    mtp: State<'_, MtpLock>,
     edit: bool,
     workout: Workout,
 ) -> Result<(), String> {
-    workouts::save_workout(&app, &settings, edit, workout).await
+    workouts::save_workout(&pool, &settings, &connect, &mtp, edit, workout).await
 }
 
 /// Opens the hidden workout window for `workout`. It prints itself to PDF once it calls
@@ -75,7 +94,9 @@ pub async fn save_workout(
 #[traced_command]
 #[tauri::command]
 pub async fn load_workout_page(app: AppHandle, workout: u16) -> Result<(), String> {
-    workouts::load_workout_page(&app, workout).await
+    open_window(&app, "workout", Some(&format!("workout={workout}")))
+        .map(|_| ())
+        .map_err(|e| e.to_string())
 }
 
 /// Called by the workout window once rendered: asks where to save the PDF (defaulting to
@@ -84,7 +105,8 @@ pub async fn load_workout_page(app: AppHandle, workout: u16) -> Result<(), Strin
 #[traced_command]
 #[tauri::command]
 pub async fn workout_print_ready(window: WebviewWindow, workout: &str) -> Result<(), String> {
-    workouts::workout_print_ready(window, workout).await
+    info!("Workout ready, printing");
+    print_to_pdf(window, workout).await
 }
 
 /// Current estimated 1RM (best of the last weeks) and weight increment of every exercise with
@@ -93,38 +115,54 @@ pub async fn workout_print_ready(window: WebviewWindow, workout: &str) -> Result
 #[traced_command]
 #[tauri::command]
 pub async fn get_percent_load_bases(
-    app: AppHandle,
+    pool: State<'_, DatabasePool>,
     settings: State<'_, SettingsLock>,
 ) -> Result<Vec<PercentLoadBase>, String> {
-    workouts::get_percent_load_bases(&app, &settings).await
+    workouts::get_percent_load_bases(&pool, &settings).await
 }
 
 /// List planned workouts.
 #[traced_command]
 #[tauri::command]
-pub async fn get_planned_workouts(app: AppHandle) -> Result<Vec<WorkoutPlanListItem>, String> {
-    workouts::get_planned_workouts(&app).await
+pub async fn get_planned_workouts(
+    pool: State<'_, DatabasePool>,
+) -> Result<Vec<WorkoutPlanListItem>, String> {
+    workouts::get_planned_workouts(&pool).await
 }
 
 /// Delete planned workout.
 #[traced_command]
 #[tauri::command]
-pub async fn delete_planned_workout(app: AppHandle, date: u32, workout: u16) -> Result<(), String> {
-    workouts::remove_planned_workout(&app, date, workout).await
+pub async fn delete_planned_workout(
+    pool: State<'_, DatabasePool>,
+    settings: State<'_, SettingsLock>,
+    connect: State<'_, ConnectLock>,
+    mtp: State<'_, MtpLock>,
+    date: u32,
+    workout: u16,
+) -> Result<(), String> {
+    workouts::remove_planned_workout(&pool, &settings, &connect, &mtp, date, workout).await
 }
 
 /// Add planned workout.
 #[traced_command]
 #[tauri::command]
-pub async fn add_planned_workout(app: AppHandle, date: u32, workout: u16) -> Result<(), String> {
-    workouts::add_planned_workout(&app, date, workout).await
+pub async fn add_planned_workout(
+    pool: State<'_, DatabasePool>,
+    settings: State<'_, SettingsLock>,
+    connect: State<'_, ConnectLock>,
+    mtp: State<'_, MtpLock>,
+    date: u32,
+    workout: u16,
+) -> Result<(), String> {
+    workouts::add_planned_workout(&pool, &settings, &connect, &mtp, date, workout).await
 }
 
 /// get next planned workout.
 #[traced_command]
 #[tauri::command]
 pub async fn get_next_planned_workout(
-    app: AppHandle,
+    pool: State<'_, DatabasePool>,
 ) -> Result<Option<WorkoutPlanListItem>, String> {
-    workouts::get_next_planned_workout(&app).await
+    workouts::get_next_planned_workout(&pool).await
 }

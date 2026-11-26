@@ -1,7 +1,11 @@
+use rusqlite_orm::database::DatabasePool;
 use strength_coach_for_garmin_macros::traced_command;
 use tauri::{AppHandle, State};
 
-use crate::{ConnectLock, SettingsLock, logic::connect};
+use crate::{
+    ConnectLock, MtpLock, SettingsLock,
+    logic::{connect, ui::event_sink},
+};
 
 /// Downloads and imports the Connect activities of the last 15 days not stored yet. Files that fail
 /// to parse are kept as pending; new activities are geocoded in the background. Resolves to the
@@ -11,10 +15,13 @@ use crate::{ConnectLock, SettingsLock, logic::connect};
 #[tauri::command]
 pub async fn import_from_connect(
     app: AppHandle,
+    pool: State<'_, DatabasePool>,
     settings: State<'_, SettingsLock>,
     connect: State<'_, ConnectLock>,
+    mtp: State<'_, MtpLock>,
 ) -> Result<usize, String> {
-    connect::import_from_connect(&app, &settings, &connect).await
+    let events = event_sink(&app);
+    connect::import_from_connect(&pool, &settings, &connect, &mtp, &events).await
 }
 
 /// Imports the Connect weight entries logged since the newest stored measurement, skipping dates
@@ -23,11 +30,11 @@ pub async fn import_from_connect(
 #[traced_command]
 #[tauri::command]
 pub async fn import_weight_from_connect(
-    app: AppHandle,
+    pool: State<'_, DatabasePool>,
     settings: State<'_, SettingsLock>,
     connect: State<'_, ConnectLock>,
 ) -> Result<usize, String> {
-    connect::import_weight_from_connect(&app, &settings, &connect).await
+    connect::import_weight_from_connect(&pool, &settings, &connect).await
 }
 
 /// Name of the user logged into Connect, `null` if none.
@@ -46,9 +53,11 @@ pub async fn connect_logged_user(
 #[tauri::command]
 pub async fn connect_login(
     app: AppHandle,
+    pool: State<'_, DatabasePool>,
+    settings: State<'_, SettingsLock>,
     connect: State<'_, ConnectLock>,
 ) -> Result<Option<String>, String> {
-    connect::connect_login(&app, &connect).await
+    connect::connect_login(&pool, &settings, &connect, &event_sink(&app)).await
 }
 
 /// Logs out of Connect, discarding the stored session.
@@ -64,10 +73,11 @@ pub async fn connect_logout(connect: State<'_, ConnectLock>) -> Result<(), Strin
 #[traced_command]
 #[tauri::command]
 pub async fn send_to_connect(
-    app: AppHandle,
+    pool: State<'_, DatabasePool>,
     settings: State<'_, SettingsLock>,
+    connect: State<'_, ConnectLock>,
     workout: u16,
     serial: &str,
 ) -> Result<(), String> {
-    connect::send_to_connect(&app, &settings, workout, serial).await
+    connect::send_to_connect(&pool, &settings, &connect, workout, serial).await
 }

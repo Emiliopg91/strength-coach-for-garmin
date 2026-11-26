@@ -1,6 +1,6 @@
 pub mod commands;
 
-use tauri::{AppHandle, Runtime};
+use rusqlite_orm::database::DatabasePool;
 use tauri_plugin_log::log::info;
 
 use crate::{
@@ -10,47 +10,46 @@ use crate::{
         body_metrics::BodyMetricListItem,
         notifications::{NotificationDefinition, NotificationKind},
     },
-    logic::{notifications::show_notification, pool, report_error, settings_language},
+    logic::{notifications::show_notification, report_error, settings_language},
     utils::translations::translate,
 };
 
 /// Returns all logged body measurements, newest first.
-pub async fn get_body_measures<R: Runtime>(
-    app: &AppHandle<R>,
+pub async fn get_body_measures(
+    pool: &DatabasePool,
     settings: &SettingsLock,
 ) -> Result<Vec<BodyMetricListItem>, String> {
     info!("Getting body measures list...");
 
-    pool(app)
-        .run_in_connection(async move |conn| {
-            Ok(BodyMetric::get_by_range(conn, None)
-                .await?
-                .iter()
-                .map(BodyMetricListItem::from)
-                .collect::<Vec<_>>())
-        })
-        .await
-        .inspect(|res| info!("Retrieved {} measures", res.len()))
-        .map_err(|e| {
-            report_error(
-                e,
-                settings,
-                "error_body_measures_list",
-                "Error getting measures list",
-            )
-        })
+    pool.run_in_connection(async move |conn| {
+        Ok(BodyMetric::get_by_range(conn, None)
+            .await?
+            .iter()
+            .map(BodyMetricListItem::from)
+            .collect::<Vec<_>>())
+    })
+    .await
+    .inspect(|res| info!("Retrieved {} measures", res.len()))
+    .map_err(|e| {
+        report_error(
+            e,
+            settings,
+            "error_body_measures_list",
+            "Error getting measures list",
+        )
+    })
 }
 
 /// Inserts a new body measurement entry.
-pub async fn add_body_measures<R: Runtime>(
-    app: &AppHandle<R>,
+pub async fn add_body_measures(
+    pool: &DatabasePool,
     settings: &SettingsLock,
     measures: BodyMetricListItem,
 ) -> Result<(), String> {
     info!("Adding body measures list...");
 
     let res = BodyMetric::insert(
-        &pool(app),
+        pool,
         &mut BodyMetric::try_from(&measures).map_err(|e| e.to_string())?,
     )
     .await;
@@ -70,12 +69,12 @@ pub async fn add_body_measures<R: Runtime>(
 }
 
 /// Deletes the body measurement logged on `date`, if any.
-pub async fn delete_body_metric<R: Runtime>(
-    app: &AppHandle<R>,
+pub async fn delete_body_metric(
+    pool: &DatabasePool,
     settings: &SettingsLock,
     date: u32,
 ) -> Result<(), String> {
-    let res = BodyMetric::delete_on(&pool(app), date).await;
+    let res = BodyMetric::delete_on(pool, date).await;
 
     let lang = settings_language(settings);
     match res {

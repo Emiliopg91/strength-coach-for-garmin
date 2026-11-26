@@ -4,7 +4,8 @@ use crate::{
     dao::{activity::Activity, body_metric::BodyMetric},
     dto::{body_metrics::BodyMetricListItem, report::ReportData},
     logic::{
-        activities::helpers::fetch_activities_details, exercises::helpers::fetch_exercises_details,
+        activities::helpers::queries::fetch_activities_details,
+        exercises::helpers::queries::fetch_exercises_details,
     },
 };
 
@@ -14,7 +15,7 @@ const STRENGTH_SUB_SPORT: u8 = 20;
 
 /// Strength activities between `from` and `to`, with the history of every exercise trained in them
 /// and the body measurements of the period.
-pub(super) async fn report_data(
+pub(in crate::logic::report) async fn report_data(
     conn: &rusqlite_orm::rusqlite::Connection,
     from: u32,
     to: u32,

@@ -1,33 +1,37 @@
 pub mod commands;
 pub mod helpers;
 
-use rusqlite_orm::errors::DatabaseError;
-use tauri::{AppHandle, Runtime};
+use rusqlite_orm::{database::DatabasePool, errors::DatabaseError};
 use tauri_plugin_log::log::info;
 
 use crate::{
-    ConnectLock, SettingsLock,
+    ConnectLock, MtpLock, SettingsLock,
     connect::client::CalendarItemType,
     dao::{body_metric::BodyMetric, device::Device},
     logic::{
-        activities::helpers::{finish_activity_import, import_pending_activities},
+        activities::helpers::import::{finish_activity_import, import_pending_activities},
         connect::helpers::{
-            get_devices_from_connect, queue_workout_on_connect, up_to_date_connect,
+            device_sync::get_devices_from_connect,
+            workout_sync::{queue_workout_on_connect, up_to_date_connect},
         },
-        devices::helpers::{notify_workout_sent, set_workout_on_device, workout_name},
-        pool, report_error, settings_language,
+        devices::helpers::{
+            queue::{set_workout_on_device, workout_name},
+            transfer::notify_workout_sent,
+        },
+        events::EventSink,
+        report_error, settings_language,
     },
 };
 
-pub async fn import_from_connect<R: Runtime>(
-    app: &AppHandle<R>,
+pub async fn import_from_connect(
+    pool: &DatabasePool,
     settings: &SettingsLock,
     connect: &ConnectLock,
+    mtp: &MtpLock,
+    events: &EventSink,
 ) -> Result<usize, String> {
-    let lang = settings_language(settings);
-
     let res: Result<_, String> = async {
-        let (mut device, existing) = pool(app)
+        let (mut device, existing) = pool
             .run_in_connection(async |conn| Ok(Device::get_connect_import_state(conn).await?))
             .await
             .map_err(|e| e.to_string())?;
@@ -59,22 +63,22 @@ pub async fn import_from_connect<R: Runtime>(
 
         // The mark only follows what Connect has listed, so activities uploaded late are not
         // missed. Their places are looked up once finished, with the rest of activities pending it.
-        import_pending_activities(app, files, &mut device, lang, None)
+        import_pending_activities(pool, files, &mut device, None)
             .await
             .map_err(|e: DatabaseError| e.to_string())
     }
     .await;
 
-    finish_activity_import(app, res)
+    finish_activity_import(pool, settings, connect, mtp, events, res)
 }
 
-pub async fn import_weight_from_connect<R: Runtime>(
-    app: &AppHandle<R>,
+pub async fn import_weight_from_connect(
+    pool: &DatabasePool,
     settings: &SettingsLock,
     connect: &ConnectLock,
 ) -> Result<usize, String> {
     let res: Result<usize, String> = async {
-        let existing = pool(app)
+        let existing = pool
             .run_in_connection(async |conn| Ok(BodyMetric::get_dates(conn).await?))
             .await
             .map_err(|e| e.to_string())?;
@@ -89,12 +93,11 @@ pub async fn import_weight_from_connect<R: Runtime>(
         if entries.is_empty() {
             Ok(0_usize)
         } else {
-            pool(app)
-                .run_in_transaction(async move |tx| {
-                    Ok(BodyMetric::insert_new(tx, &mut entries, &existing).await?)
-                })
-                .await
-                .map_err(|e| e.to_string())
+            pool.run_in_transaction(async move |tx| {
+                Ok(BodyMetric::insert_new(tx, &mut entries, &existing).await?)
+            })
+            .await
+            .map_err(|e| e.to_string())
         }
     }
     .await;
@@ -121,9 +124,13 @@ pub async fn connect_logged_user(connect: &ConnectLock) -> Result<Option<String>
     Ok(connect.lock().await.logged_user())
 }
 
-pub async fn connect_login<R: Runtime>(
-    app: &AppHandle<R>,
+/// Logs into Connect through the frontend prompts; once logged in, syncs the Connect devices and
+/// retries the pending uploads. Returns the logged user, `None` if cancelled.
+pub async fn connect_login(
+    pool: &DatabasePool,
+    settings: &SettingsLock,
     connect: &ConnectLock,
+    events: &EventSink,
 ) -> Result<Option<String>, String> {
     let user = {
         let mut connect = connect.lock().await;
@@ -133,8 +140,8 @@ pub async fn connect_login<R: Runtime>(
 
     // Released the lock first: the discovery needs it
     if user.is_some() {
-        get_devices_from_connect(app).await;
-        up_to_date_connect(app).await;
+        get_devices_from_connect(pool, connect, events).await;
+        up_to_date_connect(pool, settings, connect).await;
     }
 
     Ok(user)
@@ -149,17 +156,18 @@ pub async fn connect_logout(connect: &ConnectLock) -> Result<(), String> {
         .map_err(|e| e.to_string())
 }
 
-pub async fn send_to_connect<R: Runtime>(
-    app: &AppHandle<R>,
+pub async fn send_to_connect(
+    pool: &DatabasePool,
     settings: &SettingsLock,
+    connect: &ConnectLock,
     id: u16,
     serial: &str,
 ) -> Result<(), String> {
     let res: Result<_, Box<dyn std::error::Error>> = async {
-        queue_workout_on_connect(app, id, serial).await?;
+        queue_workout_on_connect(pool, settings, connect, id, serial).await?;
 
         // Register the pair so later changes (e.g. progressions) get re-sent once plugged by USB
-        set_workout_on_device(app, id, serial, false)
+        set_workout_on_device(pool, id, serial, false)
             .await
             .map_err(|e| e.to_string())?;
 
@@ -173,7 +181,7 @@ pub async fn send_to_connect<R: Runtime>(
     let res = res.map_err(|e| e.to_string());
     match res {
         Ok(()) => {
-            notify_workout_sent(&workout_name(app, id).await, serial, lang);
+            notify_workout_sent(&workout_name(pool, id).await, serial, lang);
             Ok(())
         }
         Err(e) => Err(report_error(

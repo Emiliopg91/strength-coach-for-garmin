@@ -1,7 +1,7 @@
 use strength_coach_for_garmin_macros::traced_command;
 use tauri::State;
 
-use crate::logic::prompts::{self, helpers::Prompts};
+use crate::logic::prompts::{self, helpers::requests::Prompts};
 
 /// Answers the pending prompt `id`, sent by the `prompt_requested` event, with the values entered
 /// (in the order the prompt kind defines), or `null` if cancelled. Rejects if no such prompt is

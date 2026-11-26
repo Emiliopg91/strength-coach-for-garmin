@@ -7,7 +7,7 @@ use crate::{
         exercise_category::ExerciseCategoryRepository,
         workout_step::WorkoutStepRepository,
     },
-    logic::exercises::helpers::exercises_catalog,
+    logic::exercises::helpers::queries::exercises_catalog,
     schema_ddls,
     tests::{common, schema::insert_legacy_activity},
 };

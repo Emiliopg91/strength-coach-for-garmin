@@ -1,5 +1,6 @@
+use rusqlite_orm::database::DatabasePool;
 use strength_coach_for_garmin_macros::traced_command;
-use tauri::{AppHandle, State};
+use tauri::State;
 
 use crate::{SettingsLock, dto::body_metrics::BodyMetricListItem, logic::body_metrics};
 
@@ -8,10 +9,10 @@ use crate::{SettingsLock, dto::body_metrics::BodyMetricListItem, logic::body_met
 #[traced_command]
 #[tauri::command]
 pub async fn get_body_measures(
-    app: AppHandle,
+    pool: State<'_, DatabasePool>,
     settings: State<'_, SettingsLock>,
 ) -> Result<Vec<BodyMetricListItem>, String> {
-    body_metrics::get_body_measures(&app, &settings).await
+    body_metrics::get_body_measures(&pool, &settings).await
 }
 
 /// Stores a new body measurement entry. On failure, shows a persistent error notification and
@@ -19,11 +20,11 @@ pub async fn get_body_measures(
 #[traced_command]
 #[tauri::command]
 pub async fn add_body_measures(
-    app: AppHandle,
+    pool: State<'_, DatabasePool>,
     settings: State<'_, SettingsLock>,
     measures: BodyMetricListItem,
 ) -> Result<(), String> {
-    body_metrics::add_body_measures(&app, &settings, measures).await
+    body_metrics::add_body_measures(&pool, &settings, measures).await
 }
 
 /// Deletes the body measurement logged at `date` (Unix seconds), notifying on success. On failure,
@@ -31,9 +32,9 @@ pub async fn add_body_measures(
 #[traced_command]
 #[tauri::command]
 pub async fn delete_body_metric(
-    app: AppHandle,
+    pool: State<'_, DatabasePool>,
     settings: State<'_, SettingsLock>,
     date: u32,
 ) -> Result<(), String> {
-    body_metrics::delete_body_metric(&app, &settings, date).await
+    body_metrics::delete_body_metric(&pool, &settings, date).await
 }

@@ -1,14 +1,26 @@
+use rusqlite_orm::database::DatabasePool;
 use strength_coach_for_garmin_macros::traced_command;
-use tauri::{AppHandle, State, WebviewWindow};
+use tauri::{AppHandle, Manager, State, WebviewWindow};
+use tauri_plugin_log::log::info;
 
-use crate::{SettingsLock, dto::report::ReportData, logic::report};
+use crate::{
+    SettingsLock,
+    dto::report::ReportData,
+    logic::{
+        report, settings_language,
+        ui::{open_window, print_to_pdf},
+    },
+    utils::translations::translate,
+};
 
 /// Opens the hidden report window for the range `from`..`to` (Unix seconds). It prints itself to
 /// PDF once it calls `report_ready`.
 #[traced_command]
 #[tauri::command]
 pub async fn load_report(app: AppHandle, from: u32, to: u32) -> Result<(), String> {
-    report::load_report(&app, from, to).await
+    open_window(&app, "report", Some(&format!("from={from}&to={to}")))
+        .map(|_| ())
+        .map_err(|e| e.to_string())
 }
 
 /// Called by the report window once rendered: asks where to save the PDF (defaulting to the
@@ -17,7 +29,9 @@ pub async fn load_report(app: AppHandle, from: u32, to: u32) -> Result<(), Strin
 #[traced_command]
 #[tauri::command]
 pub async fn report_ready(window: WebviewWindow) -> Result<(), String> {
-    report::report_ready(window).await
+    info!("Report ready, printing");
+    let lang = settings_language(&window.state::<SettingsLock>());
+    print_to_pdf(window, &translate("progression_report", lang)).await
 }
 
 /// Strength activities in `from`..`to` (Unix seconds), the history in that range of every exercise
@@ -26,10 +40,10 @@ pub async fn report_ready(window: WebviewWindow) -> Result<(), String> {
 #[traced_command(log_payload = false)]
 #[tauri::command]
 pub async fn get_report_data(
-    app: AppHandle,
+    pool: State<'_, DatabasePool>,
     settings: State<'_, SettingsLock>,
     from: u32,
     to: u32,
 ) -> Result<ReportData, String> {
-    report::get_report_data(&app, &settings, from, to).await
+    report::get_report_data(&pool, &settings, from, to).await
 }

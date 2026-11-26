@@ -2,36 +2,40 @@ pub mod commands;
 pub mod helpers;
 
 use chrono::{Datelike, Local, TimeZone, Timelike};
-use rusqlite_orm::errors::DatabaseError;
-use tauri::{AppHandle, Manager, Runtime};
+use rusqlite_orm::database::DatabasePool;
 use tauri_plugin_log::log::{error, info};
 
 use crate::{
-    MtpLock, SettingsLock,
+    ConnectLock, MtpLock, SettingsLock,
     dao::device::Device,
     dto::devices::DeviceListItem,
     logic::{
-        activities::helpers::{finish_activity_import, import_pending_activities},
-        devices::helpers::{
-            notify_workout_pending, notify_workout_sent, register_workout_on_device,
-            send_workout_to_device, set_workout_on_device, workout_name,
+        activities::helpers::import::{
+            ImportedFiles, finish_activity_import, import_pending_activities,
         },
-        fit_settings, language, pool, report_error,
+        devices::helpers::{
+            queue::{register_workout_on_device, set_workout_on_device, workout_name},
+            transfer::{notify_workout_pending, notify_workout_sent, send_workout_to_device},
+        },
+        events::EventSink,
+        fit_settings, report_error,
     },
     utils::constants,
 };
 
-pub async fn send_to_device<R: Runtime>(
-    app: &AppHandle<R>,
+/// Sends the workout `id` over USB to the device `serial` if it's plugged in, otherwise queues it
+/// for its next plug, and notifies which.
+pub async fn send_to_device(
+    pool: &DatabasePool,
     settings: &SettingsLock,
+    mtp: &MtpLock,
     id: u16,
     serial: &str,
 ) -> Result<(), String> {
-    let (lang, weight_unit) = fit_settings(app);
-    let workout = &workout_name(app, id).await;
+    let (lang, weight_unit) = fit_settings(settings);
+    let workout = &workout_name(pool, id).await;
 
-    let mtp_client = app.state::<MtpLock>();
-    let connected = mtp_client
+    let connected = mtp
         .lock()
         .await
         .is_device_connected(serial)
@@ -39,10 +43,10 @@ pub async fn send_to_device<R: Runtime>(
         .map_err(|e| e.to_string())?;
 
     let res: Result<bool, String> = if connected {
-        match send_workout_to_device(app, lang, weight_unit, id, serial).await {
+        match send_workout_to_device(pool, mtp, lang, weight_unit, id, serial).await {
             Ok(_) => {
                 // Register the pair so later changes (e.g. progressions) get re-sent to this device
-                if let Err(e) = register_workout_on_device(app, id, serial).await {
+                if let Err(e) = register_workout_on_device(pool, id, serial).await {
                     error!("Error registering workout '{workout}' for device {serial}: {e}");
                 }
 
@@ -51,7 +55,7 @@ pub async fn send_to_device<R: Runtime>(
             Err(e) => Err(e),
         }
     } else {
-        set_workout_on_device(app, id, serial, true)
+        set_workout_on_device(pool, id, serial, true)
             .await
             .map_err(|e| e.to_string())?;
 
@@ -77,15 +81,18 @@ pub async fn send_to_device<R: Runtime>(
 }
 
 /// Downloads new activity files from the given device since its last sync and imports them.
-pub async fn import_from_device<R: Runtime>(
-    app: &AppHandle<R>,
+pub async fn import_from_device(
+    pool: &DatabasePool,
+    settings: &SettingsLock,
+    connect: &ConnectLock,
+    mtp: &MtpLock,
+    events: &EventSink,
     serial: &str,
 ) -> Result<usize, String> {
     info!("Starting import from device with S/N {}", serial);
     let mut latest_date = "1970-01-01-00-00-00".to_string();
-    let lang = language(app);
     let serial_str = serial.to_string();
-    let mut device = pool(app)
+    let mut device = pool
         .run_in_connection(async move |conn| Ok(Device::get(conn, &serial_str).await?))
         .await
         .map_err(|e| e.to_string())?
@@ -108,9 +115,8 @@ pub async fn import_from_device<R: Runtime>(
         "Fetching from device activity files after {}...",
         latest_date
     );
-    let mut res: Result<Vec<u32>, DatabaseError> = Ok(Vec::new());
-    let mtp_client = app.state::<MtpLock>();
-    let mtp_client = mtp_client.lock().await;
+    let mut res = Ok(ImportedFiles::default());
+    let mtp_client = mtp.lock().await;
 
     if let Ok(files) = mtp_client
         .download_activities_since(serial, latest_date)
@@ -118,16 +124,14 @@ pub async fn import_from_device<R: Runtime>(
     {
         drop(mtp_client);
         let now = Local::now().timestamp() as u32;
-        res = import_pending_activities(app, files, &mut device, lang, Some(now)).await;
+        res = import_pending_activities(pool, files, &mut device, Some(now)).await;
     }
 
-    finish_activity_import(app, res)
+    finish_activity_import(pool, settings, connect, mtp, events, res)
 }
 
-pub async fn get_registered_devices<R: Runtime>(
-    app: &AppHandle<R>,
-) -> Result<Vec<DeviceListItem>, String> {
-    Ok(pool(app)
+pub async fn get_registered_devices(pool: &DatabasePool) -> Result<Vec<DeviceListItem>, String> {
+    Ok(pool
         .run_in_connection(async move |conn| Ok(Device::get_all(conn).await?))
         .await
         .map_err(|e| e.to_string())?

@@ -5,7 +5,7 @@ use chrono::{Datelike, Days, Local, TimeZone};
 use crate::{
     dao::{activity_step::ActivityStep, workout_step::StepType},
     dto::activities::MuscleSets,
-    logic::activities::helpers::{heatmap_data, muscle_sets},
+    logic::activities::helpers::queries::{heatmap_data, muscle_sets},
     tests::common,
 };
 

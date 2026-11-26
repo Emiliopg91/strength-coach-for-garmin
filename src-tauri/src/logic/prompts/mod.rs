@@ -1,7 +1,7 @@
 pub mod commands;
 pub mod helpers;
 
-use crate::logic::prompts::helpers::{Answer, Prompts};
+use crate::logic::prompts::helpers::requests::{Answer, Prompts};
 
 /// Resolves the pending prompt `id` with the user's `values`, or `None` if cancelled.
 pub fn answer_prompt(prompts: &Prompts, id: u32, values: Answer) -> Result<(), String> {

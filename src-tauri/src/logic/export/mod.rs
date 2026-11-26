@@ -1,9 +1,13 @@
 pub mod commands;
 
-use std::{fs, io::BufWriter, path::PathBuf};
+use std::{
+    fs,
+    io::BufWriter,
+    path::{Path, PathBuf},
+};
 
 use chrono::Local;
-use tauri::{AppHandle, Runtime};
+use rusqlite_orm::database::DatabasePool;
 use tauri_plugin_log::log::{info, warn};
 
 use crate::{
@@ -12,9 +16,7 @@ use crate::{
         export::Export,
         notifications::{NotificationDefinition, NotificationKind},
     },
-    logic::{
-        ask_save_path, notifications::show_notification, pool, report_error, settings_language,
-    },
+    logic::{notifications::show_notification, report_error, settings_language},
     rclone::{self, errors::RCloneError, providers::CloudProvider},
     utils::{
         constants,
@@ -27,8 +29,8 @@ pub async fn is_cloud_upload_available() -> bool {
     rclone::is_installed()
 }
 
-pub async fn upload_to_cloud<R: Runtime>(
-    app: &AppHandle<R>,
+pub async fn upload_to_cloud(
+    pool: &DatabasePool,
     settings: &SettingsLock,
     provider: CloudProvider,
 ) -> Result<(), String> {
@@ -52,8 +54,7 @@ pub async fn upload_to_cloud<R: Runtime>(
             fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
             let snapshot = dir.join(constants::DB_FILE.file_name().unwrap());
             info!("Writing database snapshot to {}", snapshot.display());
-            pool(app)
-                .vacuum_into(&snapshot)
+            pool.vacuum_into(&snapshot)
                 .await
                 .map_err(|e| e.to_string())?;
             provider.upload(snapshot).await.map_err(|e| e.to_string())
@@ -87,34 +88,27 @@ fn snapshot_dir() -> PathBuf {
     ))
 }
 
-/// Asks where to save the whole database as a JSON file, writes it there and notifies on success/failure.
-pub async fn export_database<R: Runtime>(
-    app: &AppHandle<R>,
-    settings: &SettingsLock,
-) -> Result<(), String> {
-    let default_file = constants::HOME_DIR.join(format!(
+/// Where the database export is offered to be saved: a timestamped file in the home dir.
+pub fn default_export_file() -> PathBuf {
+    constants::HOME_DIR.join(format!(
         "{}-{}.json",
         *constants::APP_NAME,
         Local::now().format("%Y-%m-%d-%H-%M-%S")
-    ));
-    let dialog_lang = settings_language(settings);
-    let Some(path) = ask_save_path(
-        app,
-        &default_file,
-        "JSON",
-        "json",
-        &translate("select_file_save_json", dialog_lang),
-    )
-    .await?
-    else {
-        return Ok(());
-    };
+    ))
+}
+
+/// Writes the whole database as a JSON file at `path` and notifies on success/failure.
+pub async fn export_database(
+    pool: &DatabasePool,
+    settings: &SettingsLock,
+    path: &Path,
+) -> Result<(), String> {
     info!("Exporting database to {}...", path.display());
 
-    let export_path = path.clone();
+    let export_path = path.to_path_buf();
     let export_lang = settings_language(settings);
     let res: Result<(), Box<dyn std::error::Error + Send + Sync>> = async {
-        let export = Export::from_database(&pool(app), export_lang).await?;
+        let export = Export::from_database(pool, export_lang).await?;
         tokio::task::spawn_blocking(move || {
             let file = fs::File::create(&export_path)?;
             export.write_json(BufWriter::new(file))?;

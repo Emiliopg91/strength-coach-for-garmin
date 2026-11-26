@@ -13,7 +13,11 @@ mod utils;
 #[cfg(test)]
 mod tests;
 
-use std::{process::exit, sync::RwLock, time::Duration};
+use std::{
+    process::exit,
+    sync::{Arc, RwLock},
+    time::Duration,
+};
 
 use rusqlite_orm::{
     database::{
@@ -22,7 +26,7 @@ use rusqlite_orm::{
     },
     ddls,
 };
-use tauri::{AppHandle, Emitter, Manager, RunEvent, WindowEvent};
+use tauri::{AppHandle, Manager, RunEvent, WindowEvent};
 use tauri_plugin_log::{
     Target, TargetKind,
     log::{LevelFilter, debug, error, info, warn},
@@ -39,12 +43,9 @@ use crate::{
     },
     dto::app::Settings,
     logic::{
-        activities::{
-            commands::{
-                download_activity, get_activities, get_activity_details, get_heatmap_data,
-                get_muscle_sets, import_from_files, save_activity_changes,
-            },
-            helpers::import_file_paths,
+        activities::commands::{
+            download_activity, get_activities, get_activity_details, get_heatmap_data,
+            get_muscle_sets, import_dropped_files, import_from_files, save_activity_changes,
         },
         app::commands::{
             get_environment, get_settings, get_translations, notify_frontend_ready,
@@ -56,6 +57,7 @@ use crate::{
             import_weight_from_connect, send_to_connect,
         },
         devices::commands::{get_registered_devices, import_from_device, send_to_device},
+        events::{BackendEvent, EventSink},
         exercises::commands::{
             apply_progression_suggestion, available_any_progression_suggestions,
             dismiss_progression_suggestion, get_exercise_details, get_exercises,
@@ -64,12 +66,12 @@ use crate::{
             set_exercise_unilateral,
         },
         export::commands::{export_database, is_cloud_upload_available, upload_to_cloud},
-        pool,
         prompts::{
             commands::answer_prompt,
-            helpers::{AppPrompter, Prompts},
+            helpers::requests::{AppPrompter, Prompts},
         },
         report::commands::{get_report_data, load_report, report_ready},
+        ui::event_sink,
         workouts::commands::{
             add_planned_workout, delete_planned_workout, get_next_planned_workout,
             get_percent_load_bases, get_planned_workouts, get_workout_details, get_workout_list,
@@ -83,7 +85,7 @@ use crate::{
 };
 
 #[cfg(debug_assertions)]
-use crate::logic::exercises::helpers::update_all_prs;
+use crate::logic::exercises::helpers::records::update_all_prs;
 
 pub fn check_running() -> bool {
     SingleInstance::is_app_running().0
@@ -93,11 +95,14 @@ pub fn force_write_mtp_rules(auto_run: bool) -> udev::errors::Result<()> {
     UdevManager::write_rules_file(auto_run)
 }
 
-pub type SettingsLock = RwLock<Settings>;
-pub type ConnectLock = tokio::sync::Mutex<ConnectClient>;
-pub type MtpLock = tokio::sync::Mutex<MtpClient>;
+/// Shared handles to the app state, cloned into the background tasks the logic spawns.
+pub type SettingsLock = Arc<RwLock<Settings>>;
+pub type ConnectLock = Arc<tokio::sync::Mutex<ConnectClient>>;
+pub type MtpLock = Arc<tokio::sync::Mutex<MtpClient>>;
 
-fn initialize(app: &AppHandle) -> (DatabasePool, Settings, ConnectClient, MtpClient) {
+/// Opens and migrates the database and loads the settings and the Connect session. Connect sends
+/// its prompts and login changes to the frontend through `events`.
+fn initialize(events: &EventSink, prompts: &Prompts) -> (DatabasePool, Settings, ConnectClient) {
     debug!("Initializing database...");
     let builder = DatabaseConnectionBuilder::default()
         .location(constants::DB_FILE.clone())
@@ -153,8 +158,6 @@ fn initialize(app: &AppHandle) -> (DatabasePool, Settings, ConnectClient, MtpCli
                     warn!("Could not refresh percentage loads: {}", e);
                 }
 
-                //crate::logic::activities::helpers::merge_activities(&database, _, _);
-
                 #[cfg(debug_assertions)]
                 let _ = database
                     .run_in_transaction(async |tx| Ok(update_all_prs(tx).await?))
@@ -163,23 +166,15 @@ fn initialize(app: &AppHandle) -> (DatabasePool, Settings, ConnectClient, MtpCli
                 settings
             });
 
-            (
-                database,
-                settings,
-                {
-                    let app: AppHandle = app.clone();
-                    let prompter = AppPrompter(app.clone());
-                    ConnectClient::new(
-                        move |user| {
-                            // Typed binding: the TypeScript generator reads the payload type from it
-                            let payload: Option<String> = user;
-                            let _ = app.emit("connect_logged", payload);
-                        },
-                        prompter,
-                    )
-                },
-                MtpClient {},
-            )
+            let connect = {
+                let prompter = AppPrompter::new(prompts.clone(), events.clone());
+                let events = events.clone();
+                ConnectClient::new(
+                    move |user| events.emit(BackendEvent::ConnectLogged(user)),
+                    prompter,
+                )
+            };
+            (database, settings, connect)
         }
         Err(e) => {
             error!("Could not open database: {}", e);
@@ -284,7 +279,9 @@ pub fn run(log_level: LevelFilter) {
                 *constants::PID
             );
 
-            let (database, settings, connect, mtp_client) = initialize(app.handle());
+            let events = event_sink(app.handle());
+            let prompts = Prompts::default();
+            let (database, settings, connect) = initialize(&events, &prompts);
 
             listen_for_signals(app.handle());
 
@@ -305,17 +302,17 @@ pub fn run(log_level: LevelFilter) {
 
                         let app_handle = app_handle.clone();
                         tauri::async_runtime::spawn(async move {
-                            let _ = import_file_paths(&app_handle, paths).await;
+                            let _ = import_dropped_files(&app_handle, paths).await;
                         });
                     }
                 });
             }
 
-            app.manage(Prompts::default());
+            app.manage(prompts);
             app.manage(database);
-            app.manage(SettingsLock::new(settings));
-            app.manage(ConnectLock::new(connect));
-            app.manage(MtpLock::new(mtp_client));
+            app.manage(SettingsLock::new(RwLock::new(settings)));
+            app.manage(ConnectLock::new(tokio::sync::Mutex::new(connect)));
+            app.manage(MtpLock::new(tokio::sync::Mutex::new(MtpClient {})));
 
             debug!("Setup finished");
             Ok(())
@@ -396,7 +393,7 @@ pub fn run(log_level: LevelFilter) {
             if let RunEvent::Exit = event {
                 // Tauri ends the process without dropping the managed state: closing the pool lets
                 // SQLite checkpoint the WAL and remove the -wal and -shm files
-                tauri::async_runtime::block_on(pool(app).close());
+                tauri::async_runtime::block_on(app.state::<DatabasePool>().close());
                 info!(
                     "Stopped {} v{}",
                     *constants::APP_NAME,

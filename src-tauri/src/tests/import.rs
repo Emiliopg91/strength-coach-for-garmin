@@ -7,7 +7,7 @@ use crate::{
         workout::{Workout, WorkoutRepository},
     },
     fit::{FitFile, parser::FitParser},
-    logic::activities::helpers::{ParsedFiles, import_file_list, parse_files},
+    logic::activities::helpers::import::{ParsedFiles, import_file_list, parse_files},
     tests::common,
 };
 

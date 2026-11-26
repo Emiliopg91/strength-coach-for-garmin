@@ -10,7 +10,7 @@ use crate::{
         workout_device::{WorkoutDevice, WorkoutDeviceRepository, entity::columns as wd_cols},
         workout_step::{WorkoutStep, WorkoutStepRepository, entity::columns as step_cols},
     },
-    logic::exercises::helpers::fetch_progression_suggestion,
+    logic::exercises::helpers::progressions::fetch_progression_suggestion,
     tests::common,
     utils::{
         constants,

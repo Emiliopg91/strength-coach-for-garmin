@@ -1,14 +1,17 @@
 pub mod commands;
 pub mod helpers;
 
-use std::collections::BTreeMap;
+use std::{
+    collections::BTreeMap,
+    path::{Path, PathBuf},
+};
 
 use chrono::{Local, TimeZone};
-use tauri::{AppHandle, Emitter, Runtime};
+use rusqlite_orm::database::DatabasePool;
 use tauri_plugin_log::log::info;
 
 use crate::{
-    SettingsLock,
+    ConnectLock, MtpLock, SettingsLock,
     dao::activity::Activity,
     dto::{
         activities::{ActivityDetails, ActivityListItem, ActivityStepsUpdate, MuscleSets},
@@ -16,16 +19,19 @@ use crate::{
     },
     logic::{
         activities::helpers::{
-            activity_file_name, apply_activity_changes, fetch_activities, fetch_activity_details,
-            heatmap_data, import_file_paths, muscle_sets, notify_new_prs,
-            notify_progression_available, retrieve_activity_connect_id, write_activity_fit,
+            edit::{
+                activity_file_name, apply_activity_changes, retrieve_activity_connect_id,
+                write_activity_fit,
+            },
+            import::{import_file_paths, notify_new_prs, notify_progression_available},
+            queries::{fetch_activities, fetch_activity_details, heatmap_data, muscle_sets},
         },
-        ask_open_paths, ask_save_path,
-        connect::helpers::sync_activity_sets_connect,
+        connect::helpers::activity_sync::sync_activity_sets_connect,
+        events::{BackendEvent, EventSink},
         fit_settings,
         notifications::show_notification,
-        pool, report_error, settings_language,
-        workouts::helpers::spawn_workout_sync,
+        report_error, settings_language,
+        workouts::helpers::sync::spawn_workout_sync,
     },
     utils::{
         constants,
@@ -34,32 +40,33 @@ use crate::{
 };
 
 /// Returns every recorded activity, newest first.
-pub async fn get_activities<R: Runtime>(
-    app: &AppHandle<R>,
+pub async fn get_activities(
+    pool: &DatabasePool,
     settings: &SettingsLock,
     limit: Option<i32>,
 ) -> Result<Vec<ActivityListItem>, String> {
     info!("Getting activities list...");
-    pool(app)
-        .run_in_connection(async move |conn| {
-            Ok(fetch_activities(conn, limit, None, None, None).await?)
-        })
-        .await
-        .inspect(|l| info!("Retreived {} activities", l.len()))
-        .map_err(|e| {
-            report_error(
-                e,
-                settings,
-                "error_activity_list",
-                "Error getting activities list",
-            )
-        })
+    pool.run_in_connection(async move |conn| {
+        Ok(fetch_activities(conn, limit, None, None, None).await?)
+    })
+    .await
+    .inspect(|l| info!("Retreived {} activities", l.len()))
+    .map_err(|e| {
+        report_error(
+            e,
+            settings,
+            "error_activity_list",
+            "Error getting activities list",
+        )
+    })
 }
 
-/// Returns full details for one activity (series grouped by exercise, heart rate, GPS, speeds, device).
-pub async fn get_activity_details<R: Runtime>(
-    app: &AppHandle<R>,
+/// Returns full details for one activity (series grouped by exercise, heart rate, GPS, speeds,
+/// device). Without a Connect id, it is looked up in the background.
+pub async fn get_activity_details(
+    pool: &DatabasePool,
     settings: &SettingsLock,
+    connect: &ConnectLock,
     timestamp: u32,
 ) -> Result<ActivityDetails, String> {
     info!(
@@ -70,7 +77,7 @@ pub async fn get_activity_details<R: Runtime>(
             .to_rfc3339()
     );
 
-    let res = pool(app)
+    let res = pool
         .run_in_connection(async move |conn| {
             Ok(fetch_activity_details(conn, timestamp, true, true).await?)
         })
@@ -80,9 +87,9 @@ pub async fn get_activity_details<R: Runtime>(
         Ok(details) => {
             info!("Found details for activity {}", details.timestamp);
             if details.connect_id.is_none() {
-                let app_cl = app.clone();
+                let (pool, connect) = (pool.clone(), connect.clone());
                 tauri::async_runtime::spawn(async move {
-                    retrieve_activity_connect_id(&app_cl, details.timestamp).await;
+                    retrieve_activity_connect_id(&pool, &connect, details.timestamp).await;
                 });
             }
 
@@ -97,35 +104,29 @@ pub async fn get_activity_details<R: Runtime>(
     }
 }
 
-/// Asks where to save the activity as a FIT file and writes it there.
-pub async fn download_activity<R: Runtime>(
-    app: &AppHandle<R>,
-    settings: &SettingsLock,
-    timestamp: u32,
-) -> Result<(), String> {
-    let (lang, weight_unit) = fit_settings(app);
-
+/// Where the activity at `timestamp` is offered to be saved as a FIT file: `<date> <name>.fit` in
+/// the home dir.
+pub async fn default_activity_file(pool: &DatabasePool, timestamp: u32) -> PathBuf {
     // Without a name the file is just named after the date; a failure surfaces when writing the file
-    let name = pool(app)
+    let name = pool
         .run_in_connection(async move |conn| Ok(Activity::get_name(conn, timestamp).await?))
         .await
         .ok()
         .flatten()
         .unwrap_or_default();
-    let default_file = constants::HOME_DIR.join(activity_file_name(timestamp, &name));
-    let Some(file) = ask_save_path(
-        app,
-        &default_file,
-        "FIT",
-        "fit",
-        &translate("select_file_save_fit", lang),
-    )
-    .await?
-    else {
-        return Ok(());
-    };
+    constants::HOME_DIR.join(activity_file_name(timestamp, &name))
+}
 
-    match write_activity_fit(app, timestamp, file.clone(), lang, weight_unit).await {
+/// Writes the activity at `timestamp` as a FIT file at `file` and notifies the path.
+pub async fn download_activity(
+    pool: &DatabasePool,
+    settings: &SettingsLock,
+    timestamp: u32,
+    file: &Path,
+) -> Result<(), String> {
+    let (lang, weight_unit) = fit_settings(settings);
+
+    match write_activity_fit(pool, timestamp, file.to_path_buf(), lang, weight_unit).await {
         Ok(()) => {
             show_notification(NotificationDefinition {
                 title: translate("ok_activity_download", lang),
@@ -148,9 +149,12 @@ pub async fn download_activity<R: Runtime>(
 }
 
 /// Applies user edits (activity notes and reps/weight/exercise of its series) and recomputes personal records.
-pub async fn save_activity_changes<R: Runtime>(
-    app: &AppHandle<R>,
+pub async fn save_activity_changes(
+    pool: &DatabasePool,
     settings: &SettingsLock,
+    connect: &ConnectLock,
+    mtp: &MtpLock,
+    events: &EventSink,
     details: ActivityStepsUpdate,
 ) -> Result<(), String> {
     info!(
@@ -163,7 +167,7 @@ pub async fn save_activity_changes<R: Runtime>(
     let lang = settings_language(settings);
     let (timestamp, sets) = (details.timestamp, details.sets.clone());
 
-    let res = pool(app)
+    let res = pool
         .run_in_transaction(async move |tx| Ok(apply_activity_changes(tx, &details).await?))
         .await;
 
@@ -182,15 +186,20 @@ pub async fn save_activity_changes<R: Runtime>(
             if changes.newly_suggested {
                 notify_progression_available(lang);
             }
-            // Typed binding: the TypeScript generator reads the payload type from it
-            let payload: bool = changes.any_progression;
-            let _ = app.emit("progressions_available", payload);
+            events.emit(BackendEvent::ProgressionsAvailable(changes.any_progression));
 
-            spawn_workout_sync(app, changes.refreshed_workouts, true);
+            spawn_workout_sync(
+                pool,
+                settings,
+                connect,
+                mtp,
+                changes.refreshed_workouts,
+                true,
+            );
 
-            let app_cl = app.clone();
+            let (pool, connect) = (pool.clone(), connect.clone());
             tauri::async_runtime::spawn(async move {
-                sync_activity_sets_connect(&app_cl, timestamp, sets).await;
+                sync_activity_sets_connect(&pool, &connect, timestamp, sets).await;
             });
 
             Ok(())
@@ -204,30 +213,28 @@ pub async fn save_activity_changes<R: Runtime>(
     }
 }
 
-/// Asks the user for `.fit` files and imports them; returns the number of activities imported.
-pub async fn import_from_files<R: Runtime>(
-    app: &AppHandle<R>,
+/// Imports the `.fit` files at `files` as activities; returns the number of activities imported.
+pub async fn import_from_files(
+    pool: &DatabasePool,
     settings: &SettingsLock,
+    connect: &ConnectLock,
+    mtp: &MtpLock,
+    events: &EventSink,
+    files: Vec<PathBuf>,
 ) -> Result<usize, String> {
-    let lang = settings_language(settings);
-    let files = ask_open_paths(app, "FIT", "fit", &translate("select_files_import", lang)).await?;
-
-    if !files.is_empty() {
-        return import_file_paths(app, files).await;
+    if files.is_empty() {
+        return Ok(0);
     }
-
-    Ok(0)
+    import_file_paths(pool, settings, connect, mtp, events, files).await
 }
 
-pub async fn get_heatmap_data<R: Runtime>(
-    app: &AppHandle<R>,
-) -> Result<Vec<Vec<(f32, u16)>>, String> {
-    heatmap_data(&pool(app)).await
+pub async fn get_heatmap_data(pool: &DatabasePool) -> Result<Vec<Vec<(f32, u16)>>, String> {
+    heatmap_data(pool).await
 }
 
-pub async fn get_muscle_sets<R: Runtime>(
-    app: &AppHandle<R>,
+pub async fn get_muscle_sets(
+    pool: &DatabasePool,
     since: u32,
 ) -> Result<BTreeMap<String, MuscleSets>, String> {
-    muscle_sets(&pool(app), since).await
+    muscle_sets(pool, since).await
 }

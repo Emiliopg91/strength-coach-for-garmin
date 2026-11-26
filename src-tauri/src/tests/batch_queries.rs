@@ -10,8 +10,8 @@ use crate::{
     },
     dto::{activities::ActivityDetails, exercises::ExerciseDetails},
     logic::{
-        activities::helpers::{fetch_activities_details, fetch_activity_details},
-        exercises::helpers::{fetch_exercise_details, fetch_exercises_details},
+        activities::helpers::queries::{fetch_activities_details, fetch_activity_details},
+        exercises::helpers::queries::{fetch_exercise_details, fetch_exercises_details},
     },
     tests::common,
 };

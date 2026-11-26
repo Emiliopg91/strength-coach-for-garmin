@@ -1,37 +1,19 @@
 pub mod commands;
 pub mod helpers;
 
-use tauri::{AppHandle, Runtime, WebviewWindow};
+use rusqlite_orm::database::DatabasePool;
 use tauri_plugin_log::log::info;
 
 use crate::{
     SettingsLock,
     dto::report::ReportData,
-    logic::{
-        language, open_window, pool, print_to_pdf, report::helpers::report_data, report_error,
-        settings_language,
-    },
+    logic::{report::helpers::data::report_data, report_error, settings_language},
     utils::translations::translate,
 };
 
-/// Opens the report window for the `[from, to]` range, which stays hidden: printing starts once
-/// the page calls `report_ready`.
-pub async fn load_report<R: Runtime>(app: &AppHandle<R>, from: u32, to: u32) -> Result<(), String> {
-    open_window(app, "report", Some(&format!("from={from}&to={to}")))
-        .map(|_| ())
-        .map_err(|e| e.to_string())
-}
-
-/// Called by the report window once everything is rendered and painted: prints it to PDF.
-pub async fn report_ready(window: WebviewWindow) -> Result<(), String> {
-    info!("Report ready, printing");
-    let lang = language(&window);
-    print_to_pdf(window, &translate("progression_report", lang)).await
-}
-
 /// Gathers everything the report needs for the `[from, to]` range, reusing the commands' DB logic on one connection.
-pub async fn get_report_data<R: Runtime>(
-    app: &AppHandle<R>,
+pub async fn get_report_data(
+    pool: &DatabasePool,
     settings: &SettingsLock,
     from: u32,
     to: u32,
@@ -39,7 +21,7 @@ pub async fn get_report_data<R: Runtime>(
     info!("Getting report data...");
     let lang = settings_language(settings);
 
-    let res = pool(app)
+    let res = pool
         .run_in_connection(async move |conn| Ok(report_data(conn, from, to).await?))
         .await
         .map(|mut data| {

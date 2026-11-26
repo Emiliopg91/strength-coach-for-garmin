@@ -1,12 +1,19 @@
 use std::collections::HashMap;
 
+use rusqlite_orm::database::DatabasePool;
 use strength_coach_for_garmin_macros::traced_command;
 use tauri::{AppHandle, State};
+use tauri_plugin_autostart::ManagerExt;
+use tauri_plugin_log::log::{error, info};
 
 use crate::{
-    SettingsLock,
+    ConnectLock, MtpLock, SettingsLock, constants,
     dto::app::{AppEnvironment, Settings},
-    logic::app,
+    logic::{
+        app,
+        prompts::helpers::requests::Prompts,
+        ui::{event_sink, show_main_window},
+    },
 };
 
 /// Current in-memory settings (units, language and startup behaviour).
@@ -21,8 +28,41 @@ pub async fn get_settings(settings: State<'_, SettingsLock>) -> Result<Settings,
 /// pending activities and checks for updates.
 #[traced_command]
 #[tauri::command]
-pub async fn notify_frontend_ready(app: AppHandle) {
-    app::notify_frontend_ready(&app).await
+pub async fn notify_frontend_ready(
+    app: AppHandle,
+    pool: State<'_, DatabasePool>,
+    settings: State<'_, SettingsLock>,
+    connect: State<'_, ConnectLock>,
+    mtp: State<'_, MtpLock>,
+    prompts: State<'_, Prompts>,
+) -> Result<(), String> {
+    info!("UI ready");
+    let events = event_sink(&app);
+
+    {
+        let app = app.clone();
+        let (pool, settings, connect, mtp, prompts, events) = (
+            pool.inner().clone(),
+            settings.inner().clone(),
+            connect.inner().clone(),
+            mtp.inner().clone(),
+            prompts.inner().clone(),
+            events.clone(),
+        );
+        tauri::async_runtime::spawn(async move {
+            if let Err(e) =
+                app::startup_sync(&pool, &settings, &connect, &mtp, &prompts, &events).await
+            {
+                error!("Error installing udev rules: {e}");
+                app.exit(constants::ExitCodes::UdevError.into());
+            }
+        });
+    }
+
+    let _ = show_main_window(&app);
+
+    app::start_background_tasks(&pool, &settings, &connect, &events);
+    Ok(())
 }
 
 /// Whether this is a debug or a release build.
@@ -39,8 +79,32 @@ pub async fn get_environment() -> AppEnvironment {
 /// shows a persistent error notification and rejects with the message.
 #[traced_command]
 #[tauri::command]
-pub async fn update_settings_value(app: AppHandle, name: &str, value: &str) -> Result<(), String> {
-    app::update_settings_value(&app, name, value).await
+pub async fn update_settings_value(
+    app: AppHandle,
+    pool: State<'_, DatabasePool>,
+    settings: State<'_, SettingsLock>,
+    prompts: State<'_, Prompts>,
+    name: &str,
+    value: &str,
+) -> Result<(), String> {
+    let set_autostart = |enable: bool| {
+        if enable {
+            app.autolaunch().enable()
+        } else {
+            app.autolaunch().disable()
+        }
+        .map_err(|e| e.to_string())
+    };
+    app::update_settings_value(
+        &pool,
+        &settings,
+        &prompts,
+        &event_sink(&app),
+        name,
+        value,
+        set_autostart,
+    )
+    .await
 }
 
 /// Every translation key resolved to the current language, to bootstrap the frontend i18n.

@@ -1,7 +1,13 @@
+use rusqlite_orm::database::DatabasePool;
 use strength_coach_for_garmin_macros::traced_command;
 use tauri::{AppHandle, State};
 
-use crate::{SettingsLock, logic::export, rclone::providers::CloudProvider};
+use crate::{
+    SettingsLock,
+    logic::{export, settings_language, ui::ask_save_path},
+    rclone::providers::CloudProvider,
+    utils::translations::translate,
+};
 
 /// Whether uploading to the cloud is possible, i.e. the optional rclone dependency is installed.
 #[traced_command]
@@ -16,11 +22,11 @@ pub async fn is_cloud_upload_available() -> bool {
 #[traced_command]
 #[tauri::command]
 pub async fn upload_to_cloud(
-    app: AppHandle,
+    pool: State<'_, DatabasePool>,
     settings: State<'_, SettingsLock>,
     provider: CloudProvider,
 ) -> Result<(), String> {
-    export::upload_to_cloud(&app, &settings, provider).await
+    export::upload_to_cloud(&pool, &settings, provider).await
 }
 
 /// Asks where to save the whole database as JSON (defaulting to a timestamped file in the home dir)
@@ -30,7 +36,13 @@ pub async fn upload_to_cloud(
 #[tauri::command]
 pub async fn export_database(
     app: AppHandle,
+    pool: State<'_, DatabasePool>,
     settings: State<'_, SettingsLock>,
 ) -> Result<(), String> {
-    export::export_database(&app, &settings).await
+    let title = translate("select_file_save_json", settings_language(&settings));
+    let default_file = export::default_export_file();
+    let Some(path) = ask_save_path(&app, &default_file, "JSON", "json", &title).await? else {
+        return Ok(());
+    };
+    export::export_database(&pool, &settings, &path).await
 }
