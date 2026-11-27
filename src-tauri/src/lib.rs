@@ -35,6 +35,7 @@ use tokio::signal::unix::{SignalKind, signal};
 use crate::{
     connect::ConnectClient,
     dao::{
+        activity_step::migration_42,
         body_metric::migration_21,
         settings::{self, settings_keys},
         workout_device::WorkoutDevice,
@@ -189,6 +190,7 @@ fn schema_ddls() -> Vec<DdlVersion> {
     for ddl in &mut ddls {
         ddl.update_fn = match ddl.version {
             21 => Some(|tx| Box::pin(migration_21(tx))),
+            42 => Some(|tx| Box::pin(migration_42(tx))),
             _ => None,
         };
     }

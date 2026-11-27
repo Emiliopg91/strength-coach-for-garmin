@@ -3,7 +3,10 @@ use std::collections::HashSet;
 use rusqlite_orm::{database::DatabasePool, types::order_by::OrderBy};
 
 use crate::{
-    dao::activity_step::{self, ActivityStep, ActivityStepRepository},
+    dao::{
+        activity_step::{self, ActivityStep, ActivityStepRepository},
+        workout_step::StepType,
+    },
     tests::common,
 };
 
@@ -148,4 +151,54 @@ async fn set_without_weight_loses_to_a_weighted_one() {
     .await;
 
     assert_eq!(pr_sets(&db).await, vec![(2, 0, SQUAT.0, SQUAT.1)]);
+}
+
+fn non_exercise_sets() -> Vec<ActivityStep> {
+    [
+        StepType::Warmup,
+        StepType::Cooldown,
+        StepType::Recovery,
+        StepType::Other,
+    ]
+    .into_iter()
+    .enumerate()
+    .map(|(i, kind)| {
+        let mut set = common::set(1, i as u8, SQUAT, 10, 200.0);
+        set.kind = kind;
+        set
+    })
+    .collect()
+}
+
+#[tokio::test]
+async fn non_exercise_sets_never_hold_a_record() {
+    let db = common::test_db().await;
+    let mut sets = non_exercise_sets();
+    sets.push(common::set(1, 4, SQUAT, 5, 100.0));
+    insert_and_update(&db, vec![(1, sets)]).await;
+
+    assert_eq!(pr_sets(&db).await, vec![(1, 4, SQUAT.0, SQUAT.1)]);
+}
+
+#[tokio::test]
+async fn exercise_with_only_non_exercise_sets_has_no_record() {
+    let db = common::test_db().await;
+    insert_and_update(&db, vec![(1, non_exercise_sets())]).await;
+
+    assert_eq!(pr_sets(&db).await, vec![]);
+}
+
+#[tokio::test]
+async fn stale_record_on_a_warmup_is_cleared() {
+    let db = common::test_db().await;
+    let mut warmup = common::set(1, 0, SQUAT, 10, 200.0);
+    warmup.kind = StepType::Warmup;
+    warmup.pr = true;
+    insert_and_update(
+        &db,
+        vec![(1, vec![warmup, common::set(1, 1, SQUAT, 5, 100.0)])],
+    )
+    .await;
+
+    assert_eq!(pr_sets(&db).await, vec![(1, 1, SQUAT.0, SQUAT.1)]);
 }

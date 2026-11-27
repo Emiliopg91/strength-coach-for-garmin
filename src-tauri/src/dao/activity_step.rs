@@ -458,8 +458,9 @@ impl ActivityStep {
         Ok(volume_by_activity)
     }
 
-    /// Recomputes the `pr` flag for each affected exercise. Returns whether any of `activities` holds
-    /// a new record.
+    /// Recomputes the `pr` flag for each affected exercise. Only exercise sets can hold a record:
+    /// warmup, cooldown and other steps never do. Returns whether any of `activities` holds a new
+    /// record.
     pub async fn update_prs(
         tx: &Transaction<'_>,
         exercises: &HashSet<(u16, u16)>,
@@ -481,10 +482,13 @@ impl ActivityStep {
                 entity::columns::ACTIVITY,
                 entity::columns::IDX,
             ])
-            .where_(Where::InMultiple(
-                vec![entity::columns::EX_CAT, entity::columns::EX_ID],
-                exercise_key_values(exercises),
-            ))
+            .where_(Where::And(vec![
+                Where::Eq(entity::columns::KIND, StepType::Exercise.into()),
+                Where::InMultiple(
+                    vec![entity::columns::EX_CAT, entity::columns::EX_ID],
+                    exercise_key_values(exercises),
+                ),
+            ]))
             .fetch_in(tx)
             .await?
         {
@@ -510,18 +514,19 @@ impl ActivityStep {
             .map(|pr| vec![pr.activity.into(), pr.idx.into()])
             .collect();
 
+        // Cleared even when no exercise set is left, so a record never stays on another step kind
+        ActivityStepRepository::update()
+            .set(entity::columns::PR, false.into())
+            .where_(Where::And(vec![
+                Where::InMultiple(
+                    vec![entity::columns::EX_CAT, entity::columns::EX_ID],
+                    update_false_conditions,
+                ),
+                Where::Eq(entity::columns::PR, true.into()),
+            ]))
+            .execute_in(tx)
+            .await?;
         if !update_true_conditions.is_empty() {
-            ActivityStepRepository::update()
-                .set(entity::columns::PR, false.into())
-                .where_(Where::And(vec![
-                    Where::InMultiple(
-                        vec![entity::columns::EX_CAT, entity::columns::EX_ID],
-                        update_false_conditions,
-                    ),
-                    Where::Eq(entity::columns::PR, true.into()),
-                ]))
-                .execute_in(tx)
-                .await?;
             ActivityStepRepository::update()
                 .set(entity::columns::PR, true.into())
                 .where_(Where::InMultiple(
@@ -534,4 +539,12 @@ impl ActivityStep {
 
         Ok(new_prs)
     }
+}
+
+/// Records used to be picked among every step kind: they are recomputed among exercise sets only.
+pub async fn migration_42(tx: &Transaction<'_>) -> rusqlite_orm::errors::Result<()> {
+    let exercises = ActivityStep::get_performed_exercises(tx).await?;
+    ActivityStep::update_prs(tx, &exercises, &[])
+        .await
+        .map(|_| ())
 }

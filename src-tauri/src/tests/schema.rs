@@ -47,7 +47,7 @@ fn schema_ddls_are_sorted_with_hooks_on_their_migration() {
         .filter(|d| d.update_fn.is_some())
         .map(|d| d.version)
         .collect();
-    assert_eq!(with_hooks, [21]);
+    assert_eq!(with_hooks, [21, 42]);
 }
 
 #[tokio::test]
@@ -122,6 +122,38 @@ async fn body_metrics_migrate_from_lean_mass_to_muscle_mass() {
     assert_eq!(metrics[0].date, midnight);
     assert_eq!(metrics[0].weight, 800);
     assert_eq!(metrics[0].muscle_mass, 610);
+}
+
+#[tokio::test]
+async fn migration_42_moves_records_off_non_exercise_sets() {
+    let db = DatabaseConnectionBuilder::default()
+        .enable_foreign_keys()
+        .build("test")
+        .unwrap();
+    let before: Vec<_> = schema_ddls()
+        .into_iter()
+        .filter(|d| d.version < 42)
+        .collect();
+    db.create_schema(&before).await.unwrap();
+
+    db.run_in_transaction(async move |tx| {
+        let mut warmup = common::set(1, 0, (28, 0), 10, 200.0);
+        warmup.kind = StepType::Warmup;
+        warmup.pr = true;
+        let mut activity = common::activity(1);
+        activity.steps = vec![warmup, common::set(1, 1, (28, 0), 5, 100.0)];
+        common::insert_activity(tx, activity).await;
+        Ok(())
+    })
+    .await
+    .unwrap();
+
+    db.create_schema(&schema_ddls()).await.unwrap();
+
+    let mut steps = ActivityStepRepository::select().fetch(&db).await.unwrap();
+    steps.sort_by_key(|s| s.idx);
+    let prs: Vec<_> = steps.into_iter().map(|s| s.pr).collect();
+    assert_eq!(prs, [false, true]);
 }
 
 #[tokio::test]
