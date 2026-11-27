@@ -187,6 +187,26 @@ impl Device {
         Ok(())
     }
 
+    /// Moves the last activity sync of the device `serial` to `mark`, unless it is already past it.
+    pub async fn advance_activity_sync(
+        tx: &rusqlite_orm::rusqlite::Transaction<'_>,
+        serial: &str,
+        mark: u32,
+    ) -> rusqlite_orm::errors::Result<()> {
+        DeviceRepository::update()
+            .set(entity::columns::LAST_ACTIVITY_SYNC, mark.into())
+            .where_(Where::And(vec![
+                Where::Eq(entity::columns::SERIAL, serial.into()),
+                Where::Or(vec![
+                    Where::Null(entity::columns::LAST_ACTIVITY_SYNC),
+                    Where::Lt(entity::columns::LAST_ACTIVITY_SYNC, mark.into()),
+                ]),
+            ]))
+            .execute_in(tx)
+            .await?;
+        Ok(())
+    }
+
     /// The registered device with that serial number, `None` if it isn't registered.
     pub async fn get(
         conn: &Connection,

@@ -7,8 +7,11 @@ use crate::{
         workout::{Workout, WorkoutRepository},
     },
     fit::{FitFile, parser::FitParser},
-    logic::activities::helpers::import::{ParsedFiles, import_file_list, parse_files},
+    logic::activities::helpers::import::{
+        ParsedFiles, import_device_files, import_file_list, parse_files,
+    },
     tests::common,
+    utils::constants,
 };
 
 /// Serial of the watch that recorded the fixtures, `3000000001` in hexadecimal.
@@ -177,4 +180,76 @@ async fn workout_keeps_the_notes_of_its_latest_activity() {
     let activities = ActivityRepository::select().fetch(&db).await.unwrap();
     assert_eq!(activities.len(), 3);
     assert!(activities.iter().all(|s| s.workout == Some(workout.id)));
+}
+
+/// Imports the fixtures as downloaded from Connect, the way `import_from_connect` does.
+async fn import_from_connect(db: &DatabasePool, fixtures: &[&str]) {
+    let files: Vec<_> = fixtures
+        .iter()
+        .map(|f| FitFile::read(fixture_path(f)).unwrap())
+        .collect();
+    let mut connect = DeviceRepository::select_by_id(db, constants::CONNECT_DEVICE_SERIAL)
+        .await
+        .unwrap()
+        .unwrap();
+    db.run_in_transaction(async move |tx| {
+        Ok(import_device_files(tx, parse_files(&files), &mut connect, None).await?)
+    })
+    .await
+    .unwrap();
+}
+
+async fn last_activity_sync(db: &DatabasePool, serial: &str) -> Option<u32> {
+    DeviceRepository::select_by_id(db, serial)
+        .await
+        .unwrap()
+        .unwrap()
+        .last_activity_sync
+}
+
+async fn set_last_activity_sync(db: &DatabasePool, serial: &'static str, mark: u32) {
+    db.run_in_transaction(async move |tx| {
+        Ok(Device::advance_activity_sync(tx, serial, mark).await?)
+    })
+    .await
+    .unwrap();
+}
+
+#[tokio::test]
+async fn connect_import_moves_the_mark_of_the_recording_device_to_its_latest_activity() {
+    let db = common::test_db().await;
+    register_device(&db, FIXTURE_SERIAL).await;
+
+    import_from_connect(&db, &["strength_2", "strength_1"]).await;
+
+    let latest = parse_fixture("strength_2").date;
+    assert_eq!(last_activity_sync(&db, FIXTURE_SERIAL).await, Some(latest));
+    // The pseudo-device follows what Connect lists, not a date
+    assert_eq!(
+        last_activity_sync(&db, constants::CONNECT_DEVICE_SERIAL).await,
+        None
+    );
+}
+
+#[tokio::test]
+async fn connect_import_never_moves_the_mark_back() {
+    let db = common::test_db().await;
+    register_device(&db, FIXTURE_SERIAL).await;
+    let later = parse_fixture("strength_2").date + 1;
+    set_last_activity_sync(&db, FIXTURE_SERIAL, later).await;
+
+    import_from_connect(&db, &["strength_1"]).await;
+
+    assert_eq!(last_activity_sync(&db, FIXTURE_SERIAL).await, Some(later));
+}
+
+#[tokio::test]
+async fn connect_import_leaves_other_devices_alone() {
+    let db = common::test_db().await;
+    register_device(&db, FIXTURE_SERIAL).await;
+    register_device(&db, "another").await;
+
+    import_from_connect(&db, &["strength_1"]).await;
+
+    assert_eq!(last_activity_sync(&db, "another").await, None);
 }

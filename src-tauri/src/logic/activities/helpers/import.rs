@@ -234,6 +234,8 @@ pub(crate) struct ImportedFiles {
     pub any_progression: Option<bool>,
     /// Workouts whose percentage loads changed with the inserted sets.
     pub refreshed_workouts: Vec<u16>,
+    /// Start of the latest inserted activity of each registered device that recorded one.
+    pub latest_by_device: HashMap<String, u32>,
 }
 
 /// Outcome of `parse_files`.
@@ -291,6 +293,7 @@ pub(crate) async fn import_file_list(
         Device::get_serials(tx).await?
     };
     let mut handled_workouts = HashMap::new();
+    let mut latest_by_device: HashMap<String, u32> = HashMap::new();
 
     // Newest first, as `insert_full` stores each workout only with its latest activity
     for activity in activities.iter_mut().rev() {
@@ -317,6 +320,10 @@ pub(crate) async fn import_file_list(
                 .iter()
                 .filter_map(|serie| serie.ex_cat.zip(serie.ex_id)),
         );
+        if let Some(serial) = &activity.device {
+            let latest = latest_by_device.entry(serial.clone()).or_default();
+            *latest = (*latest).max(activity.date);
+        }
         existing_activities.insert(activity.date);
         success.push(activity.date);
     }
@@ -349,12 +356,15 @@ pub(crate) async fn import_file_list(
         imported_progression,
         any_progression,
         refreshed_workouts,
+        latest_by_device,
     })
 }
 
 /// Imports the activities parsed from the `.fit` files fetched from `device` and, with `sync_mark`,
-/// moves its last activity sync to it.
-pub(super) async fn import_device_files(
+/// moves its last activity sync to it. The devices that recorded the imported activities, like the
+/// watches behind a Connect import, move their own mark up to their latest activity: just that far,
+/// as whatever they recorded later may not have been uploaded yet.
+pub(crate) async fn import_device_files(
     tx: &mut Transaction<'_>,
     parsed: ParsedFiles,
     device: &mut Device,
@@ -367,6 +377,12 @@ pub(super) async fn import_device_files(
     } else {
         ImportedFiles::default()
     };
+
+    for (serial, latest) in &res.latest_by_device {
+        if *serial != device.serial {
+            Device::advance_activity_sync(tx, serial, *latest).await?;
+        }
+    }
 
     if let Some(mark) = sync_mark {
         device.last_activity_sync = Some(mark);
