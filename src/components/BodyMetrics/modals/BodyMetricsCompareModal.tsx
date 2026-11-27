@@ -4,6 +4,7 @@ import { useContext } from "react";
 import { Dialog, DialogContent, DialogTitle, IconButton } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { MetricCompareRow } from "../rows/MetricCompareRow";
+import { closeUnlessBackdrop } from "@/utils/DialogUtils";
 
 type Props = {
     measures: BodyMetricListItem[];
@@ -21,7 +22,7 @@ export function BodyMetricsCompareModal({ measures, onClose }: Props) {
     } = useContext(I18nSettingsContext);
 
     return (
-        <Dialog open={true} onClose={onClose}>
+        <Dialog open={true} onClose={closeUnlessBackdrop(onClose)}>
             <DialogTitle>
                 {translate("metrics_comparaison")}
                 <IconButton onClick={onClose} className="modal-close-button">

@@ -22,6 +22,7 @@ import { I18nSettingsContext } from "@/context/I18nSettingsContext";
 import { BackendClient } from "@/utils/backend/client";
 import { useLoadingTask } from "@/hooks/useLoadingTask";
 import { AppContext } from "@/context/AppContext";
+import { closeUnlessBackdrop } from "@/utils/DialogUtils";
 
 type Props = {
     workout: WorkoutDetails;
@@ -137,7 +138,12 @@ export function WorkoutStepsModal({ workout, isEdit, onClose }: Props) {
     return (
         <>
             {exercisesCatalog.length > 0 && (
-                <Dialog open={true} onClose={onClose} fullWidth maxWidth="md">
+                <Dialog
+                    open={true}
+                    onClose={closeUnlessBackdrop(onClose)}
+                    fullWidth
+                    maxWidth="md"
+                >
                     <DialogTitle>
                         <TextField
                             placeholder={translate("workout")}

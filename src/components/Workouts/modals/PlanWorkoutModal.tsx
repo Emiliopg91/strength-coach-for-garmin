@@ -13,6 +13,7 @@ import {
 import CloseIcon from "@mui/icons-material/Close";
 import { I18nSettingsContext } from "@/context/I18nSettingsContext";
 import { WorkoutListItem } from "@/utils/backend/models";
+import { closeUnlessBackdrop } from "@/utils/DialogUtils";
 
 type Props = {
     day: Date;
@@ -27,7 +28,12 @@ export function PlanWorkoutModal({ day, workouts, onAdd, onClose }: Props) {
     const [workout, setWorkout] = useState(workouts[0]?.id ?? 0);
 
     return (
-        <Dialog open={true} onClose={onClose} fullWidth maxWidth="xs">
+        <Dialog
+            open={true}
+            onClose={closeUnlessBackdrop(onClose)}
+            fullWidth
+            maxWidth="xs"
+        >
             <DialogTitle>
                 {translate("plan_workout")}
                 <IconButton onClick={onClose} className="modal-close-button">

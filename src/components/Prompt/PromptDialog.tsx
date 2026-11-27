@@ -15,6 +15,7 @@ import {
     Typography,
 } from "@mui/material";
 import { FormEvent, useContext, useState } from "react";
+import { closeUnlessBackdrop } from "@/utils/DialogUtils";
 
 // Above the loading backdrop (1301), as prompts arrive while a task is running
 const PROMPT_Z_INDEX = 1400;
@@ -120,7 +121,7 @@ function PromptForm({ request, onAnswer }: FormProps) {
     return (
         <Dialog
             open={true}
-            onClose={() => onAnswer(null)}
+            onClose={closeUnlessBackdrop(() => onAnswer(null))}
             sx={{ zIndex: PROMPT_Z_INDEX }}
             fullWidth
             maxWidth="xs"

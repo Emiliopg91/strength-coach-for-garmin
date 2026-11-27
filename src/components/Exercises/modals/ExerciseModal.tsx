@@ -19,6 +19,7 @@ import { BackendClient } from "@/utils/backend/client";
 import { WeightField } from "../../Fields/WeightField";
 import { MuscleModel } from "../charts/MuscleModel";
 import { AppContext } from "@/context/AppContext";
+import { closeUnlessBackdrop } from "@/utils/DialogUtils";
 
 type Props = {
     exercise: ExerciseDetails;
@@ -232,7 +233,12 @@ export function ExerciseModal({
     };
 
     return (
-        <Dialog open={true} onClose={onClose} fullWidth maxWidth="sm">
+        <Dialog
+            open={true}
+            onClose={closeUnlessBackdrop(onClose)}
+            fullWidth
+            maxWidth="sm"
+        >
             <DialogTitle>
                 {exerciseName(exercise.category, exercise.id)}
                 <IconButton onClick={onClose} className="modal-close-button">

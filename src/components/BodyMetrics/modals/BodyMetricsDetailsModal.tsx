@@ -11,6 +11,7 @@ import {
     IconButton,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
+import { closeUnlessBackdrop } from "@/utils/DialogUtils";
 
 type Props = {
     measures: BodyMetricListItem;
@@ -41,7 +42,7 @@ export function BodyMetricsDetailsModal({
     };
 
     return (
-        <Dialog open={true} onClose={onClose}>
+        <Dialog open={true} onClose={closeUnlessBackdrop(onClose)}>
             <DialogTitle>
                 {formatDate(measures.date)}
                 <IconButton onClick={onClose} className="modal-close-button">

@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogTitle, IconButton } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { ActivityFrontDetails } from "@/utils/ActivityUtils";
 import { ActivityStepDto } from "@/utils/backend/models";
+import { closeUnlessBackdrop } from "@/utils/DialogUtils";
 
 type Props = {
     activities: ActivityFrontDetails[];
@@ -59,7 +60,7 @@ export function ActivitiesCompareModal({ activities, onClose }: Props) {
     }
 
     return (
-        <Dialog open={true} onClose={onClose}>
+        <Dialog open={true} onClose={closeUnlessBackdrop(onClose)}>
             <DialogTitle>
                 {translate("activities_comparaison") +
                     ": " +

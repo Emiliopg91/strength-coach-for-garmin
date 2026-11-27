@@ -19,6 +19,7 @@ import {
     IconButton,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
+import { closeUnlessBackdrop } from "@/utils/DialogUtils";
 
 type Props = {
     onClose: () => void;
@@ -100,7 +101,7 @@ export function Settings({ onClose }: Props) {
 
     return (
         <>
-            <Dialog open={true} onClose={onClose}>
+            <Dialog open={true} onClose={closeUnlessBackdrop(onClose)}>
                 <DialogTitle>
                     {translate("settings")}
                     <IconButton

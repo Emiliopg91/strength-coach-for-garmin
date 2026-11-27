@@ -12,6 +12,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import { DatePicker } from "@mui/x-date-pickers";
 import { BackendClient } from "@/utils/backend/client";
 import { useLoadingTask } from "@/hooks/useLoadingTask";
+import { closeUnlessBackdrop } from "@/utils/DialogUtils";
 
 type Props = {
     onClose: () => void;
@@ -48,7 +49,7 @@ export function ReportModal({ onClose }: Props) {
     };
 
     return (
-        <Dialog open={true} onClose={onClose}>
+        <Dialog open={true} onClose={closeUnlessBackdrop(onClose)}>
             <DialogTitle>
                 {translate("generate_report")}
                 <IconButton onClick={onClose} className="modal-close-button">

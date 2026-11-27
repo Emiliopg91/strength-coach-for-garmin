@@ -22,6 +22,7 @@ import { WorkoutActionsMenu } from "../menus/WorkoutActionsMenu";
 import { BackendListener } from "@/utils/backend/listener";
 import { MuscleModel } from "../../Exercises/charts/MuscleModel";
 import { WorkoutStructure } from "../views/WorkoutStructure";
+import { closeUnlessBackdrop } from "@/utils/DialogUtils";
 
 type Props = {
     workout: WorkoutDetails;
@@ -102,7 +103,12 @@ export function WorkoutModal({
     };
 
     return (
-        <Dialog open={true} onClose={onClose} fullWidth maxWidth="md">
+        <Dialog
+            open={true}
+            onClose={closeUnlessBackdrop(onClose)}
+            fullWidth
+            maxWidth="md"
+        >
             <DialogTitle>
                 {workout.name.length > 0 && <span>{workout.name}</span>}
                 {workout.name.length == 0 && <span>{translate("other")}</span>}

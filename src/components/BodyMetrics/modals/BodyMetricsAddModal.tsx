@@ -14,6 +14,7 @@ import {
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { closeUnlessBackdrop } from "@/utils/DialogUtils";
 
 type Props = {
     latest: BodyMetricListItem | undefined;
@@ -115,7 +116,7 @@ export function BodyMetricsAddModal({ latest, onClose }: Props) {
     );
 
     return (
-        <Dialog open={true} onClose={onClose}>
+        <Dialog open={true} onClose={closeUnlessBackdrop(onClose)}>
             <DialogTitle>
                 {translate("add_entry")}
                 <IconButton onClick={onClose} className="modal-close-button">

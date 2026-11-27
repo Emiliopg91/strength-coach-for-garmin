@@ -21,6 +21,7 @@ import { ActivitySetsTable } from "../tables/ActivitySetsTable";
 import "@/styles/Activities/ActivityModal.css";
 import { MuscleModel } from "../../Exercises/charts/MuscleModel";
 import { ActivityUpdate } from "@/utils/backend/models";
+import { closeUnlessBackdrop } from "@/utils/DialogUtils";
 
 type Props = {
     activity: ActivityFrontDetails;
@@ -110,7 +111,12 @@ export function ActivityModal({ activity, onClose, onUpdate }: Props) {
     };
 
     return (
-        <Dialog open={true} onClose={onClose} fullWidth maxWidth="sm">
+        <Dialog
+            open={true}
+            onClose={closeUnlessBackdrop(onClose)}
+            fullWidth
+            maxWidth="sm"
+        >
             <DialogTitle>
                 {localActivity.name.length > 0 && (
                     <span>{localActivity.name}</span>
