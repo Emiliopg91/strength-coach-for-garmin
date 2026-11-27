@@ -10,7 +10,7 @@ import { AppContext } from "./AppContext";
 function upsert(
     prev: AvailableDevice[],
     device: DeviceListItem,
-    defaults: Omit<AvailableDevice, "manufacturer" | "model" | "serial_number">,
+    defaults: Omit<AvailableDevice, "model" | "name" | "serial_number">,
     patch: Partial<AvailableDevice>,
 ): AvailableDevice[] {
     if (prev.some((d) => d.serial_number == device.serial_number)) {
@@ -22,6 +22,7 @@ function upsert(
         ...prev,
         {
             model: device.model,
+            name: device.name,
             serial_number: device.serial_number,
             ...defaults,
             ...patch,
@@ -110,11 +111,18 @@ export function DeviceProvider({
         };
     }, []);
 
+    const updateDeviceName = (serial: string, name: string) => {
+        setDevices((prev) =>
+            prev.map((p) => (p.serial_number == serial ? { ...p, name } : p)),
+        );
+    };
+
     const value = {
         // Logged out, no device is reachable through Connect; logging in rediscovers them
         devices: connectUser
             ? devices
             : devices.map((d) => ({ ...d, connect: false })),
+        updateDeviceName,
     };
 
     return (

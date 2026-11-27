@@ -145,3 +145,28 @@ pub async fn get_registered_devices(pool: &DatabasePool) -> Result<Vec<DeviceLis
         })
         .collect())
 }
+
+/// Renames the device `serial`; a blank name gives it back its model. Resolves to the stored name.
+pub async fn set_device_name(
+    pool: &DatabasePool,
+    settings: &SettingsLock,
+    serial: &str,
+    name: &str,
+) -> Result<String, String> {
+    let report = |e: &dyn std::fmt::Display| {
+        report_error(
+            e,
+            settings,
+            "error_updating_device",
+            "Error renaming device",
+        )
+    };
+    let (owned_serial, name) = (serial.to_string(), name.to_string());
+    let stored = pool
+        .run_in_transaction(async move |tx| Ok(Device::set_name(tx, &owned_serial, &name).await?))
+        .await
+        .map_err(|e| report(&e))?;
+    stored
+        .inspect(|_| info!("Renamed device"))
+        .ok_or_else(|| report(&format!("Unknown device {serial}")))
+}

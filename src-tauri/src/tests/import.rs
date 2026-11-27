@@ -34,6 +34,7 @@ async fn register_device(db: &DatabasePool, serial: &str) {
             .item(&mut Device {
                 serial: serial.clone(),
                 model: "MODEL".to_string(),
+                name: "MODEL".to_string(),
                 last_activity_sync: None,
                 last_body_metric_sync: None,
                 usb: true,

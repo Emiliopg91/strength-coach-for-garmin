@@ -60,7 +60,7 @@ export function WorkoutActionsMenu({
         .filter((d) => {
             return d.strength;
         })
-        .toSorted((a, b) => a.model.localeCompare(b.model));
+        .toSorted((a, b) => a.name.localeCompare(b.name));
 
     return (
         <>
@@ -127,7 +127,7 @@ export function WorkoutActionsMenu({
                                                 }
                                             }}
                                         >
-                                            {device.model +
+                                            {device.name +
                                                 (viaConnect
                                                     ? " (Connect)"
                                                     : "")}

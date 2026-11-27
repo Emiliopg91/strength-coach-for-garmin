@@ -236,8 +236,8 @@ heart_rate:
   en: Heart rate
   es: Frecuencia cardíaca
 syncing_device:
-  en: Syncing {} {}
-  es: Sincronizando {} {}
+  en: Syncing {}
+  es: Sincronizando {}
 error_parsing_activity:
   en: "Error parsing activity file: {}"
   es: "Error leyendo archivo de actividad: {}"
@@ -583,6 +583,9 @@ generate:
 error_updating_exercise:
   en: Error updating exercise
   es: Error actualizando ejercicio
+error_updating_device:
+  en: Error updating device
+  es: Error actualizando dispositivo
 unilateral:
   en: Unilateral
   es: Unilateral
@@ -757,3 +760,27 @@ feeling_3:
 feeling_4:
   en: Very Strong
   es: Muy fuerte
+devices:
+  en: Devices
+  es: Dispositivos
+model:
+  en: Model
+  es: Modelo
+serial_number:
+  en: Serial number
+  es: Número de serie
+connected_through:
+  en: Connected through
+  es: Conectado por
+connection_usb:
+  en: USB
+  es: USB
+last_import:
+  en: Last import
+  es: Última importación
+never:
+  en: Never
+  es: Nunca
+no_devices:
+  en: No devices yet. Plug a watch by USB or log in to Garmin Connect to add it.
+  es: Aún no hay dispositivos. Conecta un reloj por USB o inicia sesión en Garmin Connect para añadirlo.

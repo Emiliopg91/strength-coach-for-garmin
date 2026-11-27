@@ -111,7 +111,7 @@ pub(super) async fn on_device_disconnected(
         info!("Disconnected Garmin {} ({})", device.model, device.serial);
         show_notification(NotificationDefinition {
             title: translate("device_disconnected", lang),
-            body: format!("Garmin {}", device.model),
+            body: device.name.clone(),
             kind: NotificationKind::Temporal,
         });
     }
@@ -155,7 +155,7 @@ pub(super) async fn on_device_connected(
 
     show_notification(NotificationDefinition {
         title: translate("device_connected", lang),
-        body: translate_and_replace("syncing_device", &["Garmin", &device.model], lang),
+        body: translate_and_replace("syncing_device", &[&device.name], lang),
         kind: NotificationKind::Temporal,
     });
 

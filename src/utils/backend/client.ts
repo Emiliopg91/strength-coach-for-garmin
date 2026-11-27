@@ -290,6 +290,12 @@ export class BackendClient {
 	}
 	
 
+	// From src-tauri/src/logic/devices/commands.rs:58
+	public static setDeviceName(serial: string, name: string): Promise<string> {
+	  return BackendClient.inner_invoke("set_device_name", { serial, name }); 
+	}
+	
+
 	// From src-tauri/src/logic/exercises/commands.rs:69
 	public static setExerciseProgression(category: number, id: number, value: boolean): Promise<void> {
 	  return BackendClient.inner_invoke("set_exercise_progression", { category, id, value }); 

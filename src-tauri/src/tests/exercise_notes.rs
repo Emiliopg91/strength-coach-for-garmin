@@ -88,6 +88,7 @@ async fn setup() -> DatabasePool {
                 .item(&mut Device {
                     serial: serial.to_string(),
                     model: "MODEL".to_string(),
+                    name: "MODEL".to_string(),
                     last_activity_sync: None,
                     last_body_metric_sync: None,
                     usb: true,

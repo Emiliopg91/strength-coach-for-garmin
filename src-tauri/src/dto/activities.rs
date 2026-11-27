@@ -172,10 +172,7 @@ impl From<(&Activity, &[Exercise], &[ActivityStep], &[ActivityLap])> for Activit
             steps: steps.iter().map(ActivityStepDto::from).collect(),
             heart_rates: data.and_then(|d| d.get_heart_rates()).unwrap_or_default(),
             max_hr: activity.max_hr.unwrap_or(DEFAULT_MAX_HR),
-            device: activity
-                .device_obj
-                .as_ref()
-                .map(|dev| format!("Garmin {}", dev.model)),
+            device: activity.device_obj.as_ref().map(|dev| dev.name.clone()),
             laps: laps.iter().map(ActivityLapDto::from).collect(),
             coordinates: data
                 .and_then(|d| d.get_coordinates_semicircle())

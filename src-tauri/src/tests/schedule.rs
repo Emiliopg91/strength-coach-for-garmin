@@ -112,6 +112,7 @@ async fn link(db: &DatabasePool, links: Vec<(&'static str, &'static str, bool)>)
                 .item(&mut Device {
                     serial: serial.to_string(),
                     model: "Fenix".to_string(),
+                    name: "Fenix".to_string(),
                     last_activity_sync: None,
                     last_body_metric_sync: None,
                     usb: serial != constants::CONNECT_DEVICE_SERIAL,

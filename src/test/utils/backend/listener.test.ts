@@ -10,9 +10,13 @@ vi.mock("@tauri-apps/api/event", () => ({
 const listenMock = vi.mocked(listen);
 
 const device: DeviceListItem = {
+    connect_registered: false,
+    last_activity_sync: null,
     model: "Forerunner",
+    name: "Forerunner",
     serial_number: "123",
     strength_workout: true,
+    usb_registered: true,
 };
 
 describe("BackendListener", () => {

@@ -1,0 +1,19 @@
+#device-list {
+  .col-device-name {
+    width: 30%;
+  }
+
+  td {
+    text-align: center;
+  }
+}
+
+.device-serial {
+  font-family: monospace;
+}
+
+.no-devices {
+  text-align: center;
+  margin-top: 20px;
+  opacity: 0.7;
+}

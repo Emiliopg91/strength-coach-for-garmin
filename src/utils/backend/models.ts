@@ -46,7 +46,7 @@ export interface ActivityListItem {
   training_load: number;
 }
 
-// From src-tauri/src/dto/activities.rs:213
+// From src-tauri/src/dto/activities.rs:210
 export interface ActivityLocation {
   activity: number;
   location: string;
@@ -67,7 +67,7 @@ export interface ActivityStepDto {
   weight_ref: number | null;
 }
 
-// From src-tauri/src/dto/activities.rs:199
+// From src-tauri/src/dto/activities.rs:196
 export interface ActivityUpdate {
   notes: string | null;
   sets: ActivityStepDto[];
@@ -91,9 +91,13 @@ export interface BodyMetricListItem {
 
 // From src-tauri/src/dto/devices.rs:6
 export interface DeviceListItem {
+  connect_registered: boolean;
+  last_activity_sync: number | null;
   model: string;
+  name: string;
   serial_number: string;
   strength_workout: boolean;
+  usb_registered: boolean;
 }
 
 // From src-tauri/src/dao/settings.rs:104
@@ -180,7 +184,7 @@ export interface MuscleExercise {
   muscle_obj: Muscle | null;
 }
 
-// From src-tauri/src/dto/activities.rs:207
+// From src-tauri/src/dto/activities.rs:204
 export interface MuscleSets {
   primary: number;
   secondary: number;

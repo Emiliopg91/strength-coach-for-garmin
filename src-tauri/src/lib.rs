@@ -57,7 +57,9 @@ use crate::{
             connect_logged_user, connect_login, connect_logout, import_from_connect,
             import_weight_from_connect, send_to_connect,
         },
-        devices::commands::{get_registered_devices, import_from_device, send_to_device},
+        devices::commands::{
+            get_registered_devices, import_from_device, send_to_device, set_device_name,
+        },
         events::{BackendEvent, EventSink},
         exercises::commands::{
             apply_progression_suggestion, available_any_progression_suggestions,
@@ -361,6 +363,7 @@ pub fn run(log_level: LevelFilter) {
             import_from_device,
             send_to_device,
             get_registered_devices,
+            set_device_name,
             //App
             notify_frontend_ready,
             get_report_data,

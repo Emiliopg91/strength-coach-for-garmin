@@ -70,6 +70,7 @@ fn activity_details_with_additional_data() {
     activity.device_obj = Some(Device {
         serial: "123".to_string(),
         model: "Forerunner 265".to_string(),
+        name: "Forerunner 265".to_string(),
         last_activity_sync: None,
         last_body_metric_sync: None,
         usb: true,
@@ -90,5 +91,24 @@ fn activity_details_with_additional_data() {
     assert_eq!(details.coordinates, vec![Some((1, 2))]);
     assert_eq!(details.distance, Some(5.25));
     assert_eq!(details.notes, "Easy run");
-    assert_eq!(details.device.as_deref(), Some("Garmin Forerunner 265"));
+    assert_eq!(details.device.as_deref(), Some("Forerunner 265"));
+}
+
+#[test]
+fn activity_details_show_the_device_by_its_name() {
+    let mut activity = common::activity(1);
+    activity.device_obj = Some(Device {
+        serial: "123".to_string(),
+        model: "Forerunner 265".to_string(),
+        name: "Gym watch".to_string(),
+        last_activity_sync: None,
+        last_body_metric_sync: None,
+        usb: true,
+        connect: false,
+        strength_workout: true,
+    });
+
+    let details = ActivityDetails::from((&activity, &[][..], &[][..], &[][..]));
+
+    assert_eq!(details.device.as_deref(), Some("Gym watch"));
 }

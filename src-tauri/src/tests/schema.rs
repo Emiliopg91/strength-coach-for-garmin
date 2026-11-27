@@ -7,6 +7,7 @@ use crate::{
         activity_lap::ActivityLapRepository,
         activity_step::ActivityStepRepository,
         body_metric::BodyMetricRepository,
+        device::DeviceRepository,
         workout::{self, Workout, WorkoutRepository},
         workout_device::WorkoutDeviceRepository,
         workout_step::StepType,
@@ -239,6 +240,40 @@ async fn migration_43_takes_the_elapsed_time_as_timer_time() {
     activities.sort_by_key(|a| a.date);
     let times: Vec<_> = activities.iter().map(|a| a.timer_time).collect();
     assert_eq!(times, [60, 3600]);
+}
+
+#[tokio::test]
+async fn migration_43_names_devices_by_their_model() {
+    let db = DatabaseConnectionBuilder::default()
+        .enable_foreign_keys()
+        .build("test")
+        .unwrap();
+    let before: Vec<_> = schema_ddls()
+        .into_iter()
+        .filter(|d| d.version < 43)
+        .collect();
+    db.create_schema(&before).await.unwrap();
+
+    db.run_in_transaction(async move |tx| {
+        tx.execute_batch(
+            "INSERT INTO DEVICE (serial, model) VALUES ('a', 'Forerunner 265'), ('b', 'fenix 8');",
+        )?;
+        Ok(())
+    })
+    .await
+    .unwrap();
+
+    db.create_schema(&schema_ddls()).await.unwrap();
+
+    let mut devices = DeviceRepository::select().fetch(&db).await.unwrap();
+    devices.sort_by(|a, b| a.serial.cmp(&b.serial));
+    // The Connect pseudo-device comes with the schema
+    let names: Vec<_> = devices
+        .iter()
+        .filter(|d| ["a", "b"].contains(&d.serial.as_str()))
+        .map(|d| d.name.as_str())
+        .collect();
+    assert_eq!(names, ["Forerunner 265", "fenix 8"]);
 }
 
 #[tokio::test]

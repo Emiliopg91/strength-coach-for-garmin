@@ -50,3 +50,16 @@ pub async fn get_registered_devices(
 ) -> Result<Vec<DeviceListItem>, String> {
     devices::get_registered_devices(&pool).await
 }
+
+/// Renames the device `serial`; a blank `name` gives it back its model. Resolves to the stored
+/// name. On failure, shows a persistent error notification and rejects with the message.
+#[traced_command]
+#[tauri::command]
+pub async fn set_device_name(
+    pool: State<'_, DatabasePool>,
+    settings: State<'_, SettingsLock>,
+    serial: &str,
+    name: &str,
+) -> Result<String, String> {
+    devices::set_device_name(&pool, &settings, serial, name).await
+}

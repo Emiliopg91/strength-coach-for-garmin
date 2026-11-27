@@ -19,6 +19,8 @@ use crate::{connect::client::DeviceSummary, dao::activity::Activity, utils::cons
 pub struct Device {
     pub serial: String,
     pub model: String,
+    /// Name the device is shown by; its model until the user renames it
+    pub name: String,
     pub last_activity_sync: Option<u32>,
     pub last_body_metric_sync: Option<u32>,
     pub usb: bool,
@@ -35,9 +37,31 @@ impl Device {
         u64::from_str_radix(serial, 16)
     }
 
+    /// Renames the device `serial`, trimming the name; a blank one gives it back its model. Returns
+    /// the stored name, `None` if the device isn't registered.
+    pub async fn set_name(
+        tx: &rusqlite_orm::rusqlite::Transaction<'_>,
+        serial: &str,
+        name: &str,
+    ) -> rusqlite_orm::errors::Result<Option<String>> {
+        let Some(device) = DeviceRepository::select_by_id_in(tx, serial).await? else {
+            return Ok(None);
+        };
+        let name = match name.trim() {
+            "" => device.model,
+            name => name.to_string(),
+        };
+        DeviceRepository::update()
+            .set(entity::columns::NAME, name.clone().into())
+            .where_(Where::Eq(entity::columns::SERIAL, serial.into()))
+            .execute_in(tx)
+            .await?;
+        Ok(Some(name))
+    }
+
     /// Enrolls the workout-capable Connect devices in `listed`, refreshes the Connect-owned fields of
-    /// known ones and clears the `connect` flag of those no longer listed. Returns the added or changed
-    /// devices, to be announced.
+    /// known ones and clears the `connect` flag of those no longer listed. The name is the user's, so
+    /// known devices keep theirs. Returns the listed devices, to be announced.
     pub async fn sync_connect(
         tx: &rusqlite_orm::rusqlite::Transaction<'_>,
         listed: &[Device],
@@ -61,7 +85,11 @@ impl Device {
         let mut discovered = listed.to_vec();
         let mut added = Vec::new();
         for dao in &mut discovered {
-            match known.remove(&dao.serial) {
+            let stored = known.remove(&dao.serial);
+            if let Some(db) = &stored {
+                dao.name = db.name.clone();
+            }
+            match stored {
                 None => added.push(dao),
                 Some(db)
                     if !db.connect
@@ -128,19 +156,22 @@ impl Device {
         Ok((device, existing))
     }
 
-    /// Registers a device plugged by USB, or flags a known one as reachable by USB.
+    /// Registers a device plugged by USB, or flags a known one as reachable by USB and takes its
+    /// stored name.
     pub async fn enrol_usb(
         tx: &rusqlite_orm::rusqlite::Transaction<'_>,
         device: &mut Device,
     ) -> rusqlite_orm::errors::Result<()> {
         let _: () =
-            if let Some(device) = DeviceRepository::select_by_id_in(tx, &device.serial).await? {
-                if !device.usb {
+            if let Some(stored) = DeviceRepository::select_by_id_in(tx, &device.serial).await? {
+                // Over MTP the device only gives its model
+                device.name = stored.name;
+                if !stored.usb {
                     DeviceRepository::update()
                         .set(entity::columns::USB, true.into())
                         .where_(Where::Eq(
                             entity::columns::SERIAL,
-                            device.serial.clone().into(),
+                            stored.serial.clone().into(),
                         ))
                         .execute_in(tx)
                         .await
@@ -209,6 +240,7 @@ impl TryFrom<&DeviceInfo> for Device {
         Ok(Device {
             serial: info.serial_number.clone(),
             model: info.model.clone(),
+            name: info.model.clone(),
             last_activity_sync: None,
             last_body_metric_sync: None,
             usb: true,
@@ -223,6 +255,7 @@ impl From<&DeviceSummary> for Device {
         Device {
             serial: Device::serial_from_unit_id(info.unit_id),
             model: info.display_name.clone(),
+            name: info.display_name.clone(),
             last_activity_sync: None,
             last_body_metric_sync: None,
             usb: false,

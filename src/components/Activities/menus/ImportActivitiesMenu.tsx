@@ -111,9 +111,7 @@ export function ImportActivitiesMenu({ onImported }: Props) {
                                     importDevice(device.serial_number);
                                 }}
                             >
-                                {translate("import_from_device", [
-                                    device.model,
-                                ])}
+                                {translate("import_from_device", [device.name])}
                             </MenuItem>
                         ))}
                     </Menu>

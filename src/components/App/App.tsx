@@ -17,12 +17,14 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import { Home } from "../Home/Home";
 import PriorityHighIcon from "@mui/icons-material/PriorityHigh";
 import { PromptDialog } from "../Prompt/PromptDialog";
+import WatchIcon from "@mui/icons-material/Watch";
 
 // Only Home is bundled eagerly; the rest is fetched in background once Home is shown
 const loadActivitiesList = () => import("../Activities/ActivityList");
 const loadExercisesList = () => import("../Exercises/ExercisesList");
 const loadBodyMetricList = () => import("../BodyMetrics/BodyMetricList");
 const loadWorkoutsList = () => import("../Workouts/WorkoutList");
+const loadDeviceList = () => import("../Devices/DeviceList");
 const loadSettings = () => import("../Settings/Settings");
 
 const ActivitiesList = lazy(() =>
@@ -36,6 +38,9 @@ const BodyMetricList = lazy(() =>
 );
 const WorkoutsList = lazy(() =>
     loadWorkoutsList().then((m) => ({ default: m.WorkoutsList })),
+);
+const DeviceList = lazy(() =>
+    loadDeviceList().then((m) => ({ default: m.DeviceList })),
 );
 const Settings = lazy(() =>
     loadSettings().then((m) => ({ default: m.Settings })),
@@ -54,6 +59,7 @@ export function App(): JSX.Element {
         void loadExercisesList();
         void loadBodyMetricList();
         void loadWorkoutsList();
+        void loadDeviceList();
         void loadSettings();
     }, [appReady]);
 
@@ -120,6 +126,17 @@ export function App(): JSX.Element {
         {
             label: (
                 <span>
+                    <WatchIcon />
+                </span>
+            ),
+            onSelected: () => {
+                setTab(Tabs.DEVICES);
+            },
+            selected: tab == Tabs.DEVICES,
+        },
+        {
+            label: (
+                <span>
                     <SettingsIcon />
                 </span>
             ),
@@ -150,6 +167,7 @@ export function App(): JSX.Element {
                                 {tab == Tabs.EXERCISES && <ExercisesList />}
                                 {tab == Tabs.WORKOUTS && <WorkoutsList />}
                                 {tab == Tabs.BODY_METRICS && <BodyMetricList />}
+                                {tab == Tabs.DEVICES && <DeviceList />}
                                 {settingsOpened && (
                                     <Settings onClose={closeSettings} />
                                 )}

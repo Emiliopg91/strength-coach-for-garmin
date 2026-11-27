@@ -245,6 +245,7 @@ async fn queue_on_watch(app: &TestApp, id: u16) {
                 .item(&mut Device {
                     serial: "watch".to_string(),
                     model: "model".to_string(),
+                    name: "model".to_string(),
                     last_activity_sync: None,
                     last_body_metric_sync: None,
                     usb: true,
@@ -401,6 +402,7 @@ async fn workout_for_an_unplugged_device_is_left_pending() {
                 .item(&mut Device {
                     serial: "watch".to_string(),
                     model: "model".to_string(),
+                    name: "model".to_string(),
                     last_activity_sync: None,
                     last_body_metric_sync: None,
                     usb: true,
