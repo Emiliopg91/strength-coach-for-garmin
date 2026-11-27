@@ -6,6 +6,8 @@ mod common;
 mod connect;
 mod device_sync;
 mod dto;
+// The dump tool only exists in debug builds
+#[cfg(debug_assertions)]
 mod dump;
 mod exercise_notes;
 mod fit_writer;

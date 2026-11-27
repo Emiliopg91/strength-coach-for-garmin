@@ -159,7 +159,6 @@ impl ActivityStep {
     }
 
     /// Keys of every exercise with some recorded set.
-    #[cfg(debug_assertions)]
     pub async fn get_performed_exercises(
         conn: &Connection,
     ) -> rusqlite_orm::errors::Result<HashSet<(u16, u16)>> {
