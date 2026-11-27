@@ -1,7 +1,6 @@
 use crate::dao::activity_step::ActivityStep;
 
 /// Recomputes the personal records of every exercise with some recorded set.
-#[cfg(debug_assertions)]
 pub(crate) async fn update_all_prs(
     tx: &rusqlite_orm::rusqlite::Transaction<'_>,
 ) -> rusqlite_orm::errors::Result<()> {
