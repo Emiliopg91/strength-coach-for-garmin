@@ -164,6 +164,84 @@ async fn migration_42_moves_records_off_non_exercise_sets() {
 }
 
 #[tokio::test]
+async fn migration_43_moves_distance_notes_and_max_hr_to_the_activity() {
+    let db = DatabaseConnectionBuilder::default()
+        .enable_foreign_keys()
+        .build("test")
+        .unwrap();
+    let before: Vec<_> = schema_ddls()
+        .into_iter()
+        .filter(|d| d.version < 43)
+        .collect();
+    db.create_schema(&before).await.unwrap();
+
+    // Activity 1 has samples, activity 2 only had notes, activity 3 no additional data at all
+    db.run_in_transaction(async move |tx| {
+        tx.execute_batch(
+            "INSERT INTO ACTIVITY (date, name, total_elapsed_time, sport, sub_sport)
+             VALUES (1, '', 60, 10, 20), (2, '', 60, 10, 20), (3, '', 60, 10, 20);
+             INSERT INTO ACTIVITY_DATA (activity, heart_rates, distance, notes, max_hr)
+             VALUES (1, X'6465', 1500.5, 'Felt strong', 189), (2, NULL, NULL, 'Only notes', NULL);",
+        )?;
+        Ok(())
+    })
+    .await
+    .unwrap();
+
+    db.create_schema(&schema_ddls()).await.unwrap();
+
+    let mut activities = ActivityRepository::select().fetch(&db).await.unwrap();
+    activities.sort_by_key(|a| a.date);
+    let moved: Vec<_> = activities
+        .iter()
+        .map(|a| (a.distance, a.notes.as_deref(), a.max_hr))
+        .collect();
+    assert_eq!(
+        moved,
+        [
+            (Some(1500.5), Some("Felt strong"), Some(189)),
+            (None, Some("Only notes"), None),
+            (None, None, None),
+        ]
+    );
+
+    let data = ActivityDataRepository::select().fetch(&db).await.unwrap();
+    assert_eq!(data.len(), 1);
+    assert_eq!(data[0].activity, 1);
+    assert_eq!(data[0].heart_rates.as_deref(), Some(&[100_u8, 101][..]));
+}
+
+#[tokio::test]
+async fn migration_43_takes_the_elapsed_time_as_timer_time() {
+    let db = DatabaseConnectionBuilder::default()
+        .enable_foreign_keys()
+        .build("test")
+        .unwrap();
+    let before: Vec<_> = schema_ddls()
+        .into_iter()
+        .filter(|d| d.version < 43)
+        .collect();
+    db.create_schema(&before).await.unwrap();
+
+    db.run_in_transaction(async move |tx| {
+        tx.execute_batch(
+            "INSERT INTO ACTIVITY (date, name, total_elapsed_time, sport, sub_sport)
+             VALUES (1, '', 60, 10, 20), (2, '', 3600, 10, 20);",
+        )?;
+        Ok(())
+    })
+    .await
+    .unwrap();
+
+    db.create_schema(&schema_ddls()).await.unwrap();
+
+    let mut activities = ActivityRepository::select().fetch(&db).await.unwrap();
+    activities.sort_by_key(|a| a.date);
+    let times: Vec<_> = activities.iter().map(|a| a.timer_time).collect();
+    assert_eq!(times, [60, 3600]);
+}
+
+#[tokio::test]
 async fn schema_creation_is_idempotent() {
     let db = common::test_db().await;
     db.create_schema(&ddls!("../resources/ddl")).await.unwrap();
@@ -176,10 +254,9 @@ async fn activity_roundtrip_with_relationships() {
     let mut activity = common::activity(1_700_000_000);
     activity.steps = vec![common::set(1_700_000_000, 0, (28, 0), 5, 100.0)];
     activity.laps = vec![common::lap(1_700_000_000, 0, Some((1, 2)))];
-    let mut data = common::additional_data(1_700_000_000);
-    data.notes = Some("Felt strong".to_string());
-    data.distance = Some(1_000.0);
-    activity.data = Some(data);
+    activity.data = Some(common::additional_data(1_700_000_000));
+    activity.notes = Some("Felt strong".to_string());
+    activity.distance = Some(1_000.0);
 
     let mut tx_activity = activity.clone();
     db.run_in_transaction(async move |tx| {
@@ -223,9 +300,9 @@ async fn activity_roundtrip_with_relationships() {
     assert_eq!(stored.steps[0].weight, Some(1000));
     assert_eq!(stored.laps.len(), 1);
     assert_eq!(stored.laps[0].start_latitude, Some(1));
-    let data = stored.data.unwrap();
-    assert_eq!(data.notes.as_deref(), Some("Felt strong"));
-    assert_eq!(data.distance, Some(1_000.0));
+    assert!(stored.data.is_some());
+    assert_eq!(stored.notes.as_deref(), Some("Felt strong"));
+    assert_eq!(stored.distance, Some(1_000.0));
     let workout = stored.workout_obj.unwrap();
     assert!(workout.enabled);
     assert_eq!(workout.name, "Leg day");

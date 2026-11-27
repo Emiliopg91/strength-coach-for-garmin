@@ -20,7 +20,7 @@ pub struct ActivityListItem {
     pub sport: u8,
     pub sub_sport: u8,
     pub has_record: bool,
-    pub total_elapsed_time: u32,
+    pub timer_time: u32,
     pub has_sets: bool,
 }
 
@@ -34,7 +34,7 @@ impl From<&Activity> for ActivityListItem {
             sport: value.sport,
             sub_sport: value.sub_sport,
             has_record: false,
-            total_elapsed_time: value.total_elapsed_time,
+            timer_time: value.timer_time,
             has_sets: false,
         }
     }
@@ -109,7 +109,7 @@ pub struct ActivityDetails {
 
     pub timestamp: u32,
 
-    pub total_elapsed_time: u32,
+    pub timer_time: u32,
     pub active_time: u32,
 
     pub active_calories: u16,
@@ -163,7 +163,7 @@ impl From<(&Activity, &[Exercise], &[ActivityStep], &[ActivityLap])> for Activit
         Self {
             name: activity.name.clone(),
             timestamp: activity.date,
-            total_elapsed_time: activity.total_elapsed_time,
+            timer_time: activity.timer_time,
             active_time: activity.active_time,
             active_calories: activity.active_calories,
             training_load: activity.training_load,
@@ -171,7 +171,7 @@ impl From<(&Activity, &[Exercise], &[ActivityStep], &[ActivityLap])> for Activit
             sub_sport: activity.sub_sport,
             steps: steps.iter().map(ActivityStepDto::from).collect(),
             heart_rates: data.and_then(|d| d.get_heart_rates()).unwrap_or_default(),
-            max_hr: data.and_then(|d| d.max_hr).unwrap_or(DEFAULT_MAX_HR),
+            max_hr: activity.max_hr.unwrap_or(DEFAULT_MAX_HR),
             device: activity
                 .device_obj
                 .as_ref()
@@ -184,8 +184,8 @@ impl From<(&Activity, &[Exercise], &[ActivityStep], &[ActivityLap])> for Activit
                 .and_then(|d| d.get_speeds())
                 .map(|s| round_samples(s, 1000.0))
                 .unwrap_or_default(),
-            distance: data.and_then(|d| d.distance).map(|d| d / 1000_f64),
-            notes: data.and_then(|d| d.notes.clone()).unwrap_or_default(),
+            distance: activity.distance.map(|d| d / 1000_f64),
+            notes: activity.notes.clone().unwrap_or_default(),
             primary_muscles,
             secondary_muscles,
             connect_id: activity.connect_id.clone(),

@@ -80,9 +80,9 @@ fn activity_details_with_additional_data() {
     let mut data = common::additional_data(1);
     data.heart_rates = Some(vec![100, ActivityData::INVALID_HEAR_RATE]);
     data.coordinates = Some(ActivityData::build_coordinates_blob(&[(1, 2)]));
-    data.distance = Some(5_250.0);
-    data.notes = Some("Easy run".to_string());
     activity.data = Some(data);
+    activity.distance = Some(5_250.0);
+    activity.notes = Some("Easy run".to_string());
 
     let details = ActivityDetails::from((&activity, &[][..], &[][..], &[][..]));
 

@@ -191,8 +191,13 @@ fn activity_survives_a_fit_round_trip() {
             written.total_elapsed_time, activity.total_elapsed_time,
             "{name}"
         );
+        assert_eq!(written.timer_time, activity.timer_time, "{name}");
         assert_eq!(written.active_time, activity.active_time, "{name}");
         assert_eq!(written.active_calories, activity.active_calories, "{name}");
+        assert_eq!(
+            written.metabolic_calories, activity.metabolic_calories,
+            "{name}"
+        );
         assert_eq!(written.training_load, activity.training_load, "{name}");
         assert_eq!(step_summary(&written), step_summary(&activity), "{name}");
 
@@ -209,8 +214,8 @@ fn activity_survives_a_fit_round_trip() {
         assert_eq!(written_data.heart_rates, data.heart_rates, "{name}");
         assert_eq!(written_data.coordinates, data.coordinates, "{name}");
         assert_eq!(written_data.speeds, data.speeds, "{name}");
-        assert_eq!(written_data.distance, data.distance, "{name}");
-        assert_eq!(written_data.max_hr, data.max_hr, "{name}");
+        assert_eq!(written.distance, activity.distance, "{name}");
+        assert_eq!(written.max_hr, activity.max_hr, "{name}");
     }
 }
 

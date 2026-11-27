@@ -54,7 +54,7 @@ export function ActivityDetailsTable({ activity }: Props) {
                     <td>
                         {(activity.active_time > 0
                             ? formatDuration(activity.active_time) + " / "
-                            : "") + formatDuration(activity.total_elapsed_time)}
+                            : "") + formatDuration(activity.timer_time)}
                     </td>
                 </tr>
                 <tr>
@@ -76,16 +76,14 @@ export function ActivityDetailsTable({ activity }: Props) {
                                 {formatNumber(
                                     fromKm(
                                         activity.distance /
-                                            (activity.total_elapsed_time /
-                                                3600),
+                                            (activity.timer_time / 3600),
                                     ),
                                     2,
                                 )}{" "}
                                 {getDistanceUnit()}/h (
                                 {formatDuration(
                                     toKm(
-                                        activity.total_elapsed_time /
-                                            activity.distance,
+                                        activity.timer_time / activity.distance,
                                     ),
                                 )}{" "}
                                 min/{getDistanceUnit()}){" "}

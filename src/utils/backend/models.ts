@@ -21,8 +21,8 @@ export interface ActivityDetails {
   sport: number;
   steps: ActivityStepDto[];
   sub_sport: number;
+  timer_time: number;
   timestamp: number;
-  total_elapsed_time: number;
   training_load: number;
 }
 
@@ -41,8 +41,8 @@ export interface ActivityListItem {
   name: string;
   sport: number;
   sub_sport: number;
+  timer_time: number;
   timestamp: number;
-  total_elapsed_time: number;
   training_load: number;
 }
 

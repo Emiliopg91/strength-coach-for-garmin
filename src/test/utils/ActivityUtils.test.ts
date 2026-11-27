@@ -33,7 +33,7 @@ const makeDetails = (
     sub_sport: 0,
     timestamp: 0,
     active_calories: 0,
-    total_elapsed_time: 0,
+    timer_time: 0,
     training_load: 0,
     primary_muscles: [],
     secondary_muscles: [],
@@ -253,7 +253,7 @@ describe("ActivityUtils.detailsFromBackend - heart rate", () => {
     it("distributes elapsed time across zones using a 189 bpm floor for max HR", () => {
         const details = ActivityUtils.detailsFromBackend(
             makeDetails({
-                total_elapsed_time: 100,
+                timer_time: 100,
                 heart_rates: [100, 150, 180, null],
             }),
             kgToKg,
@@ -265,7 +265,7 @@ describe("ActivityUtils.detailsFromBackend - heart rate", () => {
 
     it("uses the observed max HR when it is above 189", () => {
         const details = ActivityUtils.detailsFromBackend(
-            makeDetails({ total_elapsed_time: 20, heart_rates: [200, 100] }),
+            makeDetails({ timer_time: 20, heart_rates: [200, 100] }),
             kgToKg,
         );
 
@@ -279,7 +279,7 @@ describe("ActivityUtils.detailsFromBackend - heart rate", () => {
     it("adjusts the first zone so zones always add up to the elapsed time", () => {
         const details = ActivityUtils.detailsFromBackend(
             makeDetails({
-                total_elapsed_time: 10,
+                timer_time: 10,
                 heart_rates: [100, 120, 150, 160],
             }),
             kgToKg,
@@ -293,7 +293,7 @@ describe("ActivityUtils.detailsFromBackend - heart rate", () => {
     it("computes min/avg/max ignoring missing samples", () => {
         const details = ActivityUtils.detailsFromBackend(
             makeDetails({
-                total_elapsed_time: 4,
+                timer_time: 4,
                 heart_rates: [100, null, 150, 180],
             }),
             kgToKg,
@@ -309,7 +309,7 @@ describe("ActivityUtils.detailsFromBackend - heart rate", () => {
         "keeps HR defaults with %s",
         (_: unknown, heart_rates: (number | null)[]) => {
             const details = ActivityUtils.detailsFromBackend(
-                makeDetails({ total_elapsed_time: 30, heart_rates }),
+                makeDetails({ timer_time: 30, heart_rates }),
                 kgToKg,
             );
 
@@ -322,7 +322,7 @@ describe("ActivityUtils.detailsFromBackend - heart rate", () => {
     it("builds per-sample chart data colored by zone", () => {
         const details = ActivityUtils.detailsFromBackend(
             makeDetails({
-                total_elapsed_time: 5,
+                timer_time: 5,
                 heart_rates: [100, 125, 150, 165, 180],
             }),
             kgToKg,
@@ -353,7 +353,7 @@ describe("ActivityUtils.detailsFromBackend - input", () => {
                     start_longitude: semicircles(-3),
                 },
             ],
-            total_elapsed_time: 2,
+            timer_time: 2,
             heart_rates: [120, 150],
         });
 
@@ -488,7 +488,7 @@ describe("ActivityUtils.calculateWorkoutLoad", () => {
             sport: 0,
             sub_sport: 0,
             timestamp: date.getTime() / 1000,
-            total_elapsed_time: 0,
+            timer_time: 0,
             training_load,
             has_sets: false,
         };

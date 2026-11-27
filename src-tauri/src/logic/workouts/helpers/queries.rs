@@ -40,7 +40,7 @@ pub(in crate::logic::workouts) async fn workout_list(
             continue;
         };
         stats.activities += 1;
-        stats.total_time += s.total_elapsed_time;
+        stats.total_time += s.timer_time;
         stats.latest_activity.get_or_insert(s.date);
         stats.total_load += s.training_load;
     }
@@ -99,7 +99,7 @@ pub(in crate::logic::workouts) async fn workout_details(
     let mut activity_list = Vec::new();
     for activity in &activities {
         count += 1;
-        time += activity.total_elapsed_time;
+        time += activity.timer_time;
 
         let local_volume = volume_by_activity
             .get(&activity.date)

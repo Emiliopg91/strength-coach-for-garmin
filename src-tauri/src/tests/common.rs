@@ -60,8 +60,10 @@ pub fn activity(date: u32) -> Activity {
         date,
         name: format!("Activity {date}"),
         total_elapsed_time: 3600,
+        timer_time: 3600,
         active_time: 3000,
         active_calories: 100,
+        metabolic_calories: None,
         training_load: 80.0,
         device: None,
         workout: None,
@@ -76,6 +78,9 @@ pub fn activity(date: u32) -> Activity {
         connect_id: None,
         feeling: None,
         rpe: None,
+        distance: None,
+        notes: None,
+        max_hr: None,
     }
 }
 
@@ -103,9 +108,6 @@ pub fn additional_data(activity: u32) -> ActivityData {
         heart_rates: None,
         coordinates: None,
         speeds: None,
-        distance: None,
-        notes: None,
-        max_hr: None,
     }
 }
 

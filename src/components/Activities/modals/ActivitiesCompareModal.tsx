@@ -95,16 +95,12 @@ export function ActivitiesCompareModal({ activities, onClose }: Props) {
                             <td>
                                 {formatDuration(activities[0].active_time) +
                                     " / " +
-                                    formatDuration(
-                                        activities[0].total_elapsed_time,
-                                    )}
+                                    formatDuration(activities[0].timer_time)}
                             </td>
                             <td>
                                 {formatDuration(activities[1].active_time) +
                                     " / " +
-                                    formatDuration(
-                                        activities[1].total_elapsed_time,
-                                    )}
+                                    formatDuration(activities[1].timer_time)}
                             </td>
                         </tr>
                         <tr>

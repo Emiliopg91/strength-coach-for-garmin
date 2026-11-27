@@ -28,7 +28,7 @@ impl From<&Activity> for WorkoutActivity {
         WorkoutActivity {
             date: value.date,
             volume: 0_f32,
-            time: value.total_elapsed_time,
+            time: value.timer_time,
         }
     }
 }

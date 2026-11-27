@@ -182,7 +182,7 @@ export function ActivityModal({ activity, onClose, onUpdate }: Props) {
                             hrBreathData={localActivity.hrBreathData}
                             hrRanges={localActivity.hrRanges}
                             zonesTimes={localActivity.zones_times}
-                            totalElapsedTime={localActivity.total_elapsed_time}
+                            timerTime={localActivity.timer_time}
                         />
                         <br />
                     </>

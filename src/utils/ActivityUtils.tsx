@@ -250,7 +250,7 @@ export class ActivityUtils {
             });
 
             const timeFraction =
-                details.total_elapsed_time / details.heart_rates.length;
+                details.timer_time / details.heart_rates.length;
             let accum = 0;
             details.zones_times.forEach((count, idx) => {
                 const time_i = Math.round(count * timeFraction);
@@ -258,8 +258,7 @@ export class ActivityUtils {
                 accum += time_i;
             });
 
-            details.zones_times[0] +=
-                Math.round(details.total_elapsed_time) - accum;
+            details.zones_times[0] += Math.round(details.timer_time) - accum;
 
             if (validHrs.length > 0) {
                 const nonZeroHrs = validHrs.filter((valor) => valor !== 0);

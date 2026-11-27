@@ -67,7 +67,7 @@ const emptyStats = (): HomeStats => ({
 
 const addActivity = (stats: PeriodStats, activity: ActivityListItem) => {
     stats.activities += 1;
-    stats.time += activity.total_elapsed_time;
+    stats.time += activity.timer_time;
     stats.kcal += activity.active_calories;
     stats.load += activity.training_load;
 };

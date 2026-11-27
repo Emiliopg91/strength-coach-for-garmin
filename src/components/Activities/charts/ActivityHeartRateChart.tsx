@@ -17,16 +17,16 @@ type Props = {
     hrBreathData: { idx: number; hr: number; avg: number; color: string }[];
     hrRanges: [number, number, number];
     zonesTimes: number[];
-    totalElapsedTime: number;
+    timerTime: number;
 };
 
 function HeartRateTooltip({
     active,
     payload,
-    totalElapsedTime,
+    timerTime,
     sampleCount,
 }: TooltipContentProps & {
-    totalElapsedTime: number;
+    timerTime: number;
     sampleCount: number;
 }) {
     const { translate, formatDuration, formatNumber } =
@@ -36,8 +36,7 @@ function HeartRateTooltip({
         return null;
     }
     const data = payload[0].payload as { idx: number; hr: number };
-    const elapsed =
-        sampleCount > 0 ? (data.idx * totalElapsedTime) / sampleCount : 0;
+    const elapsed = sampleCount > 0 ? (data.idx * timerTime) / sampleCount : 0;
     return (
         <div className="chart-tooltip">
             <div>
@@ -54,7 +53,7 @@ export function ActivityHeartRateChart({
     hrBreathData,
     hrRanges,
     zonesTimes,
-    totalElapsedTime,
+    timerTime,
 }: Props) {
     const { translate, formatDuration, formatPercent } =
         useContext(I18nSettingsContext);
@@ -112,8 +111,7 @@ export function ActivityHeartRateChart({
                                                     {formatDuration(time) +
                                                         " (" +
                                                         formatPercent(
-                                                            time /
-                                                                totalElapsedTime,
+                                                            time / timerTime,
                                                             0,
                                                         ) +
                                                         ")"}
@@ -155,7 +153,7 @@ export function ActivityHeartRateChart({
                         content={(props) => (
                             <HeartRateTooltip
                                 {...props}
-                                totalElapsedTime={totalElapsedTime}
+                                timerTime={timerTime}
                                 sampleCount={hrBreathData.length}
                             />
                         )}

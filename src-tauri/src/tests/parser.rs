@@ -54,6 +54,7 @@ struct Expected {
     date: u32,
     name: &'static str,
     total_elapsed_time: u32,
+    timer_time: u32,
     active_time: u32,
     active_calories: u16,
     training_load: f32,
@@ -67,6 +68,7 @@ const STRENGTH: [Expected; 6] = [
         date: 1781167080,
         name: "3 - Pierna",
         total_elapsed_time: 3230,
+        timer_time: 3230,
         active_time: 2012,
         active_calories: 272,
         training_load: 62.12,
@@ -78,6 +80,7 @@ const STRENGTH: [Expected; 6] = [
         date: 1781254355,
         name: "4 - Torso",
         total_elapsed_time: 4207,
+        timer_time: 2633,
         active_time: 1769,
         active_calories: 252,
         training_load: 73.05,
@@ -89,6 +92,7 @@ const STRENGTH: [Expected; 6] = [
         date: 1781511466,
         name: "1 - Pierna",
         total_elapsed_time: 3179,
+        timer_time: 3049,
         active_time: 1958,
         active_calories: 248,
         training_load: 64.51,
@@ -100,6 +104,7 @@ const STRENGTH: [Expected; 6] = [
         date: 1781682701,
         name: "2 - Torso",
         total_elapsed_time: 3269,
+        timer_time: 2631,
         active_time: 1614,
         active_calories: 246,
         training_load: 59.35,
@@ -111,6 +116,7 @@ const STRENGTH: [Expected; 6] = [
         date: 1781769160,
         name: "3 - Pierna",
         total_elapsed_time: 3806,
+        timer_time: 3755,
         active_time: 2538,
         active_calories: 293,
         training_load: 76.29,
@@ -122,6 +128,7 @@ const STRENGTH: [Expected; 6] = [
         date: 1788160480,
         name: "1 - Pierna",
         total_elapsed_time: 2604,
+        timer_time: 2604,
         active_time: 1386,
         active_calories: 245,
         training_load: 81.55,
@@ -137,6 +144,7 @@ const WALKS: [(Expected, (f64, f64), f64, usize); 3] = [
             date: 1786981687,
             name: "",
             total_elapsed_time: 4005,
+            timer_time: 4005,
             active_time: 0,
             active_calories: 159,
             training_load: 6.36,
@@ -153,6 +161,7 @@ const WALKS: [(Expected, (f64, f64), f64, usize); 3] = [
             date: 1788893128,
             name: "",
             total_elapsed_time: 836,
+            timer_time: 836,
             active_time: 0,
             active_calories: 70,
             training_load: 17.87,
@@ -169,6 +178,7 @@ const WALKS: [(Expected, (f64, f64), f64, usize); 3] = [
             date: 1789621646,
             name: "",
             total_elapsed_time: 7242,
+            timer_time: 7242,
             active_time: 0,
             active_calories: 169,
             training_load: 5.17,
@@ -189,8 +199,10 @@ fn assert_activity(activity: &Activity, expected: &Expected, sport: (u8, u8)) {
         activity.total_elapsed_time, expected.total_elapsed_time,
         "{ctx}"
     );
+    assert_eq!(activity.timer_time, expected.timer_time, "{ctx}");
     assert_eq!(activity.active_time, expected.active_time, "{ctx}");
     assert_eq!(activity.active_calories, expected.active_calories, "{ctx}");
+    assert!(activity.metabolic_calories.is_some(), "{ctx}");
     // Garmin scales the load by 65536: compared to two decimals
     assert!(
         (activity.training_load - expected.training_load).abs() < 0.005,
@@ -250,7 +262,7 @@ fn parses_strength_activities() {
             expected.fixture
         );
         assert!(additional_data.speeds.is_none(), "{}", expected.fixture);
-        assert_eq!(additional_data.distance, Some(0.0));
+        assert_eq!(activity.distance, Some(0.0));
     }
 }
 
@@ -314,7 +326,7 @@ fn parses_walk_activities() {
         }
 
         let additional_data = activity.data.unwrap();
-        assert_eq!(additional_data.distance, Some(*distance), "{ctx}");
+        assert_eq!(activity.distance, Some(*distance), "{ctx}");
         assert_eq!(
             additional_data.get_speeds().map(|v| v.len()),
             Some(expected.records),
@@ -346,6 +358,7 @@ fn parses_indoor_biking_activity() {
         date: 1703262819,
         name: "",
         total_elapsed_time: 4180,
+        timer_time: 3769,
         active_time: 0,
         active_calories: 313,
         training_load: 51.09,
@@ -366,7 +379,7 @@ fn parses_indoor_biking_activity() {
 
     // Distance and speed come from the speed sensor, but there is no GPS nor barometer data
     let additional_data = activity.data.unwrap();
-    assert_eq!(additional_data.distance, Some(19731.78), "{ctx}");
+    assert_eq!(activity.distance, Some(19731.78), "{ctx}");
     let speeds = additional_data.get_speeds().unwrap();
     assert_eq!(speeds.len(), expected.records, "{ctx}");
     assert_eq!(speeds.iter().flatten().count(), 3739, "{ctx}");

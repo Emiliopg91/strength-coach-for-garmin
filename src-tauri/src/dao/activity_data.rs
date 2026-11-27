@@ -1,7 +1,7 @@
 use rusqlite_orm::{
     Entity,
     dao::Repository,
-    rusqlite::{Connection, Transaction},
+    rusqlite::Connection,
     types::{order_by::OrderBy, value::Value, where_clause::Where},
 };
 use serde::{Deserialize, Serialize};
@@ -16,9 +16,6 @@ pub struct ActivityData {
     pub heart_rates: Option<Vec<u8>>,
     pub coordinates: Option<Vec<u8>>,
     pub speeds: Option<Vec<u8>>,
-    pub distance: Option<f64>,
-    pub notes: Option<String>,
-    pub max_hr: Option<u8>,
 }
 
 impl ActivityData {
@@ -32,11 +29,8 @@ impl ActivityData {
         Self {
             activity,
             coordinates: None,
-            distance: None,
             heart_rates: None,
-            notes: None,
             speeds: None,
-            max_hr: None,
         }
     }
 
@@ -134,33 +128,6 @@ impl ActivityData {
             .where_(Where::In(entity::columns::ACTIVITY, dates.to_vec()))
             .fetch_in(conn)
             .await
-    }
-
-    /// Stores the notes of a single activity, creating its additional data row if needed. Blank
-    /// notes are stored as `NULL`.
-    pub async fn update_notes(
-        tx: &Transaction<'_>,
-        activity: u32,
-        notes: Option<&str>,
-    ) -> rusqlite_orm::errors::Result<()> {
-        let notes = notes.filter(|n| !n.trim().is_empty()).map(str::to_string);
-
-        let updated = ActivityDataRepository::update()
-            .set(entity::columns::NOTES, notes.clone().into())
-            .where_(Where::Eq(entity::columns::ACTIVITY, activity.into()))
-            .execute_in(tx)
-            .await?;
-
-        if updated == 0 && notes.is_some() {
-            let mut add_data = ActivityData::new(activity);
-            add_data.notes = notes;
-            ActivityDataRepository::insert()
-                .item(&mut add_data)
-                .execute_in(tx)
-                .await?;
-        }
-
-        Ok(())
     }
 
     /// Unnamed activities recorded with GPS, newest first, to name them after their location.

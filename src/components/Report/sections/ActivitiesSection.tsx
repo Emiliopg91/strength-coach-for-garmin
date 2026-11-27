@@ -54,9 +54,7 @@ export default function ActivitiesSection({
                                     <b>{translate("time") + ": "}</b>
                                     {formatDuration(activity.active_time) +
                                         " / " +
-                                        formatDuration(
-                                            activity.total_elapsed_time,
-                                        )}
+                                        formatDuration(activity.timer_time)}
                                     <br />
                                     <b>{translate("active_calories") + ": "}</b>
                                     {activity.active_calories}

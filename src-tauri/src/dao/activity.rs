@@ -29,8 +29,13 @@ pub struct Activity {
     pub date: u32,
     pub name: String,
     pub total_elapsed_time: u32,
+    /// Time the activity timer ran, without the pauses; the elapsed time for activities imported
+    /// before it was kept
+    pub timer_time: u32,
     pub active_time: u32,
     pub active_calories: u16,
+    /// Calories burnt at rest during the activity; `None` for activities imported before it was kept
+    pub metabolic_calories: Option<u16>,
     pub training_load: f32,
     pub device: Option<String>,
     pub workout: Option<u16>,
@@ -39,6 +44,9 @@ pub struct Activity {
     pub connect_id: Option<String>,
     pub feeling: Option<u8>,
     pub rpe: Option<u8>,
+    pub distance: Option<f64>,
+    pub notes: Option<String>,
+    pub max_hr: Option<u8>,
 
     #[relationship((date, activity_step::entity::columns::ACTIVITY))]
     pub steps: Vec<ActivityStep>,
@@ -383,6 +391,20 @@ impl Activity {
         }
 
         Ok(id)
+    }
+
+    /// Stores the notes of a single activity. Blank notes are stored as `NULL`.
+    pub async fn update_notes(
+        conn: &Connection,
+        timestamp: u32,
+        notes: Option<&str>,
+    ) -> rusqlite_orm::errors::Result<usize> {
+        let notes = notes.filter(|n| !n.trim().is_empty()).map(str::to_string);
+        ActivityRepository::update()
+            .set(entity::columns::NOTES, notes.into())
+            .where_(Where::Eq(entity::columns::DATE, timestamp.into()))
+            .execute_in(conn)
+            .await
     }
 
     /// Sets the perceived effort (1-10) of the activity at `timestamp`; returns the number of rows changed.

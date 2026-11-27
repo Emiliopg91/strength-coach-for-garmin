@@ -180,12 +180,14 @@ impl TryFrom<FitParser> for Activity {
             .collect();
 
         records.timestamp = activity_data.timestamp;
-        let mut additional_data: Option<ActivityData> = records.into();
-        if let Some(ad) = additional_data.as_mut()
-            && ad.heart_rates.is_some()
-        {
-            ad.max_hr = max_heart_rate;
-        }
+        let distance = records.distance;
+        let additional_data: Option<ActivityData> = records.into();
+        // The zones max heart rate only means something with heart rate samples
+        let max_hr = additional_data
+            .as_ref()
+            .is_some_and(|ad| ad.heart_rates.is_some())
+            .then_some(max_heart_rate)
+            .flatten();
 
         // A workout other than a strength one has no steps to keep, just its name: stored disabled,
         // so the activity still links to it
@@ -209,8 +211,10 @@ impl TryFrom<FitParser> for Activity {
             // Set once the workout is stored, when the activity is
             workout: None,
             total_elapsed_time: activity_data.total_elapsed_time,
+            timer_time: activity_data.timer_time,
             active_time: activity_data.active_time,
             active_calories: activity_data.total_calories - activity_data.metabolic_calories,
+            metabolic_calories: Some(activity_data.metabolic_calories),
             steps,
             training_load: activity_data.training_load,
             sport: activity_data.sub_sport_obj.sport,
@@ -223,6 +227,9 @@ impl TryFrom<FitParser> for Activity {
             connect_id: None,
             rpe,
             feeling,
+            distance,
+            notes: None,
+            max_hr,
         })
     }
 }
@@ -293,6 +300,7 @@ struct ActivityAccumulator {
     timestamp: u32,
     sub_sport_obj: SubSport,
     total_elapsed_time: u32,
+    timer_time: u32,
     active_time: u32,
     training_load: f32,
     total_calories: u16,
@@ -310,6 +318,7 @@ impl ActivityAccumulator {
                 sport_obj: None,
             },
             total_elapsed_time: 0,
+            timer_time: 0,
             active_time: 0,
             training_load: 0.0,
             total_calories: 0,
@@ -346,6 +355,11 @@ impl ActivityAccumulator {
             .total_elapsed_time_scaled()
             .map(|v| v.round() as u32)
             .ok_or_else(|| ParseFitFileError::MissingField("total_elapsed_time".to_string()))?;
+
+        // Without it, the timer is taken as running the whole activity
+        self.timer_time = msg
+            .total_timer_time_scaled()
+            .map_or(self.total_elapsed_time, |v| v.round() as u32);
 
         self.active_time = msg.active_time_scaled().map_or(0_u32, |v| v.round() as u32);
 
@@ -422,15 +436,12 @@ impl From<RecordAccumulator> for Option<ActivityData> {
         let hrs = value.any_hr.then_some(value.hrs);
         let speeds = value.any_speed.then_some(value.speeds);
 
-        if hrs.is_some() || coords.is_some() || speeds.is_some() || value.distance.is_some() {
+        if hrs.is_some() || coords.is_some() || speeds.is_some() {
             Some(ActivityData {
                 activity: value.timestamp,
                 heart_rates: hrs,
                 coordinates: coords.map(|coords| ActivityData::build_coordinates_blob(&coords)),
                 speeds: speeds.map(|speeds| ActivityData::build_speeds_blob(&speeds)),
-                distance: value.distance,
-                notes: None,
-                max_hr: None,
             })
         } else {
             None

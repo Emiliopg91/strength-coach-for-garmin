@@ -261,8 +261,12 @@ fn lap_messages(activity: &Activity) -> Vec<Message> {
             lap.sport = Sport(activity.sport);
             lap.start_time = datetime(start);
             lap.timestamp = datetime(end);
+            // The pauses aren't kept, so the timer time is spread the same way as the elapsed one
+            let timer = time_at(0, activity.timer_time, idx + 1, count)
+                - time_at(0, activity.timer_time, idx, count);
+
             lap.set_total_elapsed_time_scaled((end - start) as f64);
-            lap.set_total_timer_time_scaled((end - start) as f64);
+            lap.set_total_timer_time_scaled(timer as f64);
             if let (Some(lat), Some(long)) = (lat, long) {
                 lap.start_position_lat = lat;
                 lap.start_position_long = long;
@@ -287,25 +291,28 @@ fn session_message(activity: &Activity, num_laps: u16, lang: Languages) -> Messa
     msg.first_lap_index = 0;
     msg.num_laps = num_laps;
     msg.set_total_elapsed_time_scaled(activity.total_elapsed_time as f64);
-    msg.set_total_timer_time_scaled(activity.total_elapsed_time as f64);
+    msg.set_total_timer_time_scaled(activity.timer_time as f64);
     msg.set_active_time_scaled(activity.active_time as f64);
     // Scaled by 65536: the scaled setter truncates, which would shift the value on every round trip
     msg.training_load_peak = (f64::from(activity.training_load) * 65536.0).round() as i32;
-    // Only active calories are kept, so the metabolic share is lost
-    msg.total_calories = activity.active_calories;
-    msg.metabolic_calories = 0;
+    // Activities imported before metabolic calories were kept only have the active ones
+    let metabolic_calories = activity.metabolic_calories.unwrap_or_default();
+    msg.total_calories = activity.active_calories.saturating_add(metabolic_calories);
+    msg.metabolic_calories = metabolic_calories;
+    msg.workout_feel = activity.feeling.map_or(u8::MAX, |f| f * 25);
+    msg.workout_rpe = activity.rpe.map_or(u8::MAX, |f| f * 10);
 
     if let Some((lat, long)) = first_position(activity) {
         msg.start_position_lat = lat;
         msg.start_position_long = long;
     }
 
-    if let Some(data) = &activity.data {
-        if let Some(distance) = data.distance {
-            // The scaled setter truncates, which would shift the value on every round trip
-            msg.total_distance = (distance * 100.0).round() as u32;
-        }
+    if let Some(distance) = activity.distance {
+        // The scaled setter truncates, which would shift the value on every round trip
+        msg.total_distance = (distance * 100.0).round() as u32;
+    }
 
+    if let Some(data) = &activity.data {
         let hrs: Vec<u32> = data
             .get_heart_rates()
             .unwrap_or_default()
@@ -333,7 +340,7 @@ fn activity_message(activity: &Activity) -> Message {
     let mut fit_activity = FitActivity::new();
     fit_activity.timestamp = datetime(end);
     fit_activity.local_timestamp = LocalDateTime::from_unix_timestamp(end as i64 + offset as i64);
-    fit_activity.set_total_timer_time_scaled(activity.total_elapsed_time as f64);
+    fit_activity.set_total_timer_time_scaled(activity.timer_time as f64);
     fit_activity.num_sessions = 1;
     fit_activity.r#type = typedef::Activity::MANUAL;
     fit_activity.event = typedef::Event::ACTIVITY;
@@ -373,15 +380,15 @@ impl ToFitMessages for Activity {
 
         if let Some(data) = &self.data {
             messages.extend(record_messages(data, self.date, self.total_elapsed_time));
+        }
 
-            if let Some(max_hr) = data.max_hr {
-                let mut zones = TimeInZone::new();
-                zones.timestamp = datetime(activity_end(self));
-                zones.reference_mesg = MesgNum::SESSION;
-                zones.reference_index = MessageIndex(0);
-                zones.max_heart_rate = max_hr;
-                messages.push(zones.into());
-            }
+        if let Some(max_hr) = self.max_hr {
+            let mut zones = TimeInZone::new();
+            zones.timestamp = datetime(activity_end(self));
+            zones.reference_mesg = MesgNum::SESSION;
+            zones.reference_index = MessageIndex(0);
+            zones.max_heart_rate = max_hr;
+            messages.push(zones.into());
         }
 
         messages.extend(set_messages(self, weight_unit));

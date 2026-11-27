@@ -7,8 +7,8 @@ use crate::utils::weight::from_kg;
 use crate::{
     ConnectLock,
     dao::{
-        activity::Activity, activity_data::ActivityData, activity_step::ActivityStep,
-        settings::WeightUnit, workout_step::WorkoutStep,
+        activity::Activity, activity_step::ActivityStep, settings::WeightUnit,
+        workout_step::WorkoutStep,
     },
     dto::activities::ActivityUpdate,
     fit::writer::FitWriter,
@@ -93,7 +93,7 @@ pub(in crate::logic::activities) async fn apply_activity_changes(
     tx: &Transaction<'_>,
     details: &ActivityUpdate,
 ) -> rusqlite_orm::errors::Result<AppliedActivityChanges> {
-    ActivityData::update_notes(tx, details.timestamp, details.notes.as_deref()).await?;
+    Activity::update_notes(tx, details.timestamp, details.notes.as_deref()).await?;
 
     let idxs: Vec<u8> = details.sets.iter().map(|s| s.idx).collect();
     let mut exercises = ActivityStep::get_step_exercises(tx, details.timestamp, &idxs).await?;
