@@ -24,7 +24,7 @@ const loadActivitiesList = () => import("../Activities/ActivityList");
 const loadExercisesList = () => import("../Exercises/ExercisesList");
 const loadBodyMetricList = () => import("../BodyMetrics/BodyMetricList");
 const loadWorkoutsList = () => import("../Workouts/WorkoutList");
-const loadDeviceList = () => import("../Devices/DeviceList");
+const loadDevices = () => import("../Devices/Devices");
 const loadSettings = () => import("../Settings/Settings");
 
 const ActivitiesList = lazy(() =>
@@ -39,9 +39,7 @@ const BodyMetricList = lazy(() =>
 const WorkoutsList = lazy(() =>
     loadWorkoutsList().then((m) => ({ default: m.WorkoutsList })),
 );
-const DeviceList = lazy(() =>
-    loadDeviceList().then((m) => ({ default: m.DeviceList })),
-);
+const Devices = lazy(() => loadDevices().then((m) => ({ default: m.Devices })));
 const Settings = lazy(() =>
     loadSettings().then((m) => ({ default: m.Settings })),
 );
@@ -51,6 +49,7 @@ export function App(): JSX.Element {
     const { translate } = useContext(I18nSettingsContext);
 
     const [settingsOpened, setSettingsOpened] = useState(false);
+    const [devicesOpened, setDevicesOpened] = useState(false);
     const [tab, setTabState] = useState(Tabs.HOME);
 
     useEffect(() => {
@@ -59,7 +58,7 @@ export function App(): JSX.Element {
         void loadExercisesList();
         void loadBodyMetricList();
         void loadWorkoutsList();
-        void loadDeviceList();
+        void loadDevices();
         void loadSettings();
     }, [appReady]);
 
@@ -75,6 +74,15 @@ export function App(): JSX.Element {
 
     const closeSettings = () => {
         setSettingsOpened(false);
+    };
+
+    // Like settings: a transition avoids the fallback while the lazy dialog resolves
+    const showDevices = () => {
+        startTransition(() => setDevicesOpened(true));
+    };
+
+    const closeDevices = () => {
+        setDevicesOpened(false);
     };
 
     const leftNavBarItems: NavBarItem[] = [
@@ -130,9 +138,9 @@ export function App(): JSX.Element {
                 </span>
             ),
             onSelected: () => {
-                setTab(Tabs.DEVICES);
+                showDevices();
             },
-            selected: tab == Tabs.DEVICES,
+            selected: false,
         },
         {
             label: (
@@ -167,9 +175,11 @@ export function App(): JSX.Element {
                                 {tab == Tabs.EXERCISES && <ExercisesList />}
                                 {tab == Tabs.WORKOUTS && <WorkoutsList />}
                                 {tab == Tabs.BODY_METRICS && <BodyMetricList />}
-                                {tab == Tabs.DEVICES && <DeviceList />}
                                 {settingsOpened && (
                                     <Settings onClose={closeSettings} />
+                                )}
+                                {devicesOpened && (
+                                    <Devices onClose={closeDevices} />
                                 )}
                             </Suspense>
                         </div>
