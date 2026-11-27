@@ -14,7 +14,7 @@ use crate::{
     ConnectLock, MtpLock, SettingsLock,
     dao::activity::Activity,
     dto::{
-        activities::{ActivityDetails, ActivityListItem, ActivityStepsUpdate, MuscleSets},
+        activities::{ActivityDetails, ActivityListItem, ActivityUpdate, MuscleSets},
         notifications::{NotificationDefinition, NotificationKind},
     },
     logic::{
@@ -155,7 +155,7 @@ pub async fn save_activity_changes(
     connect: &ConnectLock,
     mtp: &MtpLock,
     events: &EventSink,
-    details: ActivityStepsUpdate,
+    details: ActivityUpdate,
 ) -> Result<(), String> {
     info!(
         "Saving changes on activity {}...",
@@ -211,6 +211,50 @@ pub async fn save_activity_changes(
             "Error updating activity",
         )),
     }
+}
+
+/// Stores the perceived effort (1-10, `None` clears it) of the activity at `timestamp`.
+pub async fn set_activity_rpe(
+    pool: &DatabasePool,
+    settings: &SettingsLock,
+    timestamp: u32,
+    rpe: Option<u8>,
+) -> Result<(), String> {
+    info!("Setting RPE {rpe:?} on activity {timestamp}");
+    pool.run_in_connection(async move |conn| Ok(Activity::set_rpe(conn, timestamp, rpe).await?))
+        .await
+        .map(|_| ())
+        .map_err(|e| {
+            report_error(
+                e,
+                settings,
+                "error_update_activity",
+                "Error updating activity RPE",
+            )
+        })
+}
+
+/// Stores the feeling (0-4, `None` clears it) of the activity at `timestamp`.
+pub async fn set_activity_feeling(
+    pool: &DatabasePool,
+    settings: &SettingsLock,
+    timestamp: u32,
+    feeling: Option<u8>,
+) -> Result<(), String> {
+    info!("Setting feeling {feeling:?} on activity {timestamp}");
+    pool.run_in_connection(async move |conn| {
+        Ok(Activity::set_feeling(conn, timestamp, feeling).await?)
+    })
+    .await
+    .map(|_| ())
+    .map_err(|e| {
+        report_error(
+            e,
+            settings,
+            "error_update_activity",
+            "Error updating activity feeling",
+        )
+    })
 }
 
 /// Imports the `.fit` files at `files` as activities; returns the number of activities imported.

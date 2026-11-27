@@ -38,6 +38,8 @@ const makeDetails = (
     primary_muscles: [],
     secondary_muscles: [],
     connect_id: null,
+    feeling: null,
+    rpe: null,
     ...overrides,
 });
 

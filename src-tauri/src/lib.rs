@@ -46,6 +46,7 @@ use crate::{
         activities::commands::{
             download_activity, get_activities, get_activity_details, get_heatmap_data,
             get_muscle_sets, import_dropped_files, import_from_files, save_activity_changes,
+            set_activity_feeling, set_activity_rpe,
         },
         app::commands::{
             get_environment, get_settings, get_translations, notify_frontend_ready,
@@ -325,6 +326,8 @@ pub fn run(log_level: LevelFilter) {
             get_activity_details,
             download_activity,
             save_activity_changes,
+            set_activity_rpe,
+            set_activity_feeling,
             import_from_files,
             get_heatmap_data,
             get_muscle_sets,

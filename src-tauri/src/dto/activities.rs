@@ -132,6 +132,9 @@ pub struct ActivityDetails {
 
     pub device: Option<String>,
     pub connect_id: Option<String>,
+
+    pub feeling: Option<u8>,
+    pub rpe: Option<u8>,
 }
 
 /// Rounds samples to `1 / scale` precision so their JSON form stays short (e.g. `scale = 1000.0` keeps 3 decimals).
@@ -186,12 +189,14 @@ impl From<(&Activity, &[Exercise], &[ActivityStep], &[ActivityLap])> for Activit
             primary_muscles,
             secondary_muscles,
             connect_id: activity.connect_id.clone(),
+            feeling: activity.feeling,
+            rpe: activity.rpe,
         }
     }
 }
 
 #[derive(Deserialize, Serialize)]
-pub struct ActivityStepsUpdate {
+pub struct ActivityUpdate {
     pub timestamp: u32,
     pub sets: Vec<ActivityStepDto>,
     pub notes: Option<String>,

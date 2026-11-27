@@ -10,7 +10,7 @@ use crate::{
         activity::Activity, activity_data::ActivityData, activity_step::ActivityStep,
         settings::WeightUnit, workout_step::WorkoutStep,
     },
-    dto::activities::ActivityStepsUpdate,
+    dto::activities::ActivityUpdate,
     fit::writer::FitWriter,
     logic::exercises::helpers::progressions::{
         progression_suggestions, progression_suggestions_among,
@@ -91,7 +91,7 @@ pub(crate) struct AppliedActivityChanges {
 /// involved.
 pub(in crate::logic::activities) async fn apply_activity_changes(
     tx: &Transaction<'_>,
-    details: &ActivityStepsUpdate,
+    details: &ActivityUpdate,
 ) -> rusqlite_orm::errors::Result<AppliedActivityChanges> {
     ActivityData::update_notes(tx, details.timestamp, details.notes.as_deref()).await?;
 

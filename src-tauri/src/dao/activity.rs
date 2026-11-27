@@ -37,6 +37,8 @@ pub struct Activity {
     pub sport: u8,
     pub sub_sport: u8,
     pub connect_id: Option<String>,
+    pub feeling: Option<u8>,
+    pub rpe: Option<u8>,
 
     #[relationship((date, activity_step::entity::columns::ACTIVITY))]
     pub steps: Vec<ActivityStep>,
@@ -381,5 +383,31 @@ impl Activity {
         }
 
         Ok(id)
+    }
+
+    /// Sets the perceived effort (1-10) of the activity at `timestamp`; returns the number of rows changed.
+    pub async fn set_rpe(
+        conn: &Connection,
+        timestamp: u32,
+        rpe: Option<u8>,
+    ) -> rusqlite_orm::errors::Result<usize> {
+        ActivityRepository::update()
+            .set(entity::columns::RPE, rpe.into())
+            .where_(Where::Eq(entity::columns::DATE, timestamp.into()))
+            .execute_in(conn)
+            .await
+    }
+
+    /// Sets the feeling (0-4) of the activity at `timestamp`; returns the number of rows changed.
+    pub async fn set_feeling(
+        conn: &Connection,
+        timestamp: u32,
+        feeling: Option<u8>,
+    ) -> rusqlite_orm::errors::Result<usize> {
+        ActivityRepository::update()
+            .set(entity::columns::FEELING, feeling.into())
+            .where_(Where::Eq(entity::columns::DATE, timestamp.into()))
+            .execute_in(conn)
+            .await
     }
 }

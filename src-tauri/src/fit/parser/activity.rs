@@ -38,6 +38,8 @@ impl TryFrom<FitParser> for Activity {
         let mut workout = WorkoutAccumulator::default();
         let mut max_heart_rate = None;
         let mut device = None;
+        let mut rpe = None;
+        let mut feeling = None;
 
         let path_string = value.borrow_name().clone();
 
@@ -68,6 +70,12 @@ impl TryFrom<FitParser> for Activity {
                         MesgNum::SESSION => {
                             let activity_obj = mesgdef::Session::from(msg);
                             records.distance = activity_obj.total_distance_scaled();
+                            if activity_obj.workout_rpe != u8::MAX {
+                                rpe = Some(activity_obj.workout_rpe / 10);
+                            }
+                            if activity_obj.workout_feel != u8::MAX {
+                                feeling = Some(activity_obj.workout_feel / 25);
+                            }
                             activity_data.set_activity(activity_obj)?;
                         }
                         MesgNum::WORKOUT_STEP => {
@@ -213,6 +221,8 @@ impl TryFrom<FitParser> for Activity {
             device_obj: None,
             data: additional_data,
             connect_id: None,
+            rpe,
+            feeling,
         })
     }
 }

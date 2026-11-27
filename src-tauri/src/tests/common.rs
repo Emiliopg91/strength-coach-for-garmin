@@ -74,6 +74,8 @@ pub fn activity(date: u32) -> Activity {
         sub_sport_obj: None,
         workout_obj: None,
         connect_id: None,
+        feeling: None,
+        rpe: None,
     }
 }
 

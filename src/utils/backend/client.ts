@@ -2,7 +2,7 @@
 
 import { invoke, InvokeArgs } from "@tauri-apps/api/core";
 
-import { ActivityDetails, ActivityListItem, ActivityStepsUpdate, AppEnvironment, BodyMetricListItem, DeviceListItem, ExerciseDetails, ExerciseListItem, MuscleSets, PercentLoadBase, ProgressionSuggestion, ReportData, Settings, Workout, WorkoutDetails, WorkoutListItem, WorkoutPlanListItem } from "./models";
+import { ActivityDetails, ActivityListItem, ActivityUpdate, AppEnvironment, BodyMetricListItem, DeviceListItem, ExerciseDetails, ExerciseListItem, MuscleSets, PercentLoadBase, ProgressionSuggestion, ReportData, Settings, Workout, WorkoutDetails, WorkoutListItem, WorkoutPlanListItem } from "./models";
 
 export class BackendClient {
 
@@ -122,13 +122,13 @@ export class BackendClient {
 	}
 	
 
-	// From src-tauri/src/logic/activities/commands.rs:124
+	// From src-tauri/src/logic/activities/commands.rs:152
 	public static getHeatmapData(): Promise<[number, number][][]> {
 	  return BackendClient.inner_invoke("get_heatmap_data"); 
 	}
 	
 
-	// From src-tauri/src/logic/activities/commands.rs:135
+	// From src-tauri/src/logic/activities/commands.rs:163
 	public static getMuscleSets(since: number): Promise<Record<string, MuscleSets>> {
 	  return BackendClient.inner_invoke("get_muscle_sets", { since }); 
 	}
@@ -212,7 +212,7 @@ export class BackendClient {
 	}
 	
 
-	// From src-tauri/src/logic/activities/commands.rs:90
+	// From src-tauri/src/logic/activities/commands.rs:118
 	public static importFromFiles(): Promise<number> {
 	  return BackendClient.inner_invoke("import_from_files"); 
 	}
@@ -249,7 +249,7 @@ export class BackendClient {
 	
 
 	// From src-tauri/src/logic/activities/commands.rs:71
-	public static saveActivityChanges(details: ActivityStepsUpdate): Promise<void> {
+	public static saveActivityChanges(details: ActivityUpdate): Promise<void> {
 	  return BackendClient.inner_invoke("save_activity_changes", { details }); 
 	}
 	
@@ -275,6 +275,18 @@ export class BackendClient {
 	// From src-tauri/src/logic/devices/commands.rs:17
 	public static sendToDevice(workout: number, serial: string): Promise<void> {
 	  return BackendClient.inner_invoke("send_to_device", { workout, serial }); 
+	}
+	
+
+	// From src-tauri/src/logic/activities/commands.rs:102
+	public static setActivityFeeling(timestamp: number, feeling: number | null): Promise<void> {
+	  return BackendClient.inner_invoke("set_activity_feeling", { timestamp, feeling }); 
+	}
+	
+
+	// From src-tauri/src/logic/activities/commands.rs:88
+	public static setActivityRpe(timestamp: number, rpe: number | null): Promise<void> {
+	  return BackendClient.inner_invoke("set_activity_rpe", { timestamp, rpe }); 
 	}
 	
 

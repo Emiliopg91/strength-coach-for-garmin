@@ -17,7 +17,7 @@ use crate::{
     },
     dto::prompts::PromptKind,
     dto::{
-        activities::{ActivityStepDto, ActivityStepsUpdate},
+        activities::{ActivityStepDto, ActivityUpdate},
         app::Settings,
         body_metrics::BodyMetricListItem,
         exercises::ProgressionSuggestion,
@@ -680,7 +680,7 @@ async fn activity_changes_are_saved_and_records_recomputed() {
         &app.connect,
         &app.mtp,
         &app.events,
-        ActivityStepsUpdate {
+        ActivityUpdate {
             timestamp: date,
             sets,
             notes: Some("Felt strong".to_string()),
@@ -698,6 +698,35 @@ async fn activity_changes_are_saved_and_records_recomputed() {
     let records = exercises::get_exercises(&app.pool, settings).await.unwrap();
     assert_eq!(records.len(), 1);
     assert_eq!(records[0].weight, 70.0);
+}
+
+#[tokio::test]
+async fn activity_rpe_and_feeling_are_set_independently() {
+    let app = test_app().await;
+    let date = 1_700_000_000;
+    insert_activity(&app, date, 10, 60.0).await;
+    let settings = &app.settings;
+
+    activities::set_activity_rpe(&app.pool, settings, date, Some(7))
+        .await
+        .unwrap();
+    let details = activities::get_activity_details(&app.pool, settings, &app.connect, date)
+        .await
+        .unwrap();
+    assert_eq!(details.rpe, Some(7));
+    assert_eq!(details.feeling, None);
+
+    activities::set_activity_feeling(&app.pool, settings, date, Some(3))
+        .await
+        .unwrap();
+    activities::set_activity_rpe(&app.pool, settings, date, None)
+        .await
+        .unwrap();
+    let details = activities::get_activity_details(&app.pool, settings, &app.connect, date)
+        .await
+        .unwrap();
+    assert_eq!(details.rpe, None);
+    assert_eq!(details.feeling, Some(3));
 }
 
 #[tokio::test]

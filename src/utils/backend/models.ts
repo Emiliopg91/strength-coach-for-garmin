@@ -8,12 +8,14 @@ export interface ActivityDetails {
   coordinates: ([number, number] | null)[];
   device: string | null;
   distance: number | null;
+  feeling: number | null;
   heart_rates: (number | null)[];
   laps: ActivityLapDto[];
   max_hr: number;
   name: string;
   notes: string;
   primary_muscles: string[];
+  rpe: number | null;
   secondary_muscles: string[];
   speeds: (number | null)[];
   sport: number;
@@ -44,7 +46,7 @@ export interface ActivityListItem {
   training_load: number;
 }
 
-// From src-tauri/src/dto/activities.rs:208
+// From src-tauri/src/dto/activities.rs:213
 export interface ActivityLocation {
   activity: number;
   location: string;
@@ -65,8 +67,8 @@ export interface ActivityStepDto {
   weight_ref: number | null;
 }
 
-// From src-tauri/src/dto/activities.rs:194
-export interface ActivityStepsUpdate {
+// From src-tauri/src/dto/activities.rs:199
+export interface ActivityUpdate {
   notes: string | null;
   sets: ActivityStepDto[];
   timestamp: number;
@@ -178,7 +180,7 @@ export interface MuscleExercise {
   muscle_obj: Muscle | null;
 }
 
-// From src-tauri/src/dto/activities.rs:202
+// From src-tauri/src/dto/activities.rs:207
 export interface MuscleSets {
   primary: number;
   secondary: number;

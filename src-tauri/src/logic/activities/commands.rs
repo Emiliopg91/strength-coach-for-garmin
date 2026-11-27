@@ -6,7 +6,7 @@ use tauri::{AppHandle, Manager, State};
 
 use crate::{
     ConnectLock, MtpLock, SettingsLock,
-    dto::activities::{ActivityDetails, ActivityListItem, ActivityStepsUpdate, MuscleSets},
+    dto::activities::{ActivityDetails, ActivityListItem, ActivityUpdate, MuscleSets},
     logic::{
         activities, settings_language,
         ui::{ask_open_paths, ask_save_path, event_sink},
@@ -74,10 +74,38 @@ pub async fn save_activity_changes(
     settings: State<'_, SettingsLock>,
     connect: State<'_, ConnectLock>,
     mtp: State<'_, MtpLock>,
-    details: ActivityStepsUpdate,
+    details: ActivityUpdate,
 ) -> Result<(), String> {
     let events = event_sink(&app);
     activities::save_activity_changes(&pool, &settings, &connect, &mtp, &events, details).await
+}
+
+/// Stores the perceived effort (1-10, `null` clears it) of the activity at `timestamp`, leaving
+/// the rest of the activity untouched. On failure, shows a persistent error notification and
+/// rejects with the message.
+#[traced_command]
+#[tauri::command]
+pub async fn set_activity_rpe(
+    pool: State<'_, DatabasePool>,
+    settings: State<'_, SettingsLock>,
+    timestamp: u32,
+    rpe: Option<u8>,
+) -> Result<(), String> {
+    activities::set_activity_rpe(&pool, &settings, timestamp, rpe).await
+}
+
+/// Stores the feeling (0-4, `null` clears it) of the activity at `timestamp`, leaving the rest of
+/// the activity untouched. On failure, shows a persistent error notification and rejects with the
+/// message.
+#[traced_command]
+#[tauri::command]
+pub async fn set_activity_feeling(
+    pool: State<'_, DatabasePool>,
+    settings: State<'_, SettingsLock>,
+    timestamp: u32,
+    feeling: Option<u8>,
+) -> Result<(), String> {
+    activities::set_activity_feeling(&pool, &settings, timestamp, feeling).await
 }
 
 /// Asks for `.fit` files and imports them as activities. Notifies the result (files that failed to

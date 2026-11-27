@@ -21,6 +21,9 @@ export function ActivitiesCompareModal({ activities, onClose }: Props) {
         formatNumber,
     } = useContext(I18nSettingsContext);
     const { exerciseName } = useContext(AppContext);
+    // "<value> - <label>" for a value of the RPE or feeling scales, empty when unset
+    const scaleText = (scale: "rpe" | "feeling", value: number | null) =>
+        value == null ? "" : value + " - " + translate(scale + "_" + value);
     // Sets with exercise grouped by exercise ("cat-id"); exercises follow the order
     // of their first set across activities
     const exercises: string[] = [];
@@ -132,6 +135,20 @@ export function ActivitiesCompareModal({ activities, onClose }: Props) {
                             </td>
                             <td>
                                 {formatNumber(activities[1].training_load, 0)}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>{translate("rpe")}</td>
+                            <td>{scaleText("rpe", activities[0].rpe)}</td>
+                            <td>{scaleText("rpe", activities[1].rpe)}</td>
+                        </tr>
+                        <tr>
+                            <td>{translate("feeling")}</td>
+                            <td>
+                                {scaleText("feeling", activities[0].feeling)}
+                            </td>
+                            <td>
+                                {scaleText("feeling", activities[1].feeling)}
                             </td>
                         </tr>
                         <tr

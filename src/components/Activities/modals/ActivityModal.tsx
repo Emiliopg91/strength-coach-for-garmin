@@ -1,7 +1,6 @@
 import { useLoadingTask } from "@/hooks/useLoadingTask";
 import { I18nSettingsContext } from "@/context/I18nSettingsContext";
 import { BackendClient } from "@/utils/backend/client";
-import { ActivityStepsUpdate } from "@/utils/backend/models";
 import { useContext, useState } from "react";
 import {
     Button,
@@ -21,6 +20,7 @@ import { ActivityHeartRateChart } from "../charts/ActivityHeartRateChart";
 import { ActivitySetsTable } from "../tables/ActivitySetsTable";
 import "@/styles/Activities/ActivityModal.css";
 import { MuscleModel } from "../../Exercises/charts/MuscleModel";
+import { ActivityUpdate } from "@/utils/backend/models";
 
 type Props = {
     activity: ActivityFrontDetails;
@@ -81,7 +81,7 @@ export function ActivityModal({ activity, onClose, onUpdate }: Props) {
     };
 
     const saveChanges = () => {
-        const update: ActivityStepsUpdate = {
+        const update: ActivityUpdate = {
             timestamp: localActivity.timestamp,
             sets: [],
             notes: notes.length > 0 ? notes : null,

@@ -130,6 +130,10 @@
   vertical-align: top;
 }
 
+#activity-details-table .activity-details-select-row td {
+  vertical-align: middle;
+}
+
 .trophy-icon.activity-list-trophy {
   position: relative !important;
   top: -3px !important;

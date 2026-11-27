@@ -1,12 +1,16 @@
 import { I18nSettingsContext } from "@/context/I18nSettingsContext";
+import { useLoadingTask } from "@/hooks/useLoadingTask";
 import { ActivityFrontDetails } from "@/utils/ActivityUtils";
-import { useContext } from "react";
+import { BackendClient } from "@/utils/backend/client";
+import { FormControl, MenuItem, Select } from "@mui/material";
+import { useContext, useState } from "react";
 
 type Props = {
     activity: ActivityFrontDetails;
 };
 
 export function ActivityDetailsTable({ activity }: Props) {
+    const withLoading = useLoadingTask();
     const {
         translate,
         toKm,
@@ -18,6 +22,20 @@ export function ActivityDetailsTable({ activity }: Props) {
         formatTimeDate,
         formatNumber,
     } = useContext(I18nSettingsContext);
+    const [rpe, setRpe] = useState(activity.rpe);
+    const [feeling, setFeeling] = useState(activity.feeling);
+
+    const updateRpe = (value: number) => {
+        withLoading(
+            BackendClient.setActivityRpe(activity.timestamp, value),
+        ).then(() => setRpe(value));
+    };
+
+    const updateFeeling = (value: number) => {
+        withLoading(
+            BackendClient.setActivityFeeling(activity.timestamp, value),
+        ).then(() => setFeeling(value));
+    };
 
     return (
         <table id="activity-details-table">
@@ -87,6 +105,55 @@ export function ActivityDetailsTable({ activity }: Props) {
                 <tr>
                     <td>{translate("workout_load")}:</td>
                     <td>{formatNumber(activity.training_load, 0)}</td>
+                </tr>
+                <tr className="activity-details-select-row">
+                    <td>{translate("rpe")}:</td>
+                    <td>
+                        <FormControl fullWidth size="small">
+                            <Select
+                                labelId="activity-rpe-label"
+                                id="activity-rpe"
+                                value={rpe ?? ""}
+                                onChange={(e) =>
+                                    updateRpe(Number(e.target.value))
+                                }
+                            >
+                                {Array.from(
+                                    { length: 10 },
+                                    (_, i) => i + 1,
+                                ).map((rpe) => (
+                                    <MenuItem key={rpe} value={rpe}>
+                                        {rpe + " - " + translate("rpe_" + rpe)}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    </td>
+                </tr>
+                <tr className="activity-details-select-row">
+                    <td>{translate("feeling")}:</td>
+                    <td>
+                        <FormControl fullWidth size="small">
+                            <Select
+                                labelId="activity-feeling-label"
+                                id="activity-feeling"
+                                value={feeling ?? ""}
+                                onChange={(e) =>
+                                    updateFeeling(Number(e.target.value))
+                                }
+                            >
+                                {Array.from({ length: 5 }, (_, i) => i).map(
+                                    (feel) => (
+                                        <MenuItem key={feel} value={feel}>
+                                            {feel +
+                                                " - " +
+                                                translate("feeling_" + feel)}
+                                        </MenuItem>
+                                    ),
+                                )}
+                            </Select>
+                        </FormControl>
+                    </td>
                 </tr>
                 {activity.device && (
                     <tr>

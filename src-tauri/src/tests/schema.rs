@@ -136,13 +136,20 @@ async fn migration_42_moves_records_off_non_exercise_sets() {
         .collect();
     db.create_schema(&before).await.unwrap();
 
-    db.run_in_transaction(async move |tx| {
+    db.run_in_connection(async move |conn| {
+        // The sets go in without their activity: inserting it would need the columns of later
+        // migrations, which this schema doesn't have yet
+        conn.pragma_update(None, "foreign_keys", false)?;
         let mut warmup = common::set(1, 0, (28, 0), 10, 200.0);
         warmup.kind = StepType::Warmup;
         warmup.pr = true;
-        let mut activity = common::activity(1);
-        activity.steps = vec![warmup, common::set(1, 1, (28, 0), 5, 100.0)];
-        common::insert_activity(tx, activity).await;
+        ActivityStepRepository::insert()
+            .item(&mut warmup)
+            .item(&mut common::set(1, 1, (28, 0), 5, 100.0))
+            .execute_in(conn)
+            .await
+            .unwrap();
+        conn.pragma_update(None, "foreign_keys", true)?;
         Ok(())
     })
     .await

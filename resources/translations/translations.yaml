@@ -706,3 +706,54 @@ in_n_days:
 sets_per_week:
   en: "{} sets/week"
   es: "{} series/sem"
+rpe:
+  en: Perceived effort
+  es: Esfuerzo percibido
+rpe_1:
+  en: Very light
+  es: Muy ligero
+rpe_2:
+  en: Light
+  es: Ligero
+rpe_3:
+  en: Light
+  es: Ligero
+rpe_4:
+  en: Moderate
+  es: Moderado
+rpe_5:
+  en: Moderate
+  es: Moderado
+rpe_6:
+  en: Moderate
+  es: Moderado
+rpe_7:
+  en: Hard
+  es: Duro
+rpe_8:
+  en: Hard
+  es: Duro
+rpe_9:
+  en: Very Hard
+  es: Muy duro
+rpe_10:
+  en: Maximum
+  es: Máximo
+feeling:
+  en: Feeling
+  es: Sensación
+feeling_0:
+  en: Very Weak
+  es: Muy débil
+feeling_1:
+  en: Weak
+  es: Débil
+feeling_2:
+  en: Normal
+  es: Normal
+feeling_3:
+  en: Strong
+  es: Fuerte
+feeling_4:
+  en: Very Strong
+  es: Muy fuerte
